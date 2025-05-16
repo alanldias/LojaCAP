@@ -1,0 +1,13 @@
+<mvc:View controllerName="lojacap.controller.login-page"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+    <Page id="page-login" title="{i18n>title}">
+    <VBox id = "page-login-vox" class="sapUiSmallMargin">
+      <Input id="emailInput" placeholder="E-mail" type="Email" />
+      <Input id="senhaInput" placeholder="Senha" type="Password" />
+      <Button id = "page-login-button-entrar" text="Entrar" press="onLoginPress" />
+    </VBox>
+    <Text id="telaregistro" text="Não tem uma conta?"></Text>
+    <Button id="btncriarconta" text="Criar conta" press="onGoToRegister" />
+    </Page>
+</mvc:View>

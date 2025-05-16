@@ -1,0 +1,34 @@
+<mvc:View controllerName="lojacap.controller.payment-page"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    
+    <Page id="payment-page" title="Pagamento">
+        <VBox id = "aaa" class="sapUiSmallMargin">
+            <Table id="cartTable" inset="false" items="{carrinho>/itens}">
+                <columns>
+                    <Column id="coluna1"><Text id="produto1" text="Produto" /></Column>
+                    <Column id="coluna2"><Text id="quantidade1" text="Qtd" /></Column>
+                    <Column id="coluna3"><Text id="preco1" text="Preço Unit." /></Column>
+                </columns>
+                <items>
+                    <ColumnListItem id ="colunaitens">
+                        <cells>
+                            <Text id="produto" text="{carrinho>produto/nome}" />
+                            <Text id="quantidade" text="{carrinho>quantidade}" />
+                            <Text id="preco" text="{carrinho>produto/preco}" />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+
+            <Text id="txtformpayament" text="Forma de pagamento:" class="sapUiSmallMarginTop"/>
+            <Select id="selectPayment" items="{enum>/}">
+                <items>
+                    <core:Item id="algo" key="{enum>key}" text="{enum>text}" />
+                </items>
+                </Select>
+            <Button id="finalizarcompra" text="Finalizar Compra" press="onFinalizarCompra" class="sapUiSmallMarginTop" />
+        </VBox>
+    </Page>
+</mvc:View>

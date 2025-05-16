@@ -1,0 +1,12 @@
+<mvc:View controllerName="lojacap.controller.register-page"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+  <Page id="page-register" title="Cadastro de Usuário">
+    <VBox id="page-register-vox" class="sapUiSmallMargin">
+      <Input id="nomeInputRegister" placeholder="Nome" />
+      <Input id="emailInputRegister" placeholder="E-mail" type="Email" />
+      <Input id="senhaInputRegister" placeholder="Senha" type="Password" />
+      <Button id="page-register-button-cadastrar" text="Cadastrar" press="onRegisterPress" />
+    </VBox>
+  </Page>
+</mvc:View>

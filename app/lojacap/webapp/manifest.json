@@ -1,0 +1,141 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "lojacap",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:basic",
+      "version": "1.17.5",
+      "toolsId": "b1494f72-16de-4576-a60e-3f6e3d30ab2c"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/odata/v4/shop/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "odataVersion": "4.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.136.0",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "lojacap.i18n.i18n"
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      }
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
+    "routing": {
+      "config": {
+        "routerClass": "sap.m.routing.Router",
+        "controlAggregation": "pages",
+        "controlId": "app",
+        "transition": "slide",
+        "type": "View",
+        "viewType": "XML",
+        "viewPath": "lojacap.view",
+        "async": true
+      },
+      "routes": [
+        {
+          "name": "Routehome-page",
+          "pattern": "",
+          "target": ["Targethome-page"]
+        },
+        {
+          "name": "RouteLogin",
+          "pattern": "login",
+          "target": ["TargetLogin"]
+        },
+        {
+          "name": "RouteRegister",
+          "pattern": "register",
+          "target": ["TargetRegister"]
+        },
+        {
+          "name": "RoutePayment",
+          "pattern": "payment",
+          "target": ["TargetPayment"]
+        }
+      ],
+      "targets": {
+        "Targethome-page": {
+          "viewName": "home-page",
+          "viewId": "home-page"
+        },
+        "TargetLogin": {
+          "viewName": "login-page",
+          "viewId": "login-page"
+        },
+        "TargetRegister": {
+        "viewName": "register-page",
+        "viewId": "register-page"
+        },
+        "TargetPayment": {
+        "viewName": "payment-page",
+        "viewId": "payment-page"
+        }
+      }
+    },
+    "rootView": {
+      "viewName": "lojacap.view.App",
+      "type": "XML",
+      "id": "App",
+      "async": true
+    }
+  }
+}

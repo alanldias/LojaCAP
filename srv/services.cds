@@ -9,4 +9,5 @@ service ShopService {
   entity Pedidos    as projection on shop.Pedido;
 
   action registerCliente(nome: String, email: String, senha: String) returns String;
+  action loginCliente(email: String, senha: String) returns String;
 }

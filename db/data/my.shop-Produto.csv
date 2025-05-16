@@ -1,3 +1,3 @@
 ID;nome;descricao;preco;estoque;imagemURL;createdAt;createdBy;modifiedAt;modifiedBy
-f7a18f24-5102-4fa3-9c3b-59a5d5b99f1d;Camiseta Preta;Camiseta básica de algodão;59.90;120;https://exemplo.com/img/camiseta.jpg;2024-01-10T12:00:00Z;admin;2024-01-10T12:00:00Z;admin
-cafdf234-7380-4991-a40e-94e061165a72;Tênis Esportivo;Tênis confortável para corrida;199.99;45;https://exemplo.com/img/tenis.jpg;2024-01-11T14:00:00Z;admin;2024-01-11T14:00:00Z;admin
+f7a18f24-5102-4fa3-9c3b-59a5d5b99f1d;Camiseta Preta;Camiseta básica de algodão;59.90;120;https://images.tcdn.com.br/img/img_prod/958805/camiseta_streetwear_off_y_artistic_323_2_1f14e27c3b91c8f9820f5b520431e261.jpg;2024-01-10T12:00:00Z;admin;2024-01-10T12:00:00Z;admin
+cafdf234-7380-4991-a40e-94e061165a72;Tênis Esportivo;Tênis confortável para corrida;199.99;45;https://cdn.manualdohomem.com.br/?w=1200&h=751&key=aHR0cHM6Ly9tYW51YWxkb2hvbWVtbW9kZXJuby5jb20uYnI=&u=%2Ffiles%2F2019%2F02%2Ftenisbalada16.jpg;2024-01-11T14:00:00Z;admin;2024-01-11T14:00:00Z;admin

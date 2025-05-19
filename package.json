@@ -24,7 +24,9 @@
     "watch-lojacap": "cds watch --open lojacap/webapp/index.html?sap-ui-xx-viewCache=false",
     "undeploy": "cf undeploy loja --delete-services --delete-service-keys --delete-service-brokers",
     "build": "rimraf resources mta_archives && mbt build --mtar archive",
-    "deploy": "cf deploy mta_archives/archive.mtar --retries 1"
+    "deploy": "cf deploy mta_archives/archive.mtar --retries 1",
+    "watch-cadastroclientes": "cds watch --open cadastroclientes/webapp/index.html?sap-ui-xx-viewCache=false",
+    "watch-cadastroprodutos": "cds watch --open cadastroprodutos/webapp/index.html?sap-ui-xx-viewCache=false"
   },
   "cds": {
     "requires": {
@@ -37,5 +39,9 @@
     "sql": {
       "native_hana_associations": false
     }
-  }
+  },
+  "sapux": [
+    "app/cadastroclientes",
+    "app/cadastroprodutos"
+  ]
 }

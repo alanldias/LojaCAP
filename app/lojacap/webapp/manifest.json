@@ -87,9 +87,8 @@
         "transition": "slide",
         "type": "View",
         "viewType": "XML",
-        "path": "lojacap.view",
-        "async": true,
-        "viewPath": "lojacap.view"
+        "viewPath": "lojacap.view",
+        "async": true
       },
       "routes": [
         {
@@ -110,6 +109,21 @@
           "name": "carrinho",
           "pattern": "carrinho",
           "target": "Carrinho"
+        },
+        {
+          "name": "RouteLogin",
+          "pattern": "login",
+          "target": ["TargetLogin"]
+        },
+        {
+          "name": "RouteRegister",
+          "pattern": "register",
+          "target": ["TargetRegister"]
+        },
+        {
+          "name": "RoutePayment",
+          "pattern": "payment",
+          "target": ["TargetPayment"]
         }
         
       ],
@@ -125,6 +139,18 @@
         "Carrinho": {
           "id": "carrinho",
           "name": "carrinho"
+        },
+        "TargetLogin": {
+          "viewName": "login-page",
+          "viewId": "login-page"
+        },
+        "TargetRegister": {
+        "viewName": "register-page",
+        "viewId": "register-page"
+        },
+        "TargetPayment": {
+        "viewName": "payment-page",
+        "viewId": "payment-page"
         }
 
       }

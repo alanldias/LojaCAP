@@ -1,0 +1,25 @@
+<mvc:View controllerName="lojacap.controller.login-page"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m">
+
+    <Page id="page-login" title="Login" class="sapUiResponsiveContentPadding">
+
+        <VBox id="page-login-vbox" class="sapUiSmallMarginTop sapUiMediumMargin sapUiResponsiveMargin" alignItems="Center">
+
+            <Title id="page-login-title2" text="Bem-vindo!" level="H2" class="sapUiTinyMarginBottom" />
+
+            <Input id="emailInput" placeholder="E-mail" type="Email" class="sapUiSmallMarginTop" width="300px"/>
+            <Input id="senhaInput" placeholder="Senha" type="Password" class="sapUiSmallMarginTop" width="300px"/>
+
+            <Button id="page-login-button-entrar" text="Entrar" press="onLoginPress"
+                type="Emphasized" class="sapUiSmallMarginTop" width="300px" />
+
+            <HBox id="page-login-hbox-register" justifyContent="Center" class="sapUiSmallMarginTop">
+                <Text id="page-login-text-nao-tem-conta" text="Não tem uma conta?" class="sapUiTinyMarginEnd" />
+                <Link id="page-login-link-criar-conta" text="Criar conta" press="onGoToRegister" />
+            </HBox>
+
+        </VBox>
+        
+    </Page>
+</mvc:View>

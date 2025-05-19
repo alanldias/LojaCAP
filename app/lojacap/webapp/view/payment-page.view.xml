@@ -1,0 +1,44 @@
+<mvc:View controllerName="lojacap.controller.payment-page"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core">
+    
+    <Page id="payment-page" title="Pagamento" class="sapUiResponsiveContentPadding">
+        <VBox id="payment-page-vbox" class="sapUiSmallMarginTop sapUiMediumMargin sapUiResponsiveMargin" alignItems="Center">
+            
+            <Table id="payment-page-cartTable" inset="false" items="{carrinho>/itens}" width="100%">
+                <columns>
+                    <Column id="payment-page-col-produto">
+                        <Text id="payment-page-col-text-produto" text="Produto" />
+                    </Column>
+                    <Column id="payment-page-col-qtd">
+                        <Text id="payment-page-col-text-qtd" text="Qtd" />
+                    </Column>
+                    <Column id="payment-page-col-preco">
+                        <Text id="payment-page-col-text-preco" text="Preço Unit." />
+                    </Column>
+                </columns>
+                <items>
+                    <ColumnListItem id="payment-page-item-template">
+                        <cells>
+                            <Text id="payment-page-item-produto" text="{carrinho>produto/nome}" />
+                            <Text id="payment-page-item-qtd" text="{carrinho>quantidade}" />
+                            <Text id="payment-page-item-preco" text="{carrinho>produto/preco}" />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+
+            <Text id="payment-page-text-forma-pagamento" text="Forma de pagamento:" class="sapUiSmallMarginTop" />
+            
+            <Select id="selectPayment" items="{enum>/}" width="300px" class="sapUiSmallMarginTop">
+                <items>
+                    <core:Item id="payment-page-select-item" key="{enum>key}" text="{enum>text}" />
+                </items>
+            </Select>
+
+            <Button id="payment-page-button-finalizar" text="Finalizar Compra" press="onFinalizarCompra" 
+                class="sapUiSmallMarginTop" type="Emphasized" width="300px" />
+        </VBox>
+    </Page>
+</mvc:View>

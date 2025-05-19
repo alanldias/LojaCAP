@@ -1,0 +1,134 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "cadastroprodutos.cadastroprodutos",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:feop",
+      "version": "1.17.5",
+      "toolsId": "066019d8-ba41-4639-86e4-370faae91364"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/odata/v4/shop/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "odataVersion": "4.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.136.0",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.fe.templates": {},
+        "sap.fe.macros": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "cadastroprodutos.cadastroprodutos.i18n.i18n"
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      },
+      "@i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "uri": "i18n/i18n.properties"
+      }
+    },
+    "resources": {
+      "css": []
+    },
+    "routing": {
+      "config": {},
+      "routes": [
+        {
+          "pattern": "Produtos({key}):?query:",
+          "name": "ProdutosObjectPage",
+          "target": "ProdutosObjectPage"
+        }
+      ],
+      "targets": {
+        "ProdutosObjectPage": {
+          "type": "Component",
+          "id": "ProdutosObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "editableHeaderContent": false,
+              "contextPath": "/Produtos",
+              "content": {
+                "header": {
+                  "visible": true,
+                  "anchorBarVisible": false
+                }
+              },
+              "variantManagement": "Control",
+              "showRelatedApps": false,
+              "controlConfiguration": {
+                "@com.sap.vocabularies.UI.v1.LineItem#tableMacro": {
+                  "tableSettings": {
+                    "enablePaste": true,
+                    "enableFullScreen": true,
+                    "enableExport": false,
+                    "disableCopyToClipboard": true,
+                    "condensedTableLayout": false,
+                    "selectAll": true,
+                    "selectionLimit": 0,
+                    "selectionMode": "Multi"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "sap.fiori": {
+    "registrationIds": [],
+    "archeType": "transactional"
+  }
+}

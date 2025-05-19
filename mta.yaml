@@ -64,6 +64,14 @@ modules:
       - lojacap.zip
       name: lojacap
       target-path: app/
+    - artifacts:
+      - cadsatroclientescadastroclientes.zip
+      name: cadsatroclientescadastroclientes
+      target-path: app/
+    - artifacts:
+      - cadastroprodutoscadastroprodutos.zip
+      name: cadastroprodutoscadastroprodutos
+      target-path: app/
 - name: loja-portal-deployer
   type: com.sap.application.content
   path: app/portal
@@ -83,6 +91,26 @@ modules:
 - name: lojacap
   type: html5
   path: app/lojacap
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: cadsatroclientescadastroclientes
+  type: html5
+  path: app/cadastroclientes
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: cadastroprodutoscadastroprodutos
+  type: html5
+  path: app/cadastroprodutos
   build-parameters:
     build-result: dist
     builder: custom
@@ -123,9 +151,18 @@ resources:
             ProxyType: Internet
             Type: HTTP
             URL: https://ui5.sap.com
+          - Authentication: NoAuthentication
+            HTML5.DynamicDestination: true
+            HTML5.ForwardAuthToken: true
+            Name: loja-srv-api
+            ProxyType: Internet
+            Type: HTTP
+            URL: ~{srv-api/srv-url}
           existing_destinations_policy: update
     service: destination
     service-plan: lite
+  requires:
+  - name: srv-api
 - name: loja-html5-repo-host
   type: org.cloudfoundry.managed-service
   parameters:

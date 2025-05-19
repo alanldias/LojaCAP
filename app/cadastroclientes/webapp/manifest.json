@@ -108,6 +108,17 @@
               "showRelatedApps": false
             }
           }
+        },
+        "LoginPage": {
+          "type": "Component",
+          "id": "LoginPage",
+          "name": "sap.fe.templates.ObjectPage", 
+          "options": {
+            "settings": {
+            "editableHeaderContent": false,
+            "contextPath": "/Login" 
+            }
+          }
         }
       }
     }

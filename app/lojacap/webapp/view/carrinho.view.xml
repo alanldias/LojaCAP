@@ -7,36 +7,32 @@
   <Page
     id="carrinhoPage"
     title="Meu Carrinho">
+    <headerContent>
+      <Button
+        id="btnVoltar"
+        icon="sap-icon://nav-back"
+        text="Voltar"
+        type="Transparent"
+        press=".onVoltarParaProdutos" />
+    </headerContent>
 
     <content>
-      <List
-        id="carrinhoList"
-        mode="Delete"
-        delete=".onRemoverItem"
-        noDataText="Carrinho vazio.">
-
-        <items>
-          <ObjectListItem
-            id="item"
-            title="{produto/nome}"
-            number="{= 'R$ ' + ${produto/preco} }"
-            intro="{= ${quantidade} + 'x'}"
-            icon="{produto/imagemURL}"
-            iconDensityAware="false"
-            type="Inactive">
-
-            <attributes>
-              <ObjectAttribute
-                id="itematributo"
-               text="{produto/descricao}" />
-            </attributes>
-          </ObjectListItem>
-        </items>
+      <List mode="Delete" delete=".onRemoverItem" id="lista" items="{/ItensCarrinho}">
+        <StandardListItem
+          id="listaitens"
+          title="{produto/nome}"
+          description="{= 'Quantidade: ' + ${quantidade}}"
+          info="{= 'R$ ' + ${produto/preco}}"
+          icon="{produto/imagemURL}"
+          iconInset="false"
+        />
       </List>
+
     </content>
 
     <footer>
       <Toolbar id="toolbar">
+        <Text id="total" text="{= 'Total: R$ ' + ${total>/valorTotal} }" />
         <ToolbarSpacer id="toolspacer" />
         <Button
           id="finalizarButton"
@@ -45,6 +41,7 @@
           press=".onFinalizar" />
       </Toolbar>
     </footer>
+
 
   </Page>
 </mvc:View>

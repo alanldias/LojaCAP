@@ -12,6 +12,7 @@ sap.ui.define([
       this.carrinhoID = "8b0a61b5-68e0-4dc1-8eb9-c4d93d69a6ac"; // substituir por ID real
     },
 
+    
     onComprar: function (oEvent) {
       const oModel = this.getView().getModel();
       const oProduto = oEvent.getSource().getBindingContext().getObject();
@@ -24,27 +25,27 @@ sap.ui.define([
 
       oListBinding.requestContexts().then(aContexts => {
         if (aContexts.length > 0) {
+          // Já existe no carrinho: atualizar quantidade
           const oContext = aContexts[0];
           const oData = oContext.getObject();
           oContext.setProperty("quantidade", oData.quantidade + 1);
-          oModel.submitBatch().then(() => {
-            MessageToast.show("Quantidade atualizada no carrinho.");
-          });
+          MessageToast.show("Quantidade atualizada no carrinho!");
         } else {
-          oModel.bindContext("/ItensCarrinho").create({
+          // Novo item no carrinho
+          const oBinding = oModel.bindList("/ItensCarrinho");
+          oBinding.create({
             carrinho_ID: sCarrinhoID,
             produto_ID: oProduto.ID,
             quantidade: 1
           });
-          
-          
           MessageToast.show("Produto adicionado ao carrinho!");
+
         }
       }).catch(err => {
-        console.error("Erro ao consultar carrinho:", err);
-        MessageToast.show("Erro ao adicionar ao carrinho.");
+        MessageToast.show("Erro ao verificar carrinho: " + err.message);
       });
     },
+
 
     onIrParaCarrinho: function () {
       this.getOwnerComponent().getRouter().navTo("carrinho");

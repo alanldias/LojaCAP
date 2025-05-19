@@ -7,7 +7,7 @@ service ShopService {
   entity Clientes   as projection on shop.Cliente;
   entity Carrinhos  as projection on shop.Carrinho;
   entity Pedidos    as projection on shop.Pedido;
-
+  entity ItensCarrinho as projection on shop.ItemCarrinho;
   action registerCliente(nome: String, email: String, senha: String) returns String;
   action loginCliente(email: String, senha: String) returns String;
 }

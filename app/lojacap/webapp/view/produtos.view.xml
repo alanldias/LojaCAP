@@ -12,6 +12,7 @@
         type="Transparent"
         press="onIrParaCarrinho"
         tooltip="Ver Carrinho"
+        text="Meu carrinho"
       />
       <f:GridList
         id="productGrid"

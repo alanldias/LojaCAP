@@ -87,23 +87,47 @@
         "transition": "slide",
         "type": "View",
         "viewType": "XML",
-        "path": "lojacap.view",
-        "async": true,
-        "viewPath": "lojacap.view"
+        "viewPath": "lojacap.view",
+        "async": true
       },
       "routes": [
         {
           "name": "Routehome-page",
-          "pattern": ":?query:",
-          "target": [
-            "Targethome-page"
-          ]
+          "pattern": "",
+          "target": ["Targethome-page"]
+        },
+        {
+          "name": "RouteLogin",
+          "pattern": "login",
+          "target": ["TargetLogin"]
+        },
+        {
+          "name": "RouteRegister",
+          "pattern": "register",
+          "target": ["TargetRegister"]
+        },
+        {
+          "name": "RoutePayment",
+          "pattern": "payment",
+          "target": ["TargetPayment"]
         }
       ],
       "targets": {
         "Targethome-page": {
-          "id": "home-page",
-          "name": "home-page"
+          "viewName": "home-page",
+          "viewId": "home-page"
+        },
+        "TargetLogin": {
+          "viewName": "login-page",
+          "viewId": "login-page"
+        },
+        "TargetRegister": {
+        "viewName": "register-page",
+        "viewId": "register-page"
+        },
+        "TargetPayment": {
+        "viewName": "payment-page",
+        "viewId": "payment-page"
         }
       }
     },

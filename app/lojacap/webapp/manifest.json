@@ -98,13 +98,35 @@
           "target": [
             "Targethome-page"
           ]
+        },
+        {
+          "name": "produtos",
+          "pattern": "produtos",
+          "target": [
+            "ProdutosTarget"
+          ]
+        },
+        {
+          "name": "carrinho",
+          "pattern": "carrinho",
+          "target": "Carrinho"
         }
+        
       ],
       "targets": {
         "Targethome-page": {
           "id": "home-page",
           "name": "home-page"
+        },
+        "ProdutosTarget": {
+        "id": "produtos",
+        "name": "produtos"
+        },
+        "Carrinho": {
+          "id": "carrinho",
+          "name": "carrinho"
         }
+
       }
     },
     "rootView": {

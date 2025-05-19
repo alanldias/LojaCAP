@@ -43,8 +43,9 @@ annotate service.Clientes with @(
     },
     UI.Identification : [
         {
-            $Type : 'UI.DataFieldForAction',
-            Action : 'ShopService.EntityContainer/loginCliente',
+            $Type : 'UI.DataFieldForIntentBasedNavigation',
+            SemanticObject: 'Login',
+            Action : 'display',
             Label : 'Logar',
         },
     ],

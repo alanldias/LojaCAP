@@ -1,11 +1,27 @@
 {
+  "welcomeFile": "/lojacap/index.html", 
+  "authenticationMethod": "none",
   "routes": [
     {
-      "source": "^/(.*)$",
+      "source": "^/lojacap/(.*)$",
       "target": "$1",
+      "destination": "lojacap"
+    },
+    {
+      "source": "^/cadastroclientes/(.*)$",
+      "target": "$1",
+      "destination": "cadastroclientes"
+    },
+    {
+      "source": "^/cadastroprodutos/(.*)$",
+      "target": "$1",
+      "destination": "cadastroprodutos"
+    },
+    {
+      "source": "^/odata/(.*)$",
+      "target": "/odata/$1",
       "destination": "srv-api",
       "csrfProtection": true
     }
-  ],
-  "welcomeFile": "/lojacap"
+  ]
 }

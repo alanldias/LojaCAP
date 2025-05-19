@@ -10,7 +10,7 @@ sap.ui.define([
       onInit: function () {},
 
       onGoToRegister: function () {
-        this.getOwnerComponent().getRouter().navTo("RouteRegister");
+        window.location.href = "/cadastroclientes/index.html";
       },
   
       onLoginPress: function () {

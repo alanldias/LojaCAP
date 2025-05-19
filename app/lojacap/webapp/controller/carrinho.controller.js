@@ -36,7 +36,7 @@ sap.ui.define([
       const oTotalModel = this.getView().getModel("total");
       const sCarrinhoID = this.carrinhoID;
 
-      const oBinding = oModel.bindList("/ItensCarrinho", null, null, [
+      const oBinding = oModel.bindList("/ItemCarrinho", null, null, [
         new Filter("carrinho_ID", FilterOperator.EQ, sCarrinhoID)
       ]);
 
@@ -75,7 +75,7 @@ sap.ui.define([
       });
     
       oList.bindItems({
-        path: "/ItensCarrinho",
+        path: "/ItemCarrinho",
         filters: [
           new Filter("carrinho_ID", FilterOperator.EQ, this.carrinhoID)
         ],

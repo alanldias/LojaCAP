@@ -17,7 +17,7 @@
     </headerContent>
 
     <content>
-      <List mode="Delete" delete=".onRemoverItem" id="lista" items="{/ItensCarrinho}">
+      <List mode="Delete" delete=".onRemoverItem" id="lista" items="{/ItemCarrinho}">
         <StandardListItem
           id="listaitens"
           title="{produto/nome}"

@@ -18,7 +18,7 @@ sap.ui.define([
       const oProduto = oEvent.getSource().getBindingContext().getObject();
       const sCarrinhoID = this.carrinhoID;
 
-      const oListBinding = oModel.bindList("/ItensCarrinho", null, null, [
+      const oListBinding = oModel.bindList("/ItemCarrinho", null, null, [
         new Filter("carrinho_ID", FilterOperator.EQ, sCarrinhoID),
         new Filter("produto_ID", FilterOperator.EQ, oProduto.ID)
       ]);
@@ -32,7 +32,7 @@ sap.ui.define([
           MessageToast.show("Quantidade atualizada no carrinho!");
         } else {
           // Novo item no carrinho
-          const oBinding = oModel.bindList("/ItensCarrinho");
+          const oBinding = oModel.bindList("/ItemCarrinho");
           oBinding.create({
             carrinho_ID: sCarrinhoID,
             produto_ID: oProduto.ID,

@@ -1,0 +1,42 @@
+<mvc:View
+  controllerName="lojacap.controller.produtos"
+  xmlns="sap.m"
+  xmlns:f="sap.f"
+  xmlns:mvc="sap.ui.core.mvc">
+
+  <Page id="produtos" title="Catálogo de Produtos">
+    <content>
+      <Button
+        id="carrinhobtn"
+        icon="sap-icon://cart"
+        type="Transparent"
+        press="onIrParaCarrinho"
+        tooltip="Ver Carrinho"
+        text="Meu carrinho"
+      />
+      <f:GridList
+        id="productGrid"
+        items="{/Produtos}"
+        growing="true"
+        width="95%"
+        class="sapUiResponsiveMargin">
+
+        <f:GridListItem id="productItem">
+          <VBox id="productBox" width="100%" class="sapUiSmallMargin">
+            <Image
+              id="imagem"
+              src="{imagemURL}"
+              width="90%"
+              height="150px"
+              densityAware="false" />
+            <Text id="productName" text="{nome}" wrapping="true" />
+            <Text id="productPrice" text="{= 'R$ ' + ${preco}}" />
+            <Button id="buyButton" text="Comprar" type="Emphasized" press="onComprar" />
+          </VBox>
+        </f:GridListItem>
+
+      </f:GridList>
+
+    </content>
+  </Page>
+</mvc:View>

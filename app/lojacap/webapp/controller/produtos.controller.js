@@ -36,7 +36,8 @@ sap.ui.define([
           oBinding.create({
             carrinho_ID: sCarrinhoID,
             produto_ID: oProduto.ID,
-            quantidade: 1
+            quantidade: 1,
+            precoUnitario: oProduto.preco
           });
           MessageToast.show("Produto adicionado ao carrinho!");
 

@@ -26,36 +26,29 @@ sap.ui.define([
       this.getOwnerComponent().getRouter().navTo("RouteProdutos");
     },
 
-    // _calcularTotal: function () {
-    //   const oModel = this.getView().getModel();
-    //   const oTotalModel = this.getView().getModel("total");
-    //   const sCarrinhoID = this.carrinhoID;
-
-    //   const oBinding = oModel.bindList("/ItemCarrinho", null, {
-    //     $$expand: {
-    //       produto: {}
-    //     }
-    //   }, [
-    //     new Filter("carrinho_ID", FilterOperator.EQ, sCarrinhoID)
-    //   ], null); // 👈 evita sorters
-      
-
-    //   oBinding.requestContexts().then(aContexts => {
-    //     let total = 0;
-
-    //     aContexts.forEach(oContext => {
-    //       const item = oContext.getObject();
-    //       const preco = item.produto?.preco || 0;
-    //       const quantidade = item.quantidade || 0;
-    //       total += preco * quantidade;
-    //     });
-
-    //     oTotalModel.setProperty("/valorTotal", total.toFixed(2));
-    //   }).catch(err => {
-    //     console.error("Erro ao calcular total:", err);
-    //   });
-    // },
-
+    _calcularTotal: function () {
+      const oModel = this.getView().getModel();
+      const oTotalModel = this.getView().getModel("total");
+      const sCarrinhoID = this.carrinhoID;
+    
+      const oBinding = oModel.bindList("/ItemCarrinho", null, null, [
+        new sap.ui.model.Filter("carrinho_ID", sap.ui.model.FilterOperator.EQ, sCarrinhoID)
+      ]);
+    
+      oBinding.requestContexts().then((aContexts) => {
+        let total = 0;
+        aContexts.forEach((oContext) => {
+          const item = oContext.getObject();
+          const preco = item.precoUnitario || 0;
+          const quantidade = item.quantidade || 0;
+          total += preco * quantidade;
+        });
+        oTotalModel.setProperty("/valorTotal", total.toFixed(2));
+      }).catch(err => {
+        console.error("Erro ao calcular total:", err);
+      });
+    },
+    
     _carregarItensCarrinho: function () {
       const oList = this.byId("lista");
 
@@ -72,12 +65,12 @@ sap.ui.define([
 
       oList.bindItems({
         path: "/ItemCarrinho",
+        templateShareable: false, // Ajuda a evitar bugs de cache/sorter
         filters: [
           new Filter("carrinho_ID", FilterOperator.EQ, this.carrinhoID)
         ],
         template: oTemplate
       });
-      
     },
 
     onRemoverItem: function (oEvent) {

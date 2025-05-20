@@ -1,7 +1,7 @@
 {
   "_version": "1.65.0",
   "sap.app": {
-    "id": "cadsatroclientes.cadastroclientes",
+    "id": "cadastroclientes.cadastroclientes",
     "type": "application",
     "i18n": "i18n/i18n.properties",
     "applicationVersion": {
@@ -60,7 +60,7 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "cadsatroclientes.cadastroclientes.i18n.i18n"
+          "bundleName": "cadastroclientes.cadastroclientes.i18n.i18n"
         }
       },
       "": {
@@ -106,17 +106,6 @@
               },
               "variantManagement": "Control",
               "showRelatedApps": false
-            }
-          }
-        },
-        "LoginPage": {
-          "type": "Component",
-          "id": "LoginPage",
-          "name": "sap.fe.templates.ObjectPage", 
-          "options": {
-            "settings": {
-            "editableHeaderContent": false,
-            "contextPath": "/Login" 
             }
           }
         }

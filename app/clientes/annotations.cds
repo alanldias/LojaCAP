@@ -10,6 +10,7 @@ annotate service.Clientes with @(
             $Type : 'UI.DataField',
             Label : 'Nome',
             Value : nome,
+            ![@UI.Importance] : #High,
         },
         {
             $Type : 'UI.DataField',

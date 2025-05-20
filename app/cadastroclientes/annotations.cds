@@ -27,6 +27,12 @@ annotate service.Clientes with @(
             Label : '{i18n>Cadastrese}',
             Target : '@UI.FieldGroup#GeneratedGroup',
         },
+        {
+            $Type : 'UI.ReferenceFacet',
+            ID : 'LoginFacet',
+            Label : '{i18n>Login}',
+            Target : '@UI.Identification#LoginButton'
+        },
     ],
     UI.HeaderInfo : {
         TypeName : '{i18n>CadastroCliente}',
@@ -41,16 +47,15 @@ annotate service.Clientes with @(
         },
         TypeImageUrl : 'sap-icon://retail-store',
     },
-    UI.Identification : [
+   
+    UI.Identification #LoginButton : [
         {
-            $Type : 'UI.DataFieldForIntentBasedNavigation',
-            SemanticObject: 'Login',
-            Action : 'display',
-            Label : 'Logar',
+            $Type : 'UI.DataFieldWithUrl',
+            Label : 'Clique aqui para logar',
+            Value : 'Login',
+            Url : '/lojacap/index.html#login'
         },
     ],
-    UI.UpdateHidden : true,
-    UI.DeleteHidden : true,
 );
 
 annotate service.Clientes with {

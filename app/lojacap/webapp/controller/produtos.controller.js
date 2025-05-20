@@ -48,7 +48,7 @@ sap.ui.define([
 
 
     onIrParaCarrinho: function () {
-      this.getOwnerComponent().getRouter().navTo("carrinho");
+      this.getOwnerComponent().getRouter().navTo("RouteCarrinho");
     }
 
   });

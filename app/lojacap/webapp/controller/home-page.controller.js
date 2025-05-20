@@ -7,7 +7,7 @@ sap.ui.define([
         onInit() {
         },
         onIrParaProdutos: function () {
-            this.getOwnerComponent().getRouter().navTo("produtos"); 
+            this.getOwnerComponent().getRouter().navTo("RouteProdutos"); 
           }
     });
 });

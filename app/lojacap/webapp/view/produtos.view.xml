@@ -18,7 +18,6 @@
         id="productGrid"
         items="{/Produtos}"
         growing="true"
-        span="XL3 L4 M6 S12"
         width="95%"
         class="sapUiResponsiveMargin">
 

@@ -5,6 +5,9 @@ sap.ui.define([
 
     return Controller.extend("lojacap.controller.home-page", {
         onInit() {
-        }
+        },
+        onIrParaProdutos: function () {
+            this.getOwnerComponent().getRouter().navTo("RouteProdutos"); 
+          }
     });
 });

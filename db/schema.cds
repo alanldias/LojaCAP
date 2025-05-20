@@ -44,6 +44,7 @@ entity ItemCarrinho  : cuid, managed {
   carrinho      : Association to Carrinho not null;
   produto       : Association to Produto  not null;
   quantidade    : Integer                 not null;
+  precoUnitario : Decimal(10,2);
 }
 
 entity Pedido  : cuid, managed {

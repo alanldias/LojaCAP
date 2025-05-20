@@ -97,6 +97,16 @@
           "target": ["Targethome-page"]
         },
         {
+          "name": "RouteProdutos",
+          "pattern": "produtos",
+          "target": ["TargetProdutos"]
+        },
+        {
+          "name": "RouteCarrinho",
+          "pattern": "carrinho",
+          "target": ["TargetCarrinho"]
+        },
+        {
           "name": "RouteLogin",
           "pattern": "login",
           "target": ["TargetLogin"]
@@ -111,11 +121,20 @@
           "pattern": "payment",
           "target": ["TargetPayment"]
         }
+        
       ],
       "targets": {
         "Targethome-page": {
           "viewName": "home-page",
           "viewId": "home-page"
+        },
+        "TargetProdutos": {
+          "viewName": "produtos",
+          "viewId": "produtos"
+        },
+        "TargetCarrinho": {
+          "viewName": "carrinho",
+          "viewId": "carrinho"
         },
         "TargetLogin": {
           "viewName": "login-page",
@@ -129,6 +148,7 @@
         "viewName": "payment-page",
         "viewId": "payment-page"
         }
+
       }
     },
     "rootView": {

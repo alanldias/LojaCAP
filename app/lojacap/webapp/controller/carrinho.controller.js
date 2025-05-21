@@ -10,7 +10,13 @@ sap.ui.define([
   return Controller.extend("lojacap.controller.carrinho", {
 
     onInit: function () {
-      this.carrinhoID = "8b0a61b5-68e0-4dc1-8eb9-c4d93d69a6ac";
+      // Pega o carrinhoID do localStorage para manter o carrinho do usuário
+      this.carrinhoID = localStorage.getItem("carrinhoID");
+      if (!this.carrinhoID) {
+        MessageToast.show("Nenhum carrinho ativo encontrado.");
+        this.getOwnerComponent().getRouter().navTo("RouteProdutos");
+        return;
+      }
       const oTotalModel = new JSONModel({ valorTotal: 0 });
       this.getView().setModel(oTotalModel, "total");
       const oRouter = this.getOwnerComponent().getRouter();
@@ -30,11 +36,11 @@ sap.ui.define([
       const oModel = this.getView().getModel();
       const oTotalModel = this.getView().getModel("total");
       const sCarrinhoID = this.carrinhoID;
-    
+
       const oBinding = oModel.bindList("/ItemCarrinho", null, null, [
         new sap.ui.model.Filter("carrinho_ID", sap.ui.model.FilterOperator.EQ, sCarrinhoID)
       ]);
-    
+
       oBinding.requestContexts().then((aContexts) => {
         let total = 0;
         aContexts.forEach((oContext) => {
@@ -48,13 +54,13 @@ sap.ui.define([
         console.error("Erro ao calcular total:", err);
       });
     },
-    
+
     _carregarItensCarrinho: function () {
       const oList = this.byId("lista");
 
       const oTemplate = new sap.m.ObjectListItem({
         title: "{produto/nome}",
-        number: "{= 'R$ ' + ${produto/preco} }",
+        number: "{= 'R$ ' + ${precoUnitario} }",
         intro: "{= ${quantidade} + 'x'}",
         icon: "{produto/imagemURL}",
         type: "Inactive",
@@ -65,7 +71,7 @@ sap.ui.define([
 
       oList.bindItems({
         path: "/ItemCarrinho",
-        templateShareable: false, // Ajuda a evitar bugs de cache/sorter
+        templateShareable: false,
         filters: [
           new Filter("carrinho_ID", FilterOperator.EQ, this.carrinhoID)
         ],
@@ -86,8 +92,8 @@ sap.ui.define([
     },
 
     onFinalizar: function () {
+      console.log(this.carrinhoID)
       MessageToast.show("Compra finalizada!");
     }
-
   });
 });

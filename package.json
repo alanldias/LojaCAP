@@ -27,7 +27,9 @@
     "deploy": "cf deploy mta_archives/archive.mtar --retries 1",
     "watch-cadastroclientes": "cds watch --open cadastroclientes/webapp/index.html?sap-ui-xx-viewCache=false",
     "watch-cadastroprodutos": "cds watch --open cadastroprodutos/webapp/index.html?sap-ui-xx-viewCache=false",
-    "watch-clientes": "cds watch --open clientes/webapp/index.html?sap-ui-xx-viewCache=false"
+    "watch-clientes": "cds watch --open clientes/webapp/index.html?sap-ui-xx-viewCache=false",
+    "watch-produtos": "cds watch --open produtos/webapp/index.html?sap-ui-xx-viewCache=false",
+    "watch-cadastrese": "cds watch --open cadastrese/webapp/index.html?sap-ui-xx-viewCache=false"
   },
   "cds": {
     "requires": {
@@ -44,6 +46,9 @@
   "sapux": [
     "app/cadastroclientes",
     "app/cadastroprodutos",
-    "app/clientes"
+    "app/clientes",
+    "app/clientes",
+    "app/produtos",
+    "app/cadastrese"
   ]
 }

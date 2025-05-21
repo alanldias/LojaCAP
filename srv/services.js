@@ -22,29 +22,37 @@ module.exports = cds.service.impl(async function (srv) {
     return token;
   });
 
-  // ==== registerCliente ====
-  srv.on('registerCliente', async (req) => {
+  srv.before(['CREATE', 'UPDATE'], ['Clientes','Cadastrese'], async (req) => {
     const { nome, email, senha } = req.data;
     console.log("📥 Chamado registerCliente");
-
-    if (!nome || !email || !senha) {
-      req.error(400, "Todos os campos são obrigatórios.");
+ 
+    // Validação: nome com pelo menos 6 caracteres
+    if (nome.length < 6) {
+      return req.error(400, "O nome deve ter pelo menos 6 caracteres.");
     }
-
+ 
+    // Validação: senha com pelo menos 6 caracteres
+    if (senha.length < 6) {
+      return req.error(400, "A senha deve ter pelo menos 6 caracteres.");
+    }
+ 
+    // Validação: formato do e-mail (básico)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return req.error(400, "Formato de e-mail inválido.");
+    }
+ 
+    // Validação: senha com letras e números (opcional, força mínima)
+    const senhaFraca = !/\d/.test(senha) || !/[a-zA-Z]/.test(senha);
+    if (senhaFraca) {
+      return req.error(400, "A senha deve conter letras e números.");
+    }
+ 
+    // Validação: e-mail duplicado
     const existente = await SELECT.one.from(Clientes).where({ email });
     if (existente) {
-      req.error(400, "E-mail já está em uso.");
+      return req.error(400, "Este e-mail já está em uso.");
     }
-
-    const novoCliente = await INSERT.into(Clientes).entries({ nome, email, senha });
-
-    const token = jwt.sign(
-      { id: novoCliente.ID, email },
-      'naotenhoenventaoissovaisersupersecreto',
-      { expiresIn: '1h' }
-    );
-
-    return token;
   });
 
   // ==== realizarPagamento ====

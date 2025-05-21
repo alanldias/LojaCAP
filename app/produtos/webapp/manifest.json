@@ -1,7 +1,7 @@
 {
   "_version": "1.65.0",
   "sap.app": {
-    "id": "clientes.clientes",
+    "id": "produtos.produtos",
     "type": "application",
     "i18n": "i18n/i18n.properties",
     "applicationVersion": {
@@ -13,7 +13,7 @@
     "sourceTemplate": {
       "id": "@sap/generator-fiori:lrop",
       "version": "1.17.5",
-      "toolsId": "652abfa8-71ea-4077-9d5d-768f75102f7e"
+      "toolsId": "4f62c170-e8e8-4319-9634-bb7fbe858169"
     },
     "dataSources": {
       "mainService": {
@@ -50,8 +50,7 @@
         "sap.m": {},
         "sap.ui.core": {},
         "sap.fe.templates": {},
-        "sap.f": {},
-        "sap.fe.macros": {}
+        "sap.f": {}
       }
     },
     "contentDensities": {
@@ -62,7 +61,7 @@
       "i18n": {
         "type": "sap.ui.model.resource.ResourceModel",
         "settings": {
-          "bundleName": "clientes.clientes.i18n.i18n"
+          "bundleName": "produtos.produtos.i18n.i18n"
         }
       },
       "": {
@@ -85,7 +84,7 @@
     "routing": {
       "config": {
         "flexibleColumnLayout": {
-          "defaultTwoColumnLayoutType": "TwoColumnsBeginExpanded",
+          "defaultTwoColumnLayoutType": "TwoColumnsMidExpanded",
           "defaultThreeColumnLayoutType": "ThreeColumnsMidExpanded"
         },
         "routerClass": "sap.f.routing.Router"
@@ -93,45 +92,44 @@
       "routes": [
         {
           "pattern": ":?query:",
-          "name": "ClientesList",
+          "name": "ProdutosList",
           "target": [
-            "ClientesList"
+            "ProdutosList"
           ]
         },
         {
-          "pattern": "Clientes({key}):?query:",
-          "name": "ClientesObjectPage",
+          "pattern": "Produtos({key}):?query:",
+          "name": "ProdutosObjectPage",
           "target": [
-            "ClientesList",
-            "ClientesObjectPage"
+            "ProdutosList",
+            "ProdutosObjectPage"
           ]
         }
       ],
       "targets": {
-        "ClientesList": {
+        "ProdutosList": {
           "type": "Component",
-          "id": "ClientesList",
+          "id": "ProdutosList",
           "name": "sap.fe.templates.ListReport",
           "options": {
             "settings": {
-              "contextPath": "/Clientes",
+              "contextPath": "/Produtos",
               "variantManagement": "Control",
               "navigation": {
-                "Clientes": {
+                "Produtos": {
                   "detail": {
-                    "route": "ClientesObjectPage"
+                    "route": "ProdutosObjectPage"
                   }
                 }
               },
               "controlConfiguration": {
                 "@com.sap.vocabularies.UI.v1.LineItem": {
                   "tableSettings": {
-                    "type": "ResponsiveTable",
-                    "disableCopyToClipboard": false
+                    "type": "ResponsiveTable"
                   },
                   "actions": {
-                    "Imprimir": {
-                      "press": "clientes.clientes.ext.controller.Imprimir.imprimirClientes",
+                    "ImprimirProdutos": {
+                      "press": "produtos.produtos.ext.controller.ImprimirProdutos.ImprimirProdutos",
                       "visible": true,
                       "enabled": true,
                       "requiresSelection": false,
@@ -146,7 +144,7 @@
                 "header": {
                   "actions": {
                     "Login": {
-                      "press": "clientes.clientes.ext.controller.Login.login",
+                      "press": "produtos.produtos.ext.controller.Login.Login",
                       "visible": true,
                       "enabled": true,
                       "text": "{i18n>login}"
@@ -159,14 +157,14 @@
           "controlAggregation": "beginColumnPages",
           "contextPattern": ""
         },
-        "ClientesObjectPage": {
+        "ProdutosObjectPage": {
           "type": "Component",
-          "id": "ClientesObjectPage",
+          "id": "ProdutosObjectPage",
           "name": "sap.fe.templates.ObjectPage",
           "options": {
             "settings": {
               "editableHeaderContent": false,
-              "contextPath": "/Clientes",
+              "contextPath": "/Produtos",
               "variantManagement": "Control",
               "content": {
                 "header": {
@@ -177,7 +175,7 @@
             }
           },
           "controlAggregation": "midColumnPages",
-          "contextPattern": "/Clientes({key})"
+          "contextPattern": "/Produtos({key})"
         }
       }
     },

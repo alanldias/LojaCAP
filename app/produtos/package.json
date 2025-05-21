@@ -1,7 +1,7 @@
 {
-  "name": "clientes",
+  "name": "produtos",
   "version": "0.0.1",
-  "description": "Página de clientes cadastrados",
+  "description": "An SAP Fiori application.",
   "keywords": [
     "ui5",
     "openui5",

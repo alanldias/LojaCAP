@@ -23,8 +23,9 @@ entity Produto : cuid, managed{
   descricao    : String;
   preco        : Decimal(10,2) not null;
   estoque      : Integer     not null;
+  @UI.IsImageURL
+  @Common.Label : '{i18n>Imagem}'
   imagemURL    : String;
-  
 }
 
 entity Cliente  : cuid, managed {

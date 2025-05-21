@@ -5,7 +5,7 @@ sap.ui.define([
 
     return {
         Login: function(oEvent) {
-            MessageToast.show("Custom handler invoked.");
+            window.location.href = '/lojacap/webapp/index.html#login'     
         }
     };
 });

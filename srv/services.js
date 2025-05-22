@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const cds = require('@sap/cds');
+const validator = require('validator')
+const { serve } = require('@sap/cds');
 
 module.exports = cds.service.impl(async function (srv) {
   const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos } = srv.entities;
@@ -21,6 +23,8 @@ module.exports = cds.service.impl(async function (srv) {
 
     return token;
   });
+
+
 
   srv.before(['CREATE', 'UPDATE'], 'Clientes', async (req) => {
     const { nome, email, senha } = req.data;
@@ -56,6 +60,27 @@ module.exports = cds.service.impl(async function (srv) {
     const existente = await SELECT.one.from(Clientes).where({ email });
     if (existente) {
       return req.error(400, "Este e-mail já está em uso.");
+    }
+  });
+
+  srv.before(['CREATE','UPDATE'], 'Produtos', async (req) => {
+    const { nome, descricao, preco, estoque, imagemURL } = req.data;
+    const urlField = req.data.imagemURL;
+
+    if (!nome || !descricao || !preco || !estoque || !imagemURL){
+      return req.error(400, "Todos os campos são obrigatórios!")
+    }
+
+    if (preco < 0) {
+      return req.error(400, "O preço não pode ser negativo!")
+    }
+
+    if (estoque < 0) {
+      return req.error(400, "O estoque não pode estar negativo!")
+    }
+    
+    if (urlField && !validator.isURL(urlField)) {
+      return req.error(400, "A imagem deve conter uma URL válida")
     }
   });
 

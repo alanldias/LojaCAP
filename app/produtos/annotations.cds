@@ -41,11 +41,6 @@ annotate service.Produtos with @(
     UI.LineItem : [
         {
             $Type : 'UI.DataField',
-            Label : '{i18n>imagemURL}',
-            Value : imagemURL,
-        },
-        {
-            $Type : 'UI.DataField',
             Label : '{i18n>nome}',
             Value : nome,
         },
@@ -63,6 +58,12 @@ annotate service.Produtos with @(
             $Type : 'UI.DataField',
             Label : '{i18n>estoque}',
             Value : estoque,
+        },
+        {
+            $Type : 'UI.DataField',
+            Label : '{i18n>imagemURL}',
+            Value : imagemURL,
+            ![@UI.Hidden],
         },
     ],
     UI.HeaderInfo : {

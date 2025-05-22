@@ -28,7 +28,8 @@
     "watch-cadastroclientes": "cds watch --open cadastroclientes/webapp/index.html?sap-ui-xx-viewCache=false",
     "watch-cadastroprodutos": "cds watch --open cadastroprodutos/webapp/index.html?sap-ui-xx-viewCache=false",
     "watch-clientes": "cds watch --open clientes/webapp/index.html?sap-ui-xx-viewCache=false",
-    "watch-produtos": "cds watch --open produtos/webapp/index.html?sap-ui-xx-viewCache=false"
+    "watch-produtos": "cds watch --open produtos/webapp/index.html?sap-ui-xx-viewCache=false",
+    "watch-cadastrocliente": "cds watch --open cadastrocliente/webapp/index.html?sap-ui-xx-viewCache=false"
   },
   "cds": {
     "requires": {
@@ -46,6 +47,7 @@
     "app/cadastroclientes",
     "app/cadastroprodutos",
     "app/clientes",
-    "app/produtos"
+    "app/produtos",
+    "app/cadastrocliente"
   ]
 }

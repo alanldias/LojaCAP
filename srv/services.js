@@ -91,83 +91,88 @@ module.exports = cds.service.impl(async function (srv) {
   });
 
 
-  srv.on('mergeCarrinho', async (req) => {
-    const { carrinhoAnonimoID } = req.data;
-  
-    const cliente = await SELECT.one.from(Clientes).where({ createdBy: req.user.id });
-    if (!cliente) return req.error(401, "Cliente não identificado");
-  
+  this.on('mergeCarrinho', async (req) => {
+    const { carrinhoAnonimoID } = req.data; // ID do localStorage
+    if (!carrinhoAnonimoID) {
+      return req.error(400, "ID do carrinho anônimo não fornecido.");
+    }
+
+    const tx = cds.transaction(req); // Iniciar transação
+
+    const cliente = await tx.run(SELECT.one.from(Clientes).where({ /* userUUID: req.user.id OU */ createdBy: req.user.id }));
+    if (!cliente) {
+      return req.error(401, "Cliente não identificado ou não encontrado.");
+    }
     const clienteID = cliente.ID;
-  
-    const carrinhoDoCliente = await SELECT.one.from(Carrinhos).where({ cliente_ID: clienteID });
-  
+
+    // 2. Verificar se o cliente já possui um carrinho
+    let carrinhoDoCliente = await tx.run(SELECT.one.from(Carrinhos).where({ cliente_ID: clienteID }));
+
+    // 3. Buscar o carrinho anônimo pelo ID fornecido
+    // Certifique-se de que ele é realmente anônimo (cliente_ID é null)
+    const carrinhoAnonimo = await tx.run(SELECT.one.from(Carrinhos).where({ ID: carrinhoAnonimoID, cliente_ID: null }));
+
+    let idCarrinhoFinal = null;
+
     if (carrinhoDoCliente) {
-      // Cliente já tem carrinho → fazer merge
-      const itensAnonimos = await SELECT.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimoID });
-  
-      for (const item of itensAnonimos) {
-        const existente = await SELECT.one.from(ItemCarrinho).where({
-          carrinho_ID: carrinhoDoCliente.ID,
-          produto_ID: item.produto_ID
-        });
-  
-        if (existente) {
-          await UPDATE(ItemCarrinho)
-            .set({ quantidade: existente.quantidade + item.quantidade })
-            .where({ ID: existente.ID });
-        } else {
-          await INSERT.into(ItemCarrinho).entries({
+      // CASO A: Cliente já tem um carrinho.
+      idCarrinhoFinal = carrinhoDoCliente.ID;
+
+      if (carrinhoAnonimo && carrinhoAnonimo.ID !== carrinhoDoCliente.ID) {
+        const itensAnonimos = await tx.run(SELECT.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimo.ID }));
+
+        for (const itemAnonimo of itensAnonimos) {
+          const itemExistenteNoCarrinhoCliente = await tx.run(SELECT.one.from(ItemCarrinho).where({
             carrinho_ID: carrinhoDoCliente.ID,
-            produto_ID: item.produto_ID,
-            quantidade: item.quantidade,
-            precoUnitario: item.precoUnitario
-          });
+            produto_ID: itemAnonimo.produto_ID
+          }));
+
+          if (itemExistenteNoCarrinhoCliente) {
+            await tx.run(UPDATE(ItemCarrinho)
+              .set({ quantidade: itemExistenteNoCarrinhoCliente.quantidade + itemAnonimo.quantidade })
+              .where({ ID: itemExistenteNoCarrinhoCliente.ID }));
+          } else {
+            delete itemAnonimo.ID; // Garante novo ID para o item no novo carrinho
+            await tx.run(INSERT.into(ItemCarrinho).entries({
+              ...itemAnonimo, // Copia os campos relevantes (produto_ID, quantidade, precoUnitario)
+              carrinho_ID: carrinhoDoCliente.ID // Associa ao carrinho do cliente
+            }));
+          }
         }
+        await tx.run(DELETE.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimo.ID }));
+        await tx.run(DELETE.from(Carrinhos).where({ ID: carrinhoAnonimo.ID }));
+        console.log(`Itens do carrinho anônimo ${carrinhoAnonimo.ID} mesclados ao carrinho ${carrinhoDoCliente.ID} do cliente ${clienteID}. Carrinho anônimo deletado.`);
       }
-  
-      await DELETE.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimoID });
-      // await DELETE.from(Carrinhos).where({ ID: carrinhoAnonimoID });
-  
-      return novoCarrinhoID;
+      // Se não houver carrinho anônimo, ou for o mesmo, nada a fazer.
+      console.log("[BACKEND mergeCarrinho] CASO A - Preparando para retornar:", { carrinhoID: idCarrinhoFinal }, "(Tipo:", typeof idCarrinhoFinal, ")");
+      return { carrinhoID: idCarrinhoFinal };
+
     } else {
-      // Cliente ainda não tem carrinho
-      const carrinhoAnonimo = await SELECT.one.from(Carrinhos).where({ ID: carrinhoAnonimoID });
-  
+      // CASO B: Cliente NÃO tem um carrinho.
       if (carrinhoAnonimo) {
-        const novoCarrinhoID = cds.utils.uuid();
-  
-        await INSERT.into(Carrinhos).entries({
-          ID: novoCarrinhoID,
-          cliente_ID: clienteID
-        });
-  
-        const itensAnonimos = await SELECT.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimoID });
-  
-        for (const item of itensAnonimos) {
-          await INSERT.into(ItemCarrinho).entries({
-            carrinho_ID: novoCarrinhoID,
-            produto_ID: item.produto_ID,
-            quantidade: item.quantidade,
-            precoUnitario: item.precoUnitario
-          });
-        }
-  
-        await DELETE.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimoID });
-        await DELETE.from(Carrinhos).where({ ID: carrinhoAnonimoID });
-  
-        return novoCarrinhoID; // ✅ aqui também
+        await tx.run(UPDATE(Carrinhos)
+          .set({ cliente_ID: clienteID })
+          .where({ ID: carrinhoAnonimo.ID }));
+        idCarrinhoFinal = carrinhoAnonimo.ID;
+        console.log(`Carrinho anônimo ${carrinhoAnonimo.ID} associado ao cliente ${clienteID}.`);
+        // ----- LOG DE DEBUG ANTES DO RETURN (Passo 1 do diagnóstico) -----
+        console.log("[BACKEND mergeCarrinho] CASO B - Preparando para retornar:", { carrinhoID: idCarrinhoFinal }, "(Tipo:", typeof idCarrinhoFinal, ")");
+        return { carrinhoID: idCarrinhoFinal };
+
       } else {
-        // Não existe carrinho anônimo → cria um novo vazio
-        const novoCarrinhoID = cds.utils.uuid();
-  
-        await INSERT.into(Carrinhos).entries({
-          ID: novoCarrinhoID,
+        // CASO C: Cliente não tem carrinho E NÃO existe carrinho anônimo.
+        const novoCarrinho = {
+          ID: cds.utils.uuid(), // Servidor gera o ID
           cliente_ID: clienteID
-        });
-  
-        return novoCarrinhoID;
+        };
+        await tx.run(INSERT.into(Carrinhos).entries(novoCarrinho));
+        idCarrinhoFinal = novoCarrinho.ID;
+        console.log(`Novo carrinho ${idCarrinhoFinal} criado para o cliente ${clienteID}.`);
+
+        console.log("[BACKEND mergeCarrinho] CASO C - Preparando para retornar:", { carrinhoID: idCarrinhoFinal }, "(Tipo:", typeof idCarrinhoFinal, ")");
+        return { carrinhoID: idCarrinhoFinal };
       }
     }
-  });
+});
   
 });

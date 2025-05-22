@@ -1,6 +1,6 @@
 
 using from './lojacap/annotations';
 
-using from './cadastroclientes/annotations';
+using from './clientes/annotations';
 
-using from './cadastroprodutos/annotations';
+using from './produtos/annotations';

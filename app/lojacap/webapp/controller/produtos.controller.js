@@ -152,6 +152,9 @@ sap.ui.define([
 
     onIrParaCarrinho: function () {
       this.getOwnerComponent().getRouter().navTo("RouteCarrinho");
-    }
+    },
+    onVoltar: function () {
+      this.getOwnerComponent().getRouter().navTo("Routehome-page");
+    },
   });
 });

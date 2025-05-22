@@ -72,6 +72,14 @@ modules:
       - cadastroprodutoscadastroprodutos.zip
       name: cadastroprodutoscadastroprodutos
       target-path: app/
+    - artifacts:
+      - clientesclientes.zip
+      name: clientesclientes
+      target-path: app/
+    - artifacts:
+      - produtos.zip
+      name: produtos
+      target-path: app/
 - name: loja-portal-deployer
   type: com.sap.application.content
   path: app/portal
@@ -111,6 +119,26 @@ modules:
 - name: cadastroprodutoscadastroprodutos
   type: html5
   path: app/cadastroprodutos
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: clientesclientes
+  type: html5
+  path: app/clientes
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: produtos
+  type: html5
+  path: app/produtos
   build-parameters:
     build-result: dist
     builder: custom

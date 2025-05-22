@@ -5,6 +5,14 @@
   xmlns:mvc="sap.ui.core.mvc">
 
   <Page id="produtos" title="Catálogo de Produtos">
+    <headerContent>
+      <Button
+        id="btnVoltarP"
+        icon="sap-icon://nav-back"
+        text="Voltar"
+        type="Transparent"
+        press=".onVoltar" />
+    </headerContent>
     <content>
       <Button
         id="carrinhobtn"

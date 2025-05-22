@@ -6,3 +6,5 @@ using from './clientes/annotations';
 using from './produtos/annotations';
 
 using from './cadastrocliente/annotations';
+
+using from './cadastroproduto/annotations';

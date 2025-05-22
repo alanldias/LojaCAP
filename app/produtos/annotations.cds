@@ -70,7 +70,7 @@ annotate service.Produtos with @(
         TypeNamePlural : '{i18n>cadastroProdutos}',
         Title : {
             $Type : 'UI.DataField',
-            Value : nome,
+            Value : '{i18n>lojaCAP}',
         },
         Description : {
             $Type : 'UI.DataField',

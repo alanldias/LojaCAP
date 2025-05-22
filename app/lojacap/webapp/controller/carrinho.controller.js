@@ -10,7 +10,6 @@ sap.ui.define([
   return Controller.extend("lojacap.controller.carrinho", {
 
     onInit: function () {
-      // Pega o carrinhoID do localStorage para manter o carrinho do usuário
       this.carrinhoID = localStorage.getItem("carrinhoID");
       if (!this.carrinhoID) {
         MessageToast.show("Nenhum carrinho ativo encontrado.");
@@ -19,6 +18,7 @@ sap.ui.define([
       }
       const oTotalModel = new JSONModel({ valorTotal: 0 });
       this.getView().setModel(oTotalModel, "total");
+
       const oRouter = this.getOwnerComponent().getRouter();
       oRouter.getRoute("RouteCarrinho").attachPatternMatched(this._onRouteMatched, this);
     },
@@ -71,9 +71,12 @@ sap.ui.define([
 
       oList.bindItems({
         path: "/ItemCarrinho",
+        parameters: {
+          $expand: "produto"
+        },
         templateShareable: false,
         filters: [
-          new Filter("carrinho_ID", FilterOperator.EQ, this.carrinhoID)
+          new Filter("carrinho_ID", FilterOperator.EQ, String(this.carrinhoID))
         ],
         template: oTemplate
       });
@@ -92,8 +95,36 @@ sap.ui.define([
     },
 
     onFinalizar: function () {
-      console.log(this.carrinhoID)
-      MessageToast.show("Compra finalizada!");
+      const isLoggedIn = localStorage.getItem("logado") === "true";
+      const carrinhoID = this.carrinhoID;
+
+      if (!isLoggedIn) {
+        MessageToast.show("Você precisa estar logado para finalizar a compra.");
+        this.getOwnerComponent().getRouter().navTo("RouteLogin");
+        return;
+      }
+
+      const oModel = this.getOwnerComponent().getModel();
+      const oAction = oModel.bindContext("/mergeCarrinho(...)");
+      oAction.setParameter("carrinhoAnonimoID", carrinhoID);
+
+      oAction.execute().then(() => {
+        const result = oAction.getBoundContext().getObject();
+        const novoCarrinhoID = result?.value;
+
+        if (!novoCarrinhoID || typeof novoCarrinhoID !== "string") {
+          MessageToast.show("Carrinho retornado inválido!");
+          return;
+        }
+
+        localStorage.setItem("carrinhoID", novoCarrinhoID);
+        this.carrinhoID = novoCarrinhoID;
+
+        MessageToast.show("Carrinho mesclado com sucesso!");
+        this.getOwnerComponent().getRouter().navTo("RoutePagamento");
+      }).catch((err) => {
+        MessageToast.show("Erro ao mesclar carrinho: " + err.message);
+      });
     }
   });
 });

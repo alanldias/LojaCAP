@@ -29,20 +29,20 @@ sap.ui.define([
         oAction.setParameter("senha", senha);
       
         oAction.execute().then(() => {
-            const token = oAction.getBoundContext().getObject();
-          
-            if (!token) {
-                MessageBox.error("E-mail ou senha inválidos.");
-                return;
-              }
-              
-              localStorage.setItem("token", token);
-              MessageToast.show("Login realizado!");
-              this.getOwnerComponent().getRouter().navTo("Routehome-page");
-          }).catch((err) => {
-            MessageBox.error("Erro ao fazer login: " + err.message);
-            oAction.resetChanges(); // limpa o binding
-          });          
+          const response = oAction.getBoundContext().getObject();
+          const result = response?.value; // <- agora sim!
+    if (!result || result !== "OK") {
+            MessageBox.error("E-mail ou senha inválidos.");
+            return;
+          }
+        
+          localStorage.setItem("logado", "true"); // <- é isso que o carrinho vai verificar
+          MessageToast.show("Login realizado!");
+          this.getOwnerComponent().getRouter().navTo("Routehome-page");
+        }).catch((err) => {
+          MessageBox.error("Erro ao fazer login: " + err.message);
+          oAction.resetChanges();
+        });      
       }
     });
 

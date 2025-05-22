@@ -9,15 +9,28 @@ sap.ui.define([
   return Controller.extend("lojacap.controller.produtos", {
 
     onInit: function () {
-      // Tenta pegar carrinhoID do localStorage, senão gera e cria um novo carrinho
+      const oModel = this.getView().getModel();
       let carrinhoID = localStorage.getItem("carrinhoID");
-      if (!carrinhoID) {
-        carrinhoID = this._gerarUUID();
-        localStorage.setItem("carrinhoID", carrinhoID);
-        // Cria o carrinho no backend
-        this.getView().getModel().create("/Carrinho", { ID: carrinhoID });
+    
+      if (carrinhoID) {
+        this.carrinhoID = carrinhoID; // <- Garante que ele é atribuído mesmo que já exista
+        return;
       }
-      this.carrinhoID = carrinhoID;
+    
+      carrinhoID = this._gerarUUID();
+      localStorage.setItem("carrinhoID", carrinhoID);
+      this.carrinhoID = carrinhoID; // <- Atribui o carrinhoID aqui também
+    
+      // Cria o carrinho no back
+      oModel.create("/Carrinhos", { ID: carrinhoID }, {
+        success: function () {
+          console.log("✅ Carrinho criado com sucesso:", carrinhoID);
+        },
+        error: function (err) {
+          console.error("❌ Erro ao criar carrinho:", err);
+          sap.m.MessageToast.show("Erro ao criar carrinho: " + err.message);
+        }
+      });
     },
 
     _gerarUUID: function () {
@@ -32,27 +45,30 @@ sap.ui.define([
       const oModel = this.getView().getModel();
       const oProduto = oEvent.getSource().getBindingContext().getObject();
       const sCarrinhoID = this.carrinhoID;
-
+    
+      if (!sCarrinhoID) {
+        MessageToast.show("Carrinho não inicializado!");
+        return;
+      }
+    
       const oListBinding = oModel.bindList("/ItemCarrinho", null, null, [
         new Filter("carrinho_ID", FilterOperator.EQ, sCarrinhoID),
         new Filter("produto_ID", FilterOperator.EQ, oProduto.ID)
       ]);
-
+    
       oListBinding.requestContexts().then(aContexts => {
         if (aContexts.length > 0) {
-          // Já existe no carrinho: atualizar quantidade
           const oContext = aContexts[0];
           const oData = oContext.getObject();
           oContext.setProperty("quantidade", oData.quantidade + 1);
           MessageToast.show("Quantidade atualizada no carrinho!");
         } else {
-          // Novo item no carrinho (incluindo precoUnitario já aqui!)
           const oBinding = oModel.bindList("/ItemCarrinho");
           oBinding.create({
             carrinho_ID: sCarrinhoID,
             produto_ID: oProduto.ID,
             quantidade: 1,
-            precoUnitario: oProduto.preco // Salva o preço atual do produto!
+            precoUnitario: oProduto.preco
           });
           MessageToast.show("Produto adicionado ao carrinho!");
         }

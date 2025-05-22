@@ -9,43 +9,27 @@ module.exports = cds.service.impl(async function (srv) {
   // ==== loginCliente ====
   srv.on('loginCliente', async (req) => {
     const { email, senha } = req.data;
-
+  
     const user = await SELECT.one.from(Clientes).where({ email, senha });
-    if (!user) req.reject(401, "Login inválido");
-
-    const token = jwt.sign(
-      { id: user.ID, email },
-      'naotenhoenventaoissovaisersupersecreto',
-      { expiresIn: '1h' }
+    if (!user) {
+      req.reject(401, "Login inválido");
+    }
+  
+    // Atualiza createdBy com o usuário atual da sessão
+    await UPDATE(Clientes)
+      .set({}) // não precisa mudar nada além de atualizar o owner
+      .where({ ID: user.ID });
+  
+    // Associar esse cliente ao user.id da sessão
+    const result = await cds.run(
+      UPDATE('my.shop.Cliente')
+        .set({ createdBy: req.user.id })
+        .where({ ID: user.ID })
     );
-
-    return token;
+  
+    return "OK"; // simples resposta, nada de token
   });
 
-  // ==== registerCliente ====
-  srv.on('registerCliente', async (req) => {
-    const { nome, email, senha } = req.data;
-    console.log("📥 Chamado registerCliente");
-
-    if (!nome || !email || !senha) {
-      req.error(400, "Todos os campos são obrigatórios.");
-    }
-
-    const existente = await SELECT.one.from(Clientes).where({ email });
-    if (existente) {
-      req.error(400, "E-mail já está em uso.");
-    }
-
-    const novoCliente = await INSERT.into(Clientes).entries({ nome, email, senha });
-
-    const token = jwt.sign(
-      { id: novoCliente.ID, email },
-      'naotenhoenventaoissovaisersupersecreto',
-      { expiresIn: '1h' }
-    );
-
-    return token;
-  });
 
   // ==== realizarPagamento ====
   srv.on('realizarPagamento', async (req) => {
@@ -105,4 +89,85 @@ module.exports = cds.service.impl(async function (srv) {
 
     return pedidoCriadoID;
   });
+
+
+  srv.on('mergeCarrinho', async (req) => {
+    const { carrinhoAnonimoID } = req.data;
+  
+    const cliente = await SELECT.one.from(Clientes).where({ createdBy: req.user.id });
+    if (!cliente) return req.error(401, "Cliente não identificado");
+  
+    const clienteID = cliente.ID;
+  
+    const carrinhoDoCliente = await SELECT.one.from(Carrinhos).where({ cliente_ID: clienteID });
+  
+    if (carrinhoDoCliente) {
+      // Cliente já tem carrinho → fazer merge
+      const itensAnonimos = await SELECT.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimoID });
+  
+      for (const item of itensAnonimos) {
+        const existente = await SELECT.one.from(ItemCarrinho).where({
+          carrinho_ID: carrinhoDoCliente.ID,
+          produto_ID: item.produto_ID
+        });
+  
+        if (existente) {
+          await UPDATE(ItemCarrinho)
+            .set({ quantidade: existente.quantidade + item.quantidade })
+            .where({ ID: existente.ID });
+        } else {
+          await INSERT.into(ItemCarrinho).entries({
+            carrinho_ID: carrinhoDoCliente.ID,
+            produto_ID: item.produto_ID,
+            quantidade: item.quantidade,
+            precoUnitario: item.precoUnitario
+          });
+        }
+      }
+  
+      await DELETE.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimoID });
+      // await DELETE.from(Carrinhos).where({ ID: carrinhoAnonimoID });
+  
+      return novoCarrinhoID;
+    } else {
+      // Cliente ainda não tem carrinho
+      const carrinhoAnonimo = await SELECT.one.from(Carrinhos).where({ ID: carrinhoAnonimoID });
+  
+      if (carrinhoAnonimo) {
+        const novoCarrinhoID = cds.utils.uuid();
+  
+        await INSERT.into(Carrinhos).entries({
+          ID: novoCarrinhoID,
+          cliente_ID: clienteID
+        });
+  
+        const itensAnonimos = await SELECT.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimoID });
+  
+        for (const item of itensAnonimos) {
+          await INSERT.into(ItemCarrinho).entries({
+            carrinho_ID: novoCarrinhoID,
+            produto_ID: item.produto_ID,
+            quantidade: item.quantidade,
+            precoUnitario: item.precoUnitario
+          });
+        }
+  
+        await DELETE.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimoID });
+        await DELETE.from(Carrinhos).where({ ID: carrinhoAnonimoID });
+  
+        return novoCarrinhoID; // ✅ aqui também
+      } else {
+        // Não existe carrinho anônimo → cria um novo vazio
+        const novoCarrinhoID = cds.utils.uuid();
+  
+        await INSERT.into(Carrinhos).entries({
+          ID: novoCarrinhoID,
+          cliente_ID: clienteID
+        });
+  
+        return novoCarrinhoID;
+      }
+    }
+  });
+  
 });

@@ -30,8 +30,6 @@ module.exports = cds.service.impl(async function (srv) {
     return "OK"; // simples resposta, nada de token
   });
 
-
-  // ==== realizarPagamento ====
   srv.on('realizarPagamento', async (req) => {
     const { clienteID, tipoPagamento } = req.data;
 

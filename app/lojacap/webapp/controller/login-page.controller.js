@@ -10,7 +10,7 @@ sap.ui.define([
     onInit: function () {},
 
     onGoToRegister: function () {
-      window.location.href = "/cadastroclientes/index.html";
+      window.location.href = "/cadastrocliente/webapp/index.html";
     },
 
     // Marque a função como async

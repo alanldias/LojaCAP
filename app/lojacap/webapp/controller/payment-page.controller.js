@@ -171,6 +171,7 @@ sap.ui.define([
               oPaymentViewModel.setProperty("/itensNoCarrinho", false); // Reseta o estado da view
 
               this.getOwnerComponent().getRouter().navTo("Routehome-page"); // Ou para uma página de "Pedido Confirmado"
+              
 
           } catch (err) {
               MessageBox.error("Erro ao finalizar pedido: " + (err.message || "Erro desconhecido."));

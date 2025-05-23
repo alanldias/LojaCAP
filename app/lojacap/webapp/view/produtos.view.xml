@@ -41,12 +41,16 @@
        
       <content>
         <SearchField
-                  id="searchFieldProdutos"
-                  width="50%"
-                  placeholder="{i18n>searchProductPlaceholder}"
-                  search=".onSearchProduto"
-                  liveChange=".onSearchProdutoLive" />
-        <f:GridList
+            id="searchFieldProdutos"
+            width="50%"
+            placeholder="{i18n>searchProductPlaceholder}"
+            search=".onSearchProduto"
+            liveChange=".onSearchProdutoLive" />
+        
+        <SearchField
+            id="categorySearchField"
+            width="50%" placeholder="Buscar por Categoria..."
+            search=".onFilterCategory" liveChange=".onFilterCategory" class="sapUiSmallMarginTop"/> <f:GridList
           id="productGrid"
           items="{/Produtos}"
           growing="true"
@@ -63,6 +67,7 @@
                 />
               <Text id="productName" text="{nome}" wrapping="true" />
               <Text id="productPrice" text="{= 'R$ ' + ${preco}}" />
+              <ObjectStatus id="productItemCategory" text="{categoria}" /> 
               <Button id="buyButton" text="Comprar" type="Emphasized" press="onComprar" />
             </VBox>
           </f:GridListItem>

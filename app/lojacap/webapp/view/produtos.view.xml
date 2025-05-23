@@ -1,0 +1,90 @@
+<mvc:View
+  controllerName="lojacap.controller.produtos"
+  xmlns="sap.m"
+  xmlns:f="sap.f"
+  xmlns:mvc="sap.ui.core.mvc">
+
+  <Page id="produtos" title="Catálogo de Produtos">
+     <headerContent>
+            <Button
+                id="btnVoltarProdutos"
+                icon="sap-icon://nav-back"
+                tooltip="Voltar"
+                type="Transparent"
+                press=".onVoltar" /> <ToolbarSpacer id="spacerProdutos"/>
+
+            <Button
+                id="loginButtonProdutos"
+                text="{i18n>loginButtonText}" press=".onGoToLoginHeader"
+                type="Transparent"
+                visible="{headerModel>/loginButtonVisible}" />
+
+            <Button
+                id="cadastreseButtonHeader"
+                text="{i18n>cadastreseButtonText}"
+                press=".onIrCadastroClientes" type="Emphasized"
+                visible="{headerModel>/loginButtonVisible}" />
+
+            <Text
+                id="welcomeTextProdutos"
+                text="{= ${headerModel>/userName} ? (${i18n>welcomeHeaderPrefix} + ' ' + ${headerModel>/userName} + '!') : ''}"
+                visible="{headerModel>/welcomeTextVisible}"
+                class="sapUiSmallMarginBeginEnd sapMTitleStyleH6"/>
+
+            <Button
+                id="logoutButtonProdutos"
+                icon="sap-icon://log"
+                tooltip="{i18n>logoutButtonTooltip}" press=".onLogoutPressHeader"
+                type="Transparent"
+                visible="{headerModel>/logoutButtonVisible}" />
+
+            <Button
+                id="carrinhoBtnProdutos"
+                icon="sap-icon://cart"
+                tooltip="{i18n>irParaCarrinhoTooltip}" press=".onIrParaCarrinho"
+                type="Transparent" />
+      </headerContent>
+       
+      <content>
+      <HBox id="hbox" alignItems="Center" justifyContent="SpaceBetween">
+        <SearchField
+                  id="searchFieldProdutos"
+                  width="100%"
+                  placeholder="{i18n>searchProductPlaceholder}"
+                  search=".onSearchProduto"
+                  liveChange=".onSearchProdutoLive" />
+                  <Button
+                id="cadastrarProduto"
+                text="{i18n>viewCadastroProdutoButton}"
+                press=".onIrCadastroProdutos" type="Transparent"
+                visible="{headerModel>/logoutButtonVisible}"
+                width="100%"
+                icon="sap-icon://add" />
+                </HBox>
+        <f:GridList
+          id="productGrid"
+          items="{/Produtos}"
+          growing="true"
+          width="95%"
+          class="sapUiResponsiveMargin">
+
+          <f:GridListItem id="productItem">
+            <VBox id="productBox" width="100%" class="sapUiSmallMargin">
+              <Image
+                id="imagem"
+                src="{imagemURL}"
+                width="90%"
+                height="150px"
+                />
+              <Text id="productName" text="{nome}" wrapping="true" />
+              <Text id="productPrice" text="{= 'R$ ' + ${preco}}" />
+              <ObjectStatus id="productItemCategory" text="{categoria}" /> 
+              <Button id="buyButton" text="Comprar" type="Emphasized" press="onComprar" />
+            </VBox>
+          </f:GridListItem>
+
+        </f:GridList>
+
+      </content>
+  </Page>
+</mvc:View>

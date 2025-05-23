@@ -1,2 +1,12 @@
 {
+    "SAP HANA Database Explorer.ShowXsAdvancedConnections": true,
+    "SAP HANA Database Explorer.UseObjectsDefinitionForSqlGeneration.RetentionTime": 7,
+    "sqltools.connections": [
+        {
+            "previewLimit": 50,
+            "driver": "SQLite",
+            "name": "db",
+            "database": "db/sqlite.db"
+        }
+    ]
 }

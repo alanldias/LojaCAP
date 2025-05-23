@@ -1,0 +1,156 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "cadastroproduto.cadastroproduto",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:feop",
+      "version": "1.17.5",
+      "toolsId": "6085a1d7-6f0a-4cf8-8f1a-86916fe1d316"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/odata/v4/shop/",
+        "type": "OData",
+        "settings": {
+          "annotations": [],
+          "odataVersion": "4.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.136.1",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.fe.templates": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "cadastroproduto.cadastroproduto.i18n.i18n"
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      },
+      "@i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "uri": "i18n/i18n.properties"
+      }
+    },
+    "resources": {
+      "css": []
+    },
+    "routing": {
+      "config": {},
+      "routes": [
+        {
+          "pattern": "Produtos({key}):?query:",
+          "name": "ProdutosObjectPage",
+          "target": "ProdutosObjectPage"
+        }
+      ],
+      "targets": {
+        "ProdutosObjectPage": {
+          "type": "Component",
+          "id": "ProdutosObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "editableHeaderContent": false,
+              "contextPath": "/Produtos",
+              "content": {
+                "header": {
+                  "visible": true,
+                  "anchorBarVisible": false,
+                  "actions": {
+                    "Login": {
+                      "press": "cadastroproduto.cadastroproduto.ext.controller.Login.Login",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "{i18n>login}"
+                    },
+                    "Home": {
+                      "press": "cadastroproduto.cadastroproduto.ext.controller.Login.voltarInicio",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "{i18n>home}",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "Login"
+                      }
+                    },
+                    "verClientes": {
+                      "press": "cadastroproduto.cadastroproduto.ext.controller.Login.irClientesCadastrados",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "{i18n>clientescadastrados}",
+                      "position": {
+                        "placement": "Before",
+                        "anchor": "Login"
+                      }
+                    },
+                    "verProdutos": {
+                      "press": "cadastroproduto.cadastroproduto.ext.controller.Login.verProdutosCadastrados",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "{i18n>produtoscadastrados}",
+                      "position": {
+                        "placement": "Before",
+                        "anchor": "verClientes"
+                      }
+                    }
+                  }
+                }
+              },
+              "variantManagement": "Control"
+            }
+          }
+        }
+      }
+    }
+  },
+  "sap.fiori": {
+    "registrationIds": [],
+    "archeType": "transactional"
+  }
+}

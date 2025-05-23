@@ -1,0 +1,47 @@
+<mvc:View
+  controllerName="lojacap.controller.carrinho"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  displayBlock="true">
+
+  <Page
+    id="carrinhoPage"
+    title="Meu Carrinho">
+    <headerContent>
+      <Button
+        id="btnVoltar"
+        icon="sap-icon://nav-back"
+        text="Voltar"
+        type="Transparent"
+        press=".onVoltarParaProdutos" />
+    </headerContent>
+
+    <content>
+      <List mode="Delete" delete=".onRemoverItem" id="lista" items="{/ItemCarrinho}">
+        <StandardListItem
+          id="listaitens"
+          title="{produto/nome}"
+          description="{= 'Quantidade: ' + ${quantidade}}"
+          info="{= 'R$ ' + ${produto/preco}}"
+          icon="{produto/imagemURL}"
+          iconInset="false"
+        />
+      </List>
+
+    </content>
+
+    <footer>
+      <Toolbar id="toolbar">
+        <Text id="total" text="{= 'Total: R$ ' + ${total>/valorTotal} }" />
+        <ToolbarSpacer id="toolspacer" />
+        <Button
+          id="finalizarButton"
+          text="Finalizar Compra"
+          type="Emphasized"
+          press=".onFinalizar" />
+      </Toolbar>
+    </footer>
+
+
+  </Page>
+</mvc:View>

@@ -1,133 +1,245 @@
 _schema-version: 3.3.0
 ID: loja
+description: A simple CAP project.
 version: 1.0.0
-description: "A simple CAP project."
+modules:
+- name: loja-srv
+  type: nodejs
+  path: gen/srv
+  requires:
+  - name: loja-auth
+  - name: loja-db
+  - name: loja-connectivity
+  - name: loja-destination
+  provides:
+  - name: srv-api
+    properties:
+      srv-url: ${default-url}
+  parameters:
+    buildpack: nodejs_buildpack
+    instances: 1
+  build-parameters:
+    builder: npm-ci
+- name: loja-db-deployer
+  type: hdb
+  path: gen/db
+  requires:
+  - name: loja-db
+  parameters:
+    buildpack: nodejs_buildpack
+- name: loja
+  type: approuter.nodejs
+  path: app/router
+  requires:
+  - name: srv-api
+    group: destinations
+    properties:
+      forwardAuthToken: true
+      name: srv-api
+      url: ~{srv-url}
+  - name: loja-auth
+  - name: loja-destination
+  - name: loja-html5-runtime
+  - name: loja-portal
+  provides:
+  - name: app-api
+    properties:
+      app-protocol: ${protocol}
+      app-uri: ${default-uri}
+  parameters:
+    disk-quota: 256M
+    keep-existing-routes: true
+    memory: 256M
+- name: loja-app-deployer
+  type: com.sap.application.content
+  path: gen
+  requires:
+  - name: loja-html5-repo-host
+    parameters:
+      content-target: true
+  build-parameters:
+    build-result: app/
+    requires:
+    - artifacts:
+      - lojacap.zip
+      name: lojacap
+      target-path: app/
+    - artifacts:
+      - cadsatroclientescadastroclientes.zip
+      name: cadsatroclientescadastroclientes
+      target-path: app/
+    - artifacts:
+      - cadastroprodutoscadastroprodutos.zip
+      name: cadastroprodutoscadastroprodutos
+      target-path: app/
+    - artifacts:
+      - clientesclientes.zip
+      name: clientesclientes
+      target-path: app/
+    - artifacts:
+      - produtos.zip
+      name: produtos
+      target-path: app/
+    - artifacts:
+      - cadastroclientecadastrocliente.zip
+      name: cadastroclientecadastrocliente
+      target-path: app/
+    - artifacts:
+      - cadastroprodutocadastroproduto.zip
+      name: cadastroprodutocadastroproduto
+      target-path: app/
+- name: loja-portal-deployer
+  type: com.sap.application.content
+  path: app/portal
+  requires:
+  - name: loja-portal
+    parameters:
+      content-target: true
+      service-key:
+        config:
+          content-endpoint: developer
+        name: loja-portal-key
+  - name: loja-auth
+  - name: loja-html5-repo-host
+  - name: loja-app-deployer
+  deployed-after:
+  - loja-app-deployer
+- name: lojacap
+  type: html5
+  path: app/lojacap
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: cadsatroclientescadastroclientes
+  type: html5
+  path: app/cadastroclientes
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: cadastroprodutoscadastroprodutos
+  type: html5
+  path: app/cadastroprodutos
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: clientesclientes
+  type: html5
+  path: app/clientes
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: produtos
+  type: html5
+  path: app/produtos
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: cadastroclientecadastrocliente
+  type: html5
+  path: app/cadastrocliente
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+- name: cadastroprodutocadastroproduto
+  type: html5
+  path: app/cadastroproduto
+  build-parameters:
+    build-result: dist
+    builder: custom
+    commands:
+    - npm install
+    - npm run build:cf
+    supported-platforms: []
+resources:
+- name: loja-auth
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      tenant-mode: dedicated
+      xsappname: loja-${org}-${space}
+    path: ./xs-security.json
+    service: xsuaa
+    service-plan: application
+- name: loja-db
+  type: com.sap.xs.hdi-container
+  parameters:
+    service: hana
+    service-plan: hdi-shared
+- name: loja-connectivity
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: connectivity
+    service-plan: lite
+- name: loja-destination
+  type: org.cloudfoundry.managed-service
+  parameters:
+    config:
+      HTML5Runtime_enabled: false
+      init_data:
+        instance:
+          destinations:
+          - Authentication: NoAuthentication
+            Name: ui5
+            ProxyType: Internet
+            Type: HTTP
+            URL: https://ui5.sap.com
+          - Authentication: NoAuthentication
+            HTML5.DynamicDestination: true
+            HTML5.ForwardAuthToken: true
+            Name: loja-srv-api
+            ProxyType: Internet
+            Type: HTTP
+            URL: ~{srv-api/srv-url}
+          existing_destinations_policy: update
+    service: destination
+    service-plan: lite
+  requires:
+  - name: srv-api
+- name: loja-html5-repo-host
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-host
+- name: loja-html5-runtime
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: html5-apps-repo
+    service-plan: app-runtime
+- name: loja-portal
+  type: org.cloudfoundry.managed-service
+  parameters:
+    service: portal
+    service-plan: standard
 parameters:
-  enable-parallel-deployments: true
   deploy_mode: html5-repo
+  enable-parallel-deployments: true
 build-parameters:
   before-all:
-    - builder: custom
-      commands:
-        - npm ci
-        - npx cds build --production
-modules:
-  - name: loja-srv
-    type: nodejs
-    path: gen/srv
-    parameters:
-      instances: 1
-      buildpack: nodejs_buildpack
-    build-parameters:
-      builder: npm-ci
-    provides:
-      - name: srv-api # required by consumers of CAP services (e.g. approuter)
-        properties:
-          srv-url: ${default-url}
-    requires:
-      - name: loja-auth
-      - name: loja-db
-      - name: loja-connectivity
-      - name: loja-destination
-
-  - name: loja-db-deployer
-    type: hdb
-    path: gen/db
-    parameters:
-      buildpack: nodejs_buildpack
-    requires:
-      - name: loja-db
-
-  - name: loja
-    type: approuter.nodejs
-    path: app/router
-    parameters:
-      keep-existing-routes: true
-      disk-quota: 256M
-      memory: 256M
-    requires:
-      - name: srv-api
-        group: destinations
-        properties:
-          name: srv-api # must be used in xs-app.json as well
-          url: ~{srv-url}
-          forwardAuthToken: true
-      - name: loja-auth
-      - name: loja-destination
-      - name: loja-html5-runtime
-      - name: loja-portal
-    provides:
-      - name: app-api
-        properties:
-          app-protocol: ${protocol}
-          app-uri: ${default-uri}
-
-  - name: loja-app-deployer
-    type: com.sap.application.content
-    path: gen
-    requires:
-      - name: loja-html5-repo-host
-        parameters:
-          content-target: true
-    build-parameters:
-      build-result: app/
-      requires:
-
-
-  - name: loja-portal-deployer
-    type: com.sap.application.content
-    path: app/portal
-    requires:
-      - name: loja-portal
-        parameters:
-          content-target: true
-          service-key:
-            name: loja-portal-key
-            config:
-              content-endpoint: developer
-      - name: loja-auth
-      - name: loja-html5-repo-host
-      - name: loja-app-deployer
-    deployed-after:
-      - loja-app-deployer
-resources:
-  - name: loja-auth
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: xsuaa
-      service-plan: application
-      path: ./xs-security.json
-      config:
-        xsappname: loja-${org}-${space}
-        tenant-mode: dedicated
-  - name: loja-db
-    type: com.sap.xs.hdi-container
-    parameters:
-      service: hana
-      service-plan: hdi-shared
-  - name: loja-connectivity
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: connectivity
-      service-plan: lite
-  - name: loja-destination
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: destination
-      service-plan: lite
-
-  - name: loja-html5-repo-host
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: html5-apps-repo
-      service-plan: app-host
-  - name: loja-html5-runtime
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: html5-apps-repo
-      service-plan: app-runtime
-  - name: loja-portal
-    type: org.cloudfoundry.managed-service
-    parameters:
-      service: portal
-      service-plan: standard
+  - builder: custom
+    commands:
+    - npm ci
+    - npx cds build --production

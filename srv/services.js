@@ -31,6 +31,52 @@ module.exports = cds.service.impl(async function (srv) {
     return "OK"; // simples resposta, nada de token
   });
 
+  srv.before(['CREATE', 'UPDATE'], 'Clientes', async (req) => {
+    const { nome, email, senha } = req.data;
+    console.log("📥 Chamado registerCliente");
+
+    if (!nome || !email || !senha) {
+      return req.error(400, "Todos os campos são obrigatórios")
+    }
+
+    // Validação: nome com pelo menos 6 caracteres
+    if (nome.length < 6) {
+      return req.error(400, "O nome deve ter pelo menos 6 caracteres.");
+    }
+
+    // Validação: senha com pelo menos 6 caracteres
+    if (senha.length < 6) {
+      return req.error(400, "A senha deve ter pelo menos 6 caracteres.");
+    }
+
+    // Validação: formato do e-mail (básico)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return req.error(400, "Formato de e-mail inválido.");
+    }
+  });
+
+  srv.before(['CREATE','UPDATE'], 'Produtos', async (req) => {
+    const { nome, descricao, preco, estoque, imagemURL } = req.data;
+    const urlField = req.data.imagemURL;
+
+    if (!nome || !descricao || !preco || !estoque || !imagemURL){
+      return req.error(400, "Todos os campos são obrigatórios!")
+    }
+
+    if (preco < 0) {
+      return req.error(400, "O preço não pode ser negativo!")
+    }
+
+    if (estoque < 0) {
+      return req.error(400, "O estoque não pode estar negativo!")
+    }
+    
+    if (urlField && !validator.isURL(urlField)) {
+      return req.error(400, "A imagem deve conter uma URL válida")
+    }
+  });
+
   srv.on('realizarPagamento', async (req) => {
     const { clienteID, tipoPagamento } = req.data;
 
@@ -172,6 +218,5 @@ module.exports = cds.service.impl(async function (srv) {
         return { carrinhoID: idCarrinhoFinal };
       }
     }
-});
-  
+  })
 });

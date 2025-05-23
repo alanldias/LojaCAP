@@ -50,7 +50,7 @@ annotate service.Clientes with @(
         TypeNamePlural : '{i18n>cadastroClientes}',
         Title : {
             $Type : 'UI.DataField',
-            Value : nome,
+            Value : '{i18n>lojaCAP}',
         },
     },
 );

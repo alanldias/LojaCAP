@@ -10,7 +10,8 @@
     "@sap/cds": "^8",
     "@sap/xssec": "^4",
     "express": "^4",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "validator": "^13.15.0"
   },
   "devDependencies": {
     "@cap-js/cds-types": "^0.10.0",
@@ -28,7 +29,9 @@
     "watch-cadastroclientes": "cds watch --open cadastroclientes/webapp/index.html?sap-ui-xx-viewCache=false",
     "watch-cadastroprodutos": "cds watch --open cadastroprodutos/webapp/index.html?sap-ui-xx-viewCache=false",
     "watch-clientes": "cds watch --open clientes/webapp/index.html?sap-ui-xx-viewCache=false",
-    "watch-produtos": "cds watch --open produtos/webapp/index.html?sap-ui-xx-viewCache=false"
+    "watch-produtos": "cds watch --open produtos/webapp/index.html?sap-ui-xx-viewCache=false",
+    "watch-cadastrocliente": "cds watch --open cadastrocliente/webapp/index.html?sap-ui-xx-viewCache=false",
+    "watch-cadastroproduto": "cds watch --open cadastroproduto/webapp/index.html?sap-ui-xx-viewCache=false"
   },
   "cds": {
     "requires": {
@@ -46,6 +49,8 @@
     "app/cadastroclientes",
     "app/cadastroprodutos",
     "app/clientes",
-    "app/produtos"
+    "app/produtos",
+    "app/cadastrocliente",
+    "app/cadastroproduto"
   ]
 }

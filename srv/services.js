@@ -1,5 +1,7 @@
 const jwt = require('jsonwebtoken');
 const cds = require('@sap/cds');
+const validator = require('validator')
+const { serve } = require('@sap/cds');
 
 module.exports = cds.service.impl(async function (srv) {
   const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos } = srv.entities;

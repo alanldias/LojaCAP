@@ -1,0 +1,1 @@
+using ShopService as service from '../../srv/services';

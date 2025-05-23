@@ -23,7 +23,6 @@ entity Produto : cuid, managed{
   descricao    : String;
   preco        : Decimal(10,2) not null;
   estoque      : Integer     not null;
-  @UI.IsImageURL
   imagemURL    : String;
 }
 

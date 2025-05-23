@@ -1,0 +1,3 @@
+ID,createdAt,createdBy,modifiedAt,modifiedBy,carrinho_ID,produto_ID,quantidade,precoUnitario
+810b1513-2c84-4f7a-a152-0b544e2d3fa1,2025-05-23T14:33:09.257Z,privileged,2025-05-23T14:33:09.257Z,privileged,ae8b0033-0338-40f8-89d0-192ef6d87fb3,47e2072b-d11a-432f-8e67-885f8785d25a,1,149.90
+bd32c620-2ea2-451f-8064-0c2ff905ab51,2025-05-23T14:33:08.635Z,privileged,2025-05-23T14:33:08.635Z,privileged,ae8b0033-0338-40f8-89d0-192ef6d87fb3,2ff86d8f-8193-4d16-b321-9d5f3e3a154e,1,89.90

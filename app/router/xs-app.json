@@ -8,14 +8,14 @@
       "destination": "lojacap"
     },
     {
-      "source": "^/cadastroclientes/(.*)$",
+      "source": "^/cadastrocliente/(.*)$",
       "target": "$1",
-      "destination": "cadastroclientes"
+      "destination": "cadastrocliente"
     },
     {
-      "source": "^/cadastroprodutos/(.*)$",
+      "source": "^/cadastroproduto/(.*)$",
       "target": "$1",
-      "destination": "cadastroprodutos"
+      "destination": "cadastroproduto"
     },
     {
       "source": "^/odata/(.*)$",

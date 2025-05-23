@@ -120,6 +120,23 @@ sap.ui.define([
             console.log("onSearchProdutoLive acionado com newValue:", sQuery);
         },
 
+        onFilterCategory: function (oEvent) {
+            const sQuery = oEvent.getParameter("query") || this.byId("categorySearchField").getValue();
+            const oList = this.byId("productGrid");
+            const oBinding = oList.getBinding("items");
+            let aFilters = [];
+        
+            if (sQuery && sQuery.length > 0) {
+                aFilters.push(new sap.ui.model.Filter({
+                    path: "categoria", // Nome do campo da categoria no backend
+                    operator: sap.ui.model.FilterOperator.Contains, // Ou EQ para busca exata
+                    value1: sQuery,
+                    caseSensitive: false
+                }));
+            }
+            oBinding.filter(aFilters);
+        },
+
         _updateHeaderState: function () {
             const isLoggedIn = localStorage.getItem("logado") === "true";
             let userName = localStorage.getItem("userName");

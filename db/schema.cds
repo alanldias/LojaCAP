@@ -24,6 +24,7 @@ entity Produto : cuid, managed{
   preco        : Decimal(10,2) not null;
   estoque      : Integer     not null;
   imagemURL    : String;
+  categoria   : String;
 }
 
 entity Cliente  : cuid, managed {

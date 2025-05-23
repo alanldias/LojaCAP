@@ -19,6 +19,12 @@
                 type="Transparent"
                 visible="{headerModel>/loginButtonVisible}" />
 
+            <Button
+                id="cadastreseButtonHeader"
+                text="{i18n>cadastreseButtonText}"
+                press=".onIrCadastroClientes" type="Emphasized"
+                visible="{headerModel>/loginButtonVisible}" />
+
             <Text
                 id="welcomeTextProdutos"
                 text="{= ${headerModel>/userName} ? (${i18n>welcomeHeaderPrefix} + ' ' + ${headerModel>/userName} + '!') : ''}"
@@ -40,12 +46,21 @@
       </headerContent>
        
       <content>
+      <HBox id="hbox" alignItems="Center" justifyContent="SpaceBetween">
         <SearchField
                   id="searchFieldProdutos"
-                  width="50%"
+                  width="100%"
                   placeholder="{i18n>searchProductPlaceholder}"
                   search=".onSearchProduto"
                   liveChange=".onSearchProdutoLive" />
+                  <Button
+                id="cadastrarProduto"
+                text="{i18n>viewCadastroProdutoButton}"
+                press=".onIrCadastroProdutos" type="Transparent"
+                visible="{headerModel>/logoutButtonVisible}"
+                width="100%"
+                icon="sap-icon://add" />
+                </HBox>
         <f:GridList
           id="productGrid"
           items="{/Produtos}"

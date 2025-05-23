@@ -41,6 +41,77 @@ sap.ui.define([
             }
         },
 
+        /**
+         * Chamado quando o usuário digita no SearchField (liveChange) ou pressiona Enter/busca (search).
+         * @param {sap.ui.base.Event} oEvent O objeto do evento.
+         */
+        _applySearchFilter: function (sQuery) {
+            var aFilters = [];
+            if (sQuery && sQuery.length > 0) {
+                // Criar um filtro para o campo 'nome' (ou o campo que você quer filtrar)
+                // O FilterOperator.Contains não é case-sensitive por padrão na maioria dos backends OData
+                // Se precisar de case-insensitive e o backend não suportar, pode ser mais complexo.
+                // Para OData V4, a sensibilidade a maiúsculas/minúsculas depende da implementação do serviço.
+                // A função 'contains' do OData V4 é geralmente case-insensitive.
+                var oNomeFilter = new Filter({
+                    path: "nome",
+                    operator: FilterOperator.Contains,
+                    value1: sQuery,
+                    caseSensitive: false // Para OData V4, o serviço decide. Isso é mais uma dica.
+                });
+                aFilters.push(oNomeFilter);
+
+                // Você pode adicionar filtros para outros campos aqui se desejar, por exemplo, descrição:
+                // var oDescricaoFilter = new Filter({
+                //     path: "descricao",
+                //     operator: FilterOperator.Contains,
+                //     value1: sQuery,
+                //     caseSensitive: false
+                // });
+                // aFilters.push(new Filter({ filters: [oNomeFilter, oDescricaoFilter], and: false })); // Filtra se nome OU descrição contêm
+            }
+
+            // Obter o binding da GridList
+            var oGridList = this.byId("productGrid");
+            if (!oGridList) {
+                console.error("GridList 'productGrid' não encontrada.");
+                return;
+            }
+            var oBinding = oGridList.getBinding("items");
+
+            if (oBinding) {
+                oBinding.filter(aFilters);
+                console.log("Filtros aplicados:", aFilters);
+            } else {
+                console.error("Binding 'items' da GridList não encontrado.");
+            }
+        },
+
+        /**
+         * Manipulador para o evento 'search' do SearchField.
+         * @param {sap.ui.base.Event} oEvent O objeto do evento.
+         */
+        onSearchProduto: function (oEvent) {
+            var sQuery = oEvent.getParameter("query");
+            // Se você quiser limpar o filtro quando o usuário limpar o campo de busca e pressionar enter
+            // if (!sQuery && oEvent.getParameter("clearButtonPressed")) {
+            // this._applySearchFilter("");
+            // return;
+            // }
+            this._applySearchFilter(sQuery);
+            console.log("onSearchProduto acionado com query:", sQuery);
+        },
+
+        /**
+         * Manipulador para o evento 'liveChange' do SearchField.
+         * @param {sap.ui.base.Event} oEvent O objeto do evento.
+         */
+        onSearchProdutoLive: function (oEvent) {
+            var sQuery = oEvent.getParameter("newValue"); // Para liveChange, é newValue
+            this._applySearchFilter(sQuery);
+            console.log("onSearchProdutoLive acionado com newValue:", sQuery);
+        },
+
         _updateHeaderState: function () {
             const isLoggedIn = localStorage.getItem("logado") === "true";
             let userName = localStorage.getItem("userName");
@@ -255,8 +326,7 @@ sap.ui.define([
             localStorage.removeItem("carrinhoID");
             MessageToast.show("Você foi desconectado.");
             this._updateHeaderState();
-            // Substitua "RouteLogin" pelo nome da sua rota de login
-            this.getOwnerComponent().getRouter().navTo("Routehome-page", {}, true);
+            
         }
     });
 });

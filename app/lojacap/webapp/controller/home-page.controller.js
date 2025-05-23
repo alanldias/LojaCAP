@@ -11,18 +11,10 @@ sap.ui.define([
 
     return Controller.extend("lojacap.controller.home-page", { 
         onInit: function () {
-            // Modelo JSON local para controlar o estado do cabeçalho
-            this.oHeaderModel = new JSONModel({ // Agora JSONModel está definido e pode ser usado
-                isLoggedIn: false,
-                userName: "",
-                loginButtonVisible: true,
-                logoutButtonVisible: false,
-                welcomeTextVisible: false
-            });
-            this.getView().setModel(this.oHeaderModel, "headerModel");
+        
 
             var oRouter = this.getOwnerComponent().getRouter();
-            // Substitua "Routehome-page" pelo NOME REAL da rota que leva a esta view no seu manifest.json
+            
             var oRoute = oRouter.getRoute("Routehome-page"); 
             if (oRoute) {
                  oRoute.attachPatternMatched(this._updateHeaderState, this);
@@ -64,21 +56,9 @@ sap.ui.define([
         },
 
         onIrParaProdutos: function () {
-            // Substitua "RouteProdutos" pelo NOME REAL da sua rota de produtos no manifest.json
             this.getOwnerComponent().getRouter().navTo("RouteProdutos"); 
         },
 
-        onLogoutPress: function() {
-            console.log("home-page.controller: onLogoutPress chamado");
-
-            localStorage.removeItem("logado");
-            localStorage.removeItem("userName");
-            localStorage.removeItem("carrinhoID"); 
-
-            MessageToast.show("Você foi desconectado.");
-
-            this._updateHeaderState(); // Atualiza o header da view atual
-
-        }
+        
     });
 });

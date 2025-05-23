@@ -135,15 +135,15 @@ sap.ui.define([
         oListBinding.detachEvent("dataReceived", fnDataReceived); // Não precisa do 'this' aqui se fnDataReceived não usa 'this' ou usa arrow
         oListBinding.attachEventOnce("dataReceived", fnDataReceived);
 
-        // Handler para falha
-        const fnRequestFailed = (oEvent) => {
-            console.error("[_carregarItensCarrinho] requestFailed disparado!", oEvent.getParameters()); // DEBUG
-            MessageToast.show("Falha ao carregar os itens do carrinho.");
-            this._calcularTotal([]); // Limpa o total
-            oList.setNoDataText("Não foi possível carregar os itens do carrinho.");
-        };
-        oListBinding.detachEvent("requestFailed", fnRequestFailed);
-        oListBinding.attachEventOnce("requestFailed", fnRequestFailed);
+        // // Handler para falha
+        // const fnRequestFailed = (oEvent) => {
+        //     console.error("[_carregarItensCarrinho] requestFailed disparado!", oEvent.getParameters()); // DEBUG
+        //     MessageToast.show("Falha ao carregar os itens do carrinho.");
+        //     this._calcularTotal([]); // Limpa o total
+        //     oList.setNoDataText("Não foi possível carregar os itens do carrinho.");
+        // };
+        // oListBinding.detachEvent("requestFailed", fnRequestFailed);
+        // oListBinding.attachEventOnce("requestFailed", fnRequestFailed);
 
         // O refresh pode não ser necessário se o binding é novo ou o filtro mudou.
         // Mas para garantir que os dados sejam buscados:
@@ -164,7 +164,7 @@ sap.ui.define([
       oContext.delete().then(() => {
         MessageToast.show("Item removido do carrinho.");
         // Se não, um refresh no binding da lista pode ser necessário aqui:
-        // this.byId("lista").getBinding("items").refresh();
+        // this.byId("lista").getBinding("items").refresh();ass
       }).catch((err) => {
         MessageToast.show("Erro ao remover item: " + err.message);
       });

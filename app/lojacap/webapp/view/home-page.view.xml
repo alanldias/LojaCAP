@@ -14,13 +14,22 @@
         showHeader="true"  
         class="sapUiResponsiveContentPadding">
 
-        <headerContent> 
+         <headerContent>
             <Button
-                id="logoutButton"
+                id="loginButtonHeader"
+                text="{i18n>loginButtonText}"
+                press=".onGoToLogin" type="Transparent"
+                visible="{headerModel>/loginButtonVisible}" /> <Text
+                id="welcomeTextHeader"
+                text="{= ${headerModel>/userName} ? (${i18n>welcomeHeaderPrefix} + ' ' + ${headerModel>/userName} + '!') : ''}"
+                visible="{headerModel>/welcomeTextVisible}" class="sapUiSmallMarginBeginEnd sapMTitleStyleH6"/>
+
+            <Button
+                id="logoutButtonHeader"
                 icon="sap-icon://log"
                 tooltip="{i18n>logoutButtonTooltip}"
-                press=".onLogoutPress"
-                type="Transparent"/> 
+                press=".onLogoutPress" type="Transparent"
+                visible="{headerModel>/logoutButtonVisible}" /> 
         </headerContent>
 
         <VBox

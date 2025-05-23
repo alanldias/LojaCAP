@@ -14,5 +14,4 @@ service ShopService {
 
   action mergeCarrinho(clienteID: UUID, carrinhoAnonimoID: UUID) returns { carrinhoID : UUID };
 
-  action adicionarproduto(carrinhoAnonimoID: UUID)returns UUID;
 }

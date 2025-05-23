@@ -1,44 +1,100 @@
 <mvc:View controllerName="lojacap.controller.payment-page"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
-    xmlns:core="sap.ui.core">
-    
-    <Page id="payment-page" title="Pagamento" class="sapUiResponsiveContentPadding">
-        <VBox id="payment-page-vbox" class="sapUiSmallMarginTop sapUiMediumMargin sapUiResponsiveMargin" alignItems="Center">
-            
-            <Table id="payment-page-cartTable" inset="false" items="{carrinho>/itens}" width="100%">
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">          <Page id="payment-page" title="Revisão do Pedido e Pagamento" class="sapUiResponsiveContentPadding">
+        <VBox id="payment-page-vbox" class="sapUiSmallMargin sapUiResponsiveMargin" alignItems="Stretch">
+
+            <Title id="payment-page-title-review" text="Revise seu Pedido" level="H2" class="sapUiSmallMarginBottom" />
+
+            <Table id="payment-page-cartTable"
+                   inset="false"
+                   items="{paymentView>/itens}" noDataText="Seu carrinho para pagamento está vazio."
+                   width="100%"
+                   class="sapUiSmallMarginBottom">
                 <columns>
                     <Column id="payment-page-col-produto">
                         <Text id="payment-page-col-text-produto" text="Produto" />
                     </Column>
-                    <Column id="payment-page-col-qtd">
+                    <Column id="payment-page-col-qtd" hAlign="Center" minScreenWidth="Tablet" demandPopin="true">
                         <Text id="payment-page-col-text-qtd" text="Qtd" />
                     </Column>
-                    <Column id="payment-page-col-preco">
+                    <Column id="payment-page-col-preco" hAlign="Right" minScreenWidth="Small" demandPopin="true">
                         <Text id="payment-page-col-text-preco" text="Preço Unit." />
+                    </Column>
+                    <Column id="payment-page-col-subtotal" hAlign="Right" minScreenWidth="Small" demandPopin="true">
+                        <Text id="payment-page-col-text-subtotal" text="Subtotal" />
                     </Column>
                 </columns>
                 <items>
-                    <ColumnListItem id="payment-page-item-template">
+                    <ColumnListItem id="payment-page-item-template" vAlign="Middle">
                         <cells>
-                            <Text id="payment-page-item-produto" text="{carrinho>produto/nome}" />
-                            <Text id="payment-page-item-qtd" text="{carrinho>quantidade}" />
-                            <Text id="payment-page-item-preco" text="{carrinho>produto/preco}" />
+                            <Text id="payment-page-item-produto" text="{paymentView>produto/nome}" />
+                            <Text id="payment-page-item-qtd" text="{paymentView>quantidade}" />
+                            <ObjectNumber
+                                id="payment-page-item-preco"
+                                number="{
+                                    path: 'paymentView>precoUnitario',
+                                    type: 'sap.ui.model.type.Float',
+                                    formatOptions: { minFractionDigits: 2, maxFractionDigits: 2 }
+                                }"
+                                unit="R$" />
+                            <ObjectNumber
+                                id="payment-page-item-subtotal"
+                                number="{= (parseFloat(${paymentView>precoUnitario}) || 0) * (parseInt(${paymentView>quantidade}, 10) || 0) }"
+                                unit="R$"
+                                emphasized="false"
+                                class="sapUiTinyMarginEnd"
+                                state="Information" />
                         </cells>
                     </ColumnListItem>
                 </items>
             </Table>
 
-            <Text id="payment-page-text-forma-pagamento" text="Forma de pagamento:" class="sapUiSmallMarginTop" />
-            
-            <Select id="selectPayment" items="{enum>/}" width="300px" class="sapUiSmallMarginTop">
-                <items>
-                    <core:Item id="payment-page-select-item" key="{enum>key}" text="{enum>text}" />
-                </items>
-            </Select>
+            <HBox id="payment-page-total-section" justifyContent="End" width="100%" class="sapUiSmallMarginBottom sapUiMediumMarginTop">
+                <Title id="payment-page-title-total-label" text="Total do Pedido: " level="H3" class="sapUiTinyMarginEnd sapUiAlignVerticallyCenter"/>
+                <ObjectNumber
+                    id="payment-page-text-total-value"
+                    number="{
+                        path: 'paymentView>/valorTotal',
+                        type: 'sap.ui.model.type.Float',
+                        formatOptions: { minFractionDigits: 2, maxFractionDigits: 2 }
+                    }"
+                    unit="R$"
+                    emphasized="true"
+                    state="Success"
+                    class="sapMObjectNumberLarge"/>
+            </HBox>
 
-            <Button id="payment-page-button-finalizar" text="Finalizar Compra" press="onFinalizarCompra" 
-                class="sapUiSmallMarginTop" type="Emphasized" width="300px" />
-        </VBox>
+            <f:SimpleForm id="paymentForm"
+                          editable="true"
+                          layout="ResponsiveGridLayout"
+                          title="Forma de Pagamento"
+                          labelSpanXL="3" labelSpanL="3" labelSpanM="3" labelSpanS="12"
+                          adjustLabelSpan="false"
+                          emptySpanXL="0" emptySpanL="0" emptySpanM="0" emptySpanS="0"
+                          columnsXL="1" columnsL="1" columnsM="1"
+                          singleContainerFullSize="false"
+                          class="sapUiMediumMarginTop">
+                <f:content>
+                    <Label id="payment-page-label-forma-pagamento" text="Escolha como pagar" required="true"/>
+                    <Select id="selectPayment"
+                            items="{enum>/}"
+                            width="100%">
+                        <items>
+                            <core:Item id="payment-page-select-item" key="{enum>key}" text="{enum>text}" />
+                        </items>
+                    </Select>
+                </f:content>
+            </f:SimpleForm>
+
+            <Button id="payment-page-button-finalizar"
+                    text="Finalizar Compra e Pagar"
+                    press="onFinalizarCompra"
+                    class="sapUiLargeMarginTop"
+                    type="Emphasized"
+                    width="100%"
+                    icon="sap-icon://cart-approval"
+                    enabled="{= ${paymentView>/itensNoCarrinho} &amp;&amp; !!${paymentView>/clienteID} }" /> </VBox>
     </Page>
 </mvc:View>

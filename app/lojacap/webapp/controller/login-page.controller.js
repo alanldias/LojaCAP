@@ -13,7 +13,7 @@ sap.ui.define([
       window.location.href = "/cadastrocliente/webapp/index.html";
     },
 
-    // Marque a função como async
+  
     onLoginPress: async function () {
       const email = this.byId("emailInput").getValue();
       const senha = this.byId("senhaInput").getValue();
@@ -26,7 +26,7 @@ sap.ui.define([
       const oModel = this.getOwnerComponent().getModel();
 
       // 1. Executar o Login
-      const oLoginAction = oModel.bindContext("/loginCliente(...)"); // Verifique se o path está correto
+      const oLoginAction = oModel.bindContext("/loginCliente(...)"); 
       oLoginAction.setParameter("email", email);
       oLoginAction.setParameter("senha", senha);
 
@@ -39,7 +39,7 @@ sap.ui.define([
             return;
         }
         const loginResponse = loginResponseContext.getObject();
-        const loginResult = loginResponse?.value; // Assumindo que a action retorna um objeto com a propriedade 'value'
+        const loginResult = loginResponse?.value; 
 
         if (!loginResult || loginResult !== "OK") {
           MessageBox.error("E-mail ou senha inválidos.");
@@ -61,7 +61,7 @@ sap.ui.define([
             const mergeResponseContext = oMergeAction.getBoundContext();
             if (mergeResponseContext) {
               const mergeResult = mergeResponseContext.getObject();
-              // Supondo que sua action mergeCarrinho retorna um objeto como { carrinhoID: "ID_DO_CARRINHO_FINAL" }
+         
               if (mergeResult && mergeResult.carrinhoID) {
                 localStorage.setItem("carrinhoID", mergeResult.carrinhoID);
                 MessageToast.show("Carrinho sincronizado!");

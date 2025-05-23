@@ -351,7 +351,8 @@ sap.ui.define([
             localStorage.removeItem("carrinhoID");
             MessageToast.show("Você foi desconectado.");
             this._updateHeaderState();
-            
+            // Substitua "RouteLogin" pelo nome da sua rota de login
+            this.getOwnerComponent().getRouter().navTo("Routehome-page", {}, true);
         }
     });
 });

@@ -63,22 +63,9 @@ sap.ui.define([
             console.log("home-page.controller: headerModel atualizado:", this.oHeaderModel.getData());
         },
 
-        onGoToLogin: function() {
-            // Substitua "RouteLoginPage" pelo NOME REAL da sua rota de login no manifest.json
-            this.getOwnerComponent().getRouter().navTo("RouteLogin"); 
-        },
-
         onIrParaProdutos: function () {
             // Substitua "RouteProdutos" pelo NOME REAL da sua rota de produtos no manifest.json
             this.getOwnerComponent().getRouter().navTo("RouteProdutos"); 
-        },
-
-        onIrCadastroProdutos: function () {
-            window.location.href = "/cadastroproduto/webapp/index.html"; 
-        },
-
-        onIrCadastroClientes: function () {
-            window.location.href = "/cadastrocliente/webapp/index.html"; 
         },
 
         onLogoutPress: function() {

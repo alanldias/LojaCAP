@@ -6,6 +6,9 @@ sap.ui.define([
     return {
         Login: function(oEvent) {
             window.location.href = '/lojacap/webapp/index.html#login'
+        },
+        voltarInicio: function() {
+            window.location.href = '/lojacap/webapp/index.html'
         }
     };
 });

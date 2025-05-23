@@ -73,6 +73,14 @@ sap.ui.define([
             this.getOwnerComponent().getRouter().navTo("RouteProdutos"); 
         },
 
+        onIrCadastroProdutos: function () {
+            window.location.href = "/cadastroproduto/webapp/index.html"; 
+        },
+
+        onIrCadastroClientes: function () {
+            window.location.href = "/cadastrocliente/webapp/index.html"; 
+        },
+
         onLogoutPress: function() {
             console.log("home-page.controller: onLogoutPress chamado");
 

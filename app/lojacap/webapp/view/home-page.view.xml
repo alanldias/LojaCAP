@@ -25,6 +25,12 @@
                 visible="{headerModel>/welcomeTextVisible}" class="sapUiSmallMarginBeginEnd sapMTitleStyleH6"/>
 
             <Button
+                id="cadastreseButtonHeader"
+                text="{i18n>cadastreseButtonText}"
+                press=".onIrCadastroClientes" type="Transparent"
+                visible="{headerModel>/loginButtonVisible}" /> 
+               
+            <Button
                 id="logoutButtonHeader"
                 icon="sap-icon://log"
                 tooltip="{i18n>logoutButtonTooltip}"
@@ -77,6 +83,13 @@
                             type="Emphasized"
                             width="100%"
                             icon="sap-icon://list" />
+                        <Button
+                            id="cadastrarProduto"
+                            text="{i18n>viewCadastroProdutoButton}"
+                            press=".onIrCadastroProdutos" type="Transparent"
+                            visible="{headerModel>/logoutButtonVisible}"
+                            width="100%"
+                            icon="sap-icon://add" />
                     </VBox>
                 </f:content>
             </f:Card>

@@ -1,4 +1,3 @@
-const jwt = require('jsonwebtoken');
 const cds = require('@sap/cds');
 const validator = require('validator')
 const { serve } = require('@sap/cds');
@@ -19,7 +18,7 @@ module.exports = cds.service.impl(async function (srv) {
   
     // Atualiza createdBy com o usuário atual da sessão
     await UPDATE(Clientes)
-      .set({}) // não precisa mudar nada além de atualizar o owner
+      .set({}) 
       .where({ ID: user.ID });
   
     // Associar esse cliente ao user.id da sessão

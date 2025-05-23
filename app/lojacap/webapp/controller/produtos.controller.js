@@ -41,6 +41,14 @@ sap.ui.define([
             }
         },
 
+        onIrCadastroProdutos: function () {
+            window.location.href = "/cadastroproduto/webapp/index.html"; 
+        },
+
+        onIrCadastroClientes: function () {
+            window.location.href = "/cadastrocliente/webapp/index.html"; 
+        },
+
         /**
          * Chamado quando o usuário digita no SearchField (liveChange) ou pressiona Enter/busca (search).
          * @param {sap.ui.base.Event} oEvent O objeto do evento.

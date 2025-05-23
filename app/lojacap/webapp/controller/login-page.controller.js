@@ -12,7 +12,7 @@ sap.ui.define([
       onInit: function () {},
 
       onGoToRegister: function () {
-          window.location.href = "../cadastrocliente/webapp/index.html";
+          window.location.href = "/cadastrocliente/webapp/index.html";
       },
 
       onLoginPress: async function () {

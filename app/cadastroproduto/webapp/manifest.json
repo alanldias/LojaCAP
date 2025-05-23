@@ -108,6 +108,36 @@
                       "visible": true,
                       "enabled": true,
                       "text": "{i18n>login}"
+                    },
+                    "Home": {
+                      "press": "cadastroproduto.cadastroproduto.ext.controller.Login.voltarInicio",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "{i18n>home}",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "Login"
+                      }
+                    },
+                    "verClientes": {
+                      "press": "cadastroproduto.cadastroproduto.ext.controller.Login.irClientesCadastrados",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "{i18n>clientescadastrados}",
+                      "position": {
+                        "placement": "Before",
+                        "anchor": "Login"
+                      }
+                    },
+                    "verProdutos": {
+                      "press": "cadastroproduto.cadastroproduto.ext.controller.Login.verProdutosCadastrados",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "{i18n>produtoscadastrados}",
+                      "position": {
+                        "placement": "Before",
+                        "anchor": "verClientes"
+                      }
                     }
                   }
                 }

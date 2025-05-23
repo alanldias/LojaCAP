@@ -14,6 +14,13 @@
         showHeader="true"  
         class="sapUiResponsiveContentPadding">
 
+         <headerContent>
+           <Text
+                id="welcomeTextHeader"
+                text="{= ${headerModel>/userName} ? (${i18n>welcomeHeaderPrefix} + ' ' + ${headerModel>/userName} + '!') : ''}"
+                visible="{headerModel>/welcomeTextVisible}" class="sapUiSmallMarginBeginEnd sapMTitleStyleH6"/>
+        </headerContent>
+
         <VBox
             id="conteudo"
             alignItems="Center"

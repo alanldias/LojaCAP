@@ -108,6 +108,16 @@
                       "visible": true,
                       "enabled": true,
                       "text": "{i18n>login}"
+                    },
+                    "Home": {
+                      "press": "cadastrocliente.cadastrocliente.ext.controller.Login.voltarInicio",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "{i18n>home}",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "Login"
+                      }
                     }
                   }
                 }

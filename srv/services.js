@@ -173,5 +173,28 @@ module.exports = cds.service.impl(async function (srv) {
       }
     }
 });
-  
+srv.after('READ', 'Pedidos', (each) => {
+  if (each.status) {
+      switch (each.status) {
+          case 'AGUARDANDO_PAGAMENTO':
+              each.statusCriticality = 2; // Critical (laranja/amarelo)
+              break;
+          case 'PAGO':
+              each.statusCriticality = 3; // VERDE
+              break;
+          case 'ENVIADO':
+              each.statusCriticality = 5; // Information (azul)
+              break;
+          case 'ENTREGUE':
+              each.statusCriticality = 3; // sem nada
+              break;
+          case 'CANCELADO':
+              each.statusCriticality = 2; // Negative (vermelho)
+              break;
+          default:
+              each.statusCriticality = 1; // Neutral (cinza)
+      }
+  }
+});
+
 });

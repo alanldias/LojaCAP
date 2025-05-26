@@ -136,6 +136,34 @@ sap.ui.define([
             }
             oBinding.filter(aFilters);
         },
+        onFiltrarPorPreco: function () {
+        const sPrecoMin = this.byId("precoMinInput").getValue();
+        const sPrecoMax = this.byId("precoMaxInput").getValue();
+
+        const aFilters = [];
+
+        if (sPrecoMin) {
+            aFilters.push(new sap.ui.model.Filter("preco", sap.ui.model.FilterOperator.GE, parseFloat(sPrecoMin)));
+        }
+
+        if (sPrecoMax) {
+            aFilters.push(new sap.ui.model.Filter("preco", sap.ui.model.FilterOperator.LE, parseFloat(sPrecoMax)));
+        }
+
+        const oList = this.byId("productGrid");
+        const oBinding = oList.getBinding("items");
+
+        if (aFilters.length > 0) {
+            const oFilter = new sap.ui.model.Filter({
+            filters: aFilters,
+            and: true // <- ESSENCIAL PARA "BETWEEN"
+            });
+            oBinding.filter(oFilter);
+        } else {
+            oBinding.filter([]); // Sem filtros
+        }
+        } ,
+
 
         _updateHeaderState: function () {
             const isLoggedIn = localStorage.getItem("logado") === "true";

@@ -11,16 +11,18 @@ sap.ui.define([
     return Controller.extend("lojacap.controller.payment-page", {
 
         onInit: function () {
-            // 1. Modelo para os dados da view de pagamento (itens, total, clienteID)
+            console.log("💰 Controller payment-page.js: onInit - Iniciando.");
+            // 1. Modelo para os dados da view de pagamento
             const oPaymentViewModel = new JSONModel({
                 itens: [],
                 valorTotal: "0.00",
-                clienteID: null,      // Será buscado
-                itensNoCarrinho: false // Para controlar se há itens
+                clienteID: null,        // Será buscado
+                itensNoCarrinho: false, // Para controlar se há itens
+                isBuyNowFlow: false   // <<< NOSSA NOVA FLAG INICIALIZADA AQUI
             });
-            this.getView().setModel(oPaymentViewModel, "paymentView"); // Nome do modelo: "paymentView"
+            this.getView().setModel(oPaymentViewModel, "paymentView");
 
-            // 2. Modelo para os tipos de pagamento (como você já tinha)
+            // 2. Modelo para os tipos de pagamento
             const oEnumPagamento = new JSONModel([
                 { key: "PIX", text: "PIX" },
                 { key: "CARTAO", text: "Cartão" },
@@ -31,45 +33,54 @@ sap.ui.define([
             // 3. Anexa uma função para ser chamada quando a rota "RoutePayment" for acessada
             const oRouter = this.getOwnerComponent().getRouter();
             oRouter.getRoute("RoutePayment").attachPatternMatched(this._onRouteMatched, this);
+            console.log("💰 Controller payment-page.js: onInit - Rota 'RoutePayment' monitorada.");
         },
 
-        // Função chamada quando a rota é acessada
         _onRouteMatched: function (oEvent) {
             console.log("💰 Controller payment-page.js: _onRouteMatched - Rota acessada.");
-            const oArguments = oEvent.getParameter("arguments");
-            // LOG DE DEBUG CRUCIAL:
-            console.log("💰 Controller payment-page.js: Argumentos recebidos na rota:", JSON.stringify(oArguments)); 
-        
             const oPaymentViewModel = this.getView().getModel("paymentView");
-            const oMainModel = this.getOwnerComponent().getModel();
-        
-            const sBuyNowProductId = oArguments.buyNowProductId; 
-        
-            if (sBuyNowProductId) {
-                console.log("💰 Controller payment-page.js: Fluxo 'Comprar Agora' DETECTADO. Produto ID:", sBuyNowProductId);
-                const fBuyNowProductPreco = parseFloat(oArguments.buyNowProductPreco);
-                const iBuyNowProductQty = parseInt(oArguments.buyNowProductQty, 10);
-                const sBuyNowProdutoNome = oArguments.buyNowProdutoNome;
-        
+            const oMainModel = this.getOwnerComponent().getModel(); // Modelo OData principal
+
+            const oNavArgsModel = this.getOwnerComponent().getModel("navArgs");
+            const oNavData = oNavArgsModel.getData();
+            console.log("💰 Controller payment-page.js: Dados recebidos via modelo 'navArgs':", JSON.stringify(oNavData));
+
+            const sBuyNowProductId = oNavData.buyNowProductId; 
+
+            if (sBuyNowProductId) { // FLUXO "COMPRAR AGORA"
+                console.log("💰 Controller payment-page.js: Fluxo 'Comprar Agora' DETECTADO via navArgs. Produto ID:", sBuyNowProductId);
+                oPaymentViewModel.setProperty("/isBuyNowFlow", true); // <<< DEFINE A FLAG COMO TRUE
+                
+                const fBuyNowProductPreco = parseFloat(oNavData.buyNowProductPreco);
+                const iBuyNowProductQty = parseInt(oNavData.buyNowProductQty, 10);
+                const sBuyNowProdutoNome = oNavData.buyNowProdutoNome;
+
+                // Limpa o navArgs APÓS ler os dados para não interferir em futuras navegações
+                oNavArgsModel.setData({}); 
+                console.log("💰 Controller payment-page.js: Modelo 'navArgs' limpo.");
+
                 const oItemUnico = {
                     produto_ID: sBuyNowProductId,
                     quantidade: iBuyNowProductQty,
                     precoUnitario: fBuyNowProductPreco,
-                    produto: {
+                    produto: { // Simulando o $expand: "produto" que _carregarItensEFinalizarCalculo faz
                         ID: sBuyNowProductId,
                         nome: sBuyNowProdutoNome,
                         preco: fBuyNowProductPreco
+                        // Adicione outros campos do produto se sua view de pagamento os mostrar
                     }
                 };
-        
+
                 oPaymentViewModel.setProperty("/itens", [oItemUnico]);
                 oPaymentViewModel.setProperty("/valorTotal", (fBuyNowProductPreco * iBuyNowProductQty).toFixed(2));
                 oPaymentViewModel.setProperty("/itensNoCarrinho", true);
-        
+
+                // Lógica para buscar clienteID (vital para "Comprar Agora" também)
+                // this.carrinhoID será usado para buscar o clienteID do carrinho principal do usuário
                 this.carrinhoID = localStorage.getItem("carrinhoID"); 
                 if (this.carrinhoID) {
                     const sCarrinhoPath = "/Carrinhos(ID=" + this.carrinhoID + ")"; 
-                    console.log("💰 Controller payment-page.js: Buscando Carrinho (NÃO DRAFT) para clienteID (no fluxo Comprar Agora):", sCarrinhoPath);
+                    console.log("💰 Controller payment-page.js: Buscando Carrinho (NÃO DRAFT) para clienteID (fluxo Comprar Agora):", sCarrinhoPath);
                     const oCarrinhoContextBinding = oMainModel.bindContext(sCarrinhoPath);
                     
                     oCarrinhoContextBinding.requestObject().then(oCarrinhoData => {
@@ -77,35 +88,30 @@ sap.ui.define([
                             oPaymentViewModel.setProperty("/clienteID", oCarrinhoData.cliente_ID);
                             console.log("💰 Controller payment-page.js: Cliente ID (via carrinho) para pagamento:", oCarrinhoData.cliente_ID);
                         } else {
-                            console.warn("💰 Controller payment-page.js: Não foi possível obter clienteID via carrinho (dados do carrinho: " + JSON.stringify(oCarrinhoData) + ") no fluxo Comprar Agora.");
-                             MessageBox.error("Não foi possível obter os dados do cliente. Faça login ou crie um carrinho primeiro.", {
-                                 onClose: () => {
-                                     this.getOwnerComponent().getRouter().navTo("RouteProdutos");
-                                 }
+                            console.warn("💰 Controller payment-page.js: Não foi possível obter clienteID via carrinho (cliente_ID nulo no carrinho ou carrinho não encontrado). Dados do carrinho:", JSON.stringify(oCarrinhoData));
+                             MessageBox.error("Não foi possível obter os dados do cliente. Faça login ou certifique-se de que seu usuário tem um carrinho associado.", {
+                                 onClose: () => this.getOwnerComponent().getRouter().navTo("RouteProdutos")
                              });
                         }
                     }).catch(oError => {
-                         console.error("💰 Controller payment-page.js: Erro ao buscar clienteID do carrinho (no fluxo Comprar Agora):", oError);
+                         console.error("💰 Controller payment-page.js: Erro ao buscar clienteID do carrinho (fluxo Comprar Agora):", oError);
                          MessageBox.error("Erro ao obter dados do cliente. Tente novamente.");
                     });
                 } else {
-                     console.warn("💰 Controller payment-page.js: CarrinhoID não encontrado no localStorage para buscar clienteID (no fluxo Comprar Agora).");
-                     MessageBox.error("Carrinho não encontrado para obter dados do cliente. Crie um carrinho ou faça login.", {
-                         onClose: () => {
-                             this.getOwnerComponent().getRouter().navTo("RouteProdutos");
-                         }
+                     console.warn("💰 Controller payment-page.js: CarrinhoID não encontrado no localStorage para buscar clienteID (fluxo Comprar Agora).");
+                     MessageBox.error("Carrinho não encontrado para obter dados do cliente. Adicione um item ao carrinho na tela de produtos ou faça login.", {
+                         onClose: () => this.getOwnerComponent().getRouter().navTo("RouteProdutos")
                      });
                 }
-        
-            } else { // <<<<<<<<<< AQUI É ONDE ELE ESTÁ ENTRANDO INDEVIDAMENTE
-                console.log("💰 Controller payment-page.js: Fluxo 'Comprar Agora' NÃO detectado. Tentando carregar carrinho completo.");
+
+            } else { // FLUXO CARRINHO COMPLETO
+                console.log("💰 Controller payment-page.js: Fluxo 'Comprar Agora' NÃO detectado via navArgs. Carregando carrinho completo.");
+                oPaymentViewModel.setProperty("/isBuyNowFlow", false); // <<< DEFINE A FLAG COMO FALSE
+
                 this.carrinhoID = localStorage.getItem("carrinhoID");
                 if (!this.carrinhoID) {
-                    // É AQUI QUE O SEU WARNING APARECE
-                    MessageBox.warning("Seu carrinho para pagamento está vazio. Adicione produtos.", {
-                        onClose: () => {
-                            this.getOwnerComponent().getRouter().navTo("RouteProdutos");
-                        }
+                    MessageBox.warning("Seu carrinho para pagamento está vazio. Adicione produtos.", { 
+                        onClose: () => this.getOwnerComponent().getRouter().navTo("RouteProdutos")
                     });
                     oPaymentViewModel.setProperty("/itensNoCarrinho", false);
                     oPaymentViewModel.setProperty("/valorTotal", "0.00");
@@ -124,11 +130,9 @@ sap.ui.define([
                         this._carregarItensEFinalizarCalculo(this.carrinhoID);
                     } else {
                         MessageBox.error("Não foi possível obter os dados do cliente para este carrinho.", {
-                            onClose: () => {
-                                this.getOwnerComponent().getRouter().navTo("RouteCarrinho");
-                            }
+                            onClose: () => this.getOwnerComponent().getRouter().navTo("RouteCarrinho")
                         });
-                        oPaymentViewModel.setProperty("/itensNoCarrinho", false);
+                        oPaymentViewModel.setProperty("/itensNoCarrinho", false); // Garante que não há itens se o clienteID falhar
                     }
                 }).catch(oError => {
                     console.error("Erro ao buscar dados do Carrinho (completo):", oError);
@@ -140,20 +144,19 @@ sap.ui.define([
             }
         },
 
-        // Função para carregar os itens do carrinho e calcular o total
         _carregarItensEFinalizarCalculo: function (sCarrinhoID) {
-            const oMainModel = this.getOwnerComponent().getModel(); // Modelo OData
+            const oMainModel = this.getOwnerComponent().getModel(); 
             const oPaymentViewModel = this.getView().getModel("paymentView");
 
             const oListBinding = oMainModel.bindList("/ItemCarrinho", undefined,
-                undefined, // Sorters
-                [new Filter("carrinho_ID", FilterOperator.EQ, sCarrinhoID)], // Filters
-                { $expand: "produto" } // Parameters (para incluir dados do produto)
+                undefined, 
+                [new Filter("carrinho_ID", FilterOperator.EQ, sCarrinhoID)], 
+                { $expand: "produto" } 
             );
 
             oListBinding.requestContexts().then(aContexts => {
                 const aItens = aContexts.map(oContext => oContext.getObject());
-                oPaymentViewModel.setProperty("/itens", aItens); // Atualiza o modelo da view com os itens
+                oPaymentViewModel.setProperty("/itens", aItens); 
 
                 let totalCalculado = 0;
                 if (aItens.length > 0) {
@@ -166,7 +169,6 @@ sap.ui.define([
                 }
                 oPaymentViewModel.setProperty("/valorTotal", totalCalculado.toFixed(2));
 
-                // Se, após carregar, o carrinho estiver vazio, avisa e redireciona
                 if (!oPaymentViewModel.getProperty("/itensNoCarrinho")) {
                     MessageBox.warning("Seu carrinho para pagamento está vazio. Adicione produtos.", {
                         onClose: () => {
@@ -183,61 +185,96 @@ sap.ui.define([
         },
 
         onFinalizarCompra: async function () {
-            const sTipoPagamento = this.byId("selectPayment").getSelectedKey();
+            console.log("💰 Controller payment-page.js: onFinalizarCompra - Iniciando.");
             const oPaymentViewModel = this.getView().getModel("paymentView");
+            // Não precisamos mais do navArgs aqui diretamente, vamos usar a flag do paymentViewModel
+            
+            const sTipoPagamento = this.byId("selectPayment").getSelectedKey();
             const sClienteID = oPaymentViewModel.getProperty("/clienteID");
-            // O this.carrinhoID foi definido em _onRouteMatched
-
-            if (!sTipoPagamento) {
-                MessageBox.warning("Escolha uma forma de pagamento.");
+            const oMainODataModel = this.getView().getModel(); // Modelo OData padrão
+        
+            // Suas Validações Essenciais
+            if (!sTipoPagamento) { MessageBox.warning("Escolha uma forma de pagamento."); return; }
+            if (!sClienteID) { 
+                MessageBox.error("ID do cliente não está disponível. Não é possível finalizar o pedido."); 
+                console.error("💰 Controller payment-page.js: ClienteID faltando para finalizar compra.");
+                return; 
+            }
+            if (!oPaymentViewModel.getProperty("/itensNoCarrinho") || !oPaymentViewModel.getProperty("/itens") || oPaymentViewModel.getProperty("/itens").length === 0) {
+                MessageBox.error("Não há itens para finalizar o pedido."); 
+                console.error("💰 Controller payment-page.js: Nenhum item na view de pagamento para finalizar.");
                 return;
             }
-
-            if (!sClienteID) {
-                MessageBox.error("ID do cliente não está disponível. Não é possível finalizar o pedido.");
-                return;
+        
+            // <<< USA A FLAG DO paymentViewModel PARA DECIDIR O FLUXO >>>
+            const bIsBuyNowFlow = oPaymentViewModel.getProperty("/isBuyNowFlow"); 
+            let oAction; 
+        
+            if (bIsBuyNowFlow) {
+                console.log("💰 'Comprar Agora' (usando flag /isBuyNowFlow): Chamando ação 'realizarPagamentoItemUnico'.");
+                const oItemUnico = oPaymentViewModel.getProperty("/itens")[0]; 
+        
+                oAction = oMainODataModel.bindContext("/realizarPagamentoItemUnico(...)");
+                oAction.setParameter("clienteID", sClienteID);
+                oAction.setParameter("tipoPagamento", sTipoPagamento);
+                oAction.setParameter("produtoID", oItemUnico.produto.ID); 
+                oAction.setParameter("quantidade", oItemUnico.quantidade);
+                oAction.setParameter("precoUnitario", oItemUnico.precoUnitario);
+                console.log("💰 Parâmetros para realizarPagamentoItemUnico:", {
+                    clienteID: sClienteID, tipoPagamento: sTipoPagamento, produtoID: oItemUnico.produto.ID,
+                    quantidade: oItemUnico.quantidade, precoUnitario: oItemUnico.precoUnitario
+                });
+        
+            } else {
+                console.log("💰 Carrinho Completo (usando flag /isBuyNowFlow): Chamando ação 'realizarPagamento'.");
+                oAction = oMainODataModel.bindContext("/realizarPagamento(...)");
+                oAction.setParameter("clienteID", sClienteID);
+                oAction.setParameter("tipoPagamento", sTipoPagamento);
+                console.log("💰 Parâmetros para realizarPagamento:", {
+                    clienteID: sClienteID, tipoPagamento: sTipoPagamento
+                });
             }
-
-            if (!this.carrinhoID) {
-                MessageBox.error("ID do Carrinho não está disponível. Não é possível finalizar o pedido.");
-                return;
-            }
-
-            if (!oPaymentViewModel.getProperty("/itensNoCarrinho")) {
-                MessageBox.error("Seu carrinho está vazio. Não é possível finalizar o pedido.");
-                return;
-            }
-
-            const oMainODataModel = this.getOwnerComponent().getModel(); // Modelo OData principal
-
-            const oAction = oMainODataModel.bindContext("/realizarPagamento(...)");
-
-            oAction.setParameter("clienteID", sClienteID);
-            oAction.setParameter("tipoPagamento", sTipoPagamento);
-
+        
             try {
-                await oAction.execute();
+                console.log("💰 Executando ação OData...");
+                const sPedidoID = await oAction.execute(); 
+                console.log("💰 Ação OData executada. Pedido ID:", sPedidoID); 
 
-                MessageToast.show("Pedido realizado com sucesso!");
-
-                // Limpa o carrinho do localStorage, pois o pedido foi feito
-                localStorage.removeItem("carrinhoID");
-                this.carrinhoID = null; // Limpa o ID no controller
-                oPaymentViewModel.setProperty("/itensNoCarrinho", false); // Reseta o estado da view
-
-                this.getOwnerComponent().getRouter().navTo("Routehome-page"); // Ou para uma página de "Pedido Confirmado"
-
+                MessageToast.show("Pedido realizado com sucesso!" + (sPedidoID ? " ID: " + sPedidoID : ""));
+        
+                // Decide se remove o carrinhoID do localStorage baseado no fluxo
+                if (!bIsBuyNowFlow) { 
+                    console.log("💰 Finalização de Carrinho Completo: Removendo carrinhoID do localStorage.");
+                    localStorage.removeItem("carrinhoID"); 
+                    this.carrinhoID = null; 
+                } else {
+                    console.log("💰 Finalização de 'Comprar Agora': NÃO removemos o carrinhoID do localStorage.");
+                }
+                
+                // Limpeza do ViewModel da Página de Pagamento
+                oPaymentViewModel.setProperty("/itensNoCarrinho", false);
+                oPaymentViewModel.setProperty("/itens", []);
+                oPaymentViewModel.setProperty("/valorTotal", "0.00");
+                oPaymentViewModel.setProperty("/clienteID", null); 
+                oPaymentViewModel.setProperty("/isBuyNowFlow", false); // <<< RESETA A FLAG
+        
+                // O navArgs já foi limpo no _onRouteMatched quando era "Comprar Agora"
+        
+                this.getOwnerComponent().getRouter().navTo("Routehome-page");
+        
             } catch (err) {
-                MessageBox.error("Erro ao finalizar pedido: " + (err.message || "Erro desconhecido."));
-                console.error("Erro na action realizarPagamento:", err);
+                const sErrorMessage = err.message || "Erro desconhecido.";
+                MessageBox.error("Erro ao finalizar pedido: " + sErrorMessage);
+                console.error("💰 Erro na execução da ação OData:", err);
+                
                 if (oAction && typeof oAction.resetChanges === 'function') {
                     oAction.resetChanges();
                 }
             }
         },
 
-        // FUNÇÃO PARA IMPRIMIR O PEDIDO 
         onPrintOrder: function () {
+            // Seu código onPrintOrder original
             var oPaymentViewModel = this.getView().getModel("paymentView");
             var oPaymentViewData = oPaymentViewModel.getData();
 
@@ -255,10 +292,9 @@ sap.ui.define([
             sPrintContent += "<tbody>";
 
             oPaymentViewData.itens.forEach(function (oItem) {
-                // Aqui usamos item.produto.nome e item.precoUnitario, conforme o binding do seu XML e o retorno do OData
                 var fItemTotal = (parseFloat(oItem.precoUnitario) || 0) * (parseInt(oItem.quantidade, 10) || 0);
                 sPrintContent += "<tr>";
-                sPrintContent += "<td>" + oItem.produto.nome + "</td>";
+                sPrintContent += "<td>" + (oItem.produto ? oItem.produto.nome : "N/A") + "</td>"; // Verifica se oItem.produto existe
                 sPrintContent += "<td>" + (parseFloat(oItem.precoUnitario) || 0).toFixed(2) + "</td>";
                 sPrintContent += "<td>" + oItem.quantidade + "</td>";
                 sPrintContent += "<td>" + fItemTotal.toFixed(2) + "</td>";
@@ -267,7 +303,6 @@ sap.ui.define([
 
             sPrintContent += "</tbody></table>";
             sPrintContent += "<h3>Valor Total do Pedido: " + (parseFloat(oPaymentViewData.valorTotal) || 0).toFixed(2) + "</h3>";
-
 
             var printWindow = window.open('', '_blank');
             printWindow.document.write('<html><head><title>Imprimir Pedido</title>');
@@ -285,7 +320,6 @@ sap.ui.define([
             printWindow.print();
         },
 
-        // FUNÇÃO PARA VOLTAR AO CARRINHO (ADICIONAR AQUI)
         onNavToCart: function () {
             this.getOwnerComponent().getRouter().navTo("RouteCarrinho");
         }

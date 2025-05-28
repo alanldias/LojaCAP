@@ -136,52 +136,49 @@ sap.ui.define([
                 console.error("🛒 Controller produtoDetalhe.js: Erro geral:", error);
             }
         },
-        onBuyNow: function () {
+        
+        onBuyNow: async function () { // Mantemos async se você usar requestProperty, senão pode ser síncrono
             console.log("🛍️ Controller produtoDetalhe.js: onBuyNow - Iniciando compra imediata...");
             const oContext = this.getView().getBindingContext();
         
             if (!oContext) {
-                MessageToast.show("Erro: Não foi possível identificar o produto para compra imediata.");
-                console.error("🛍️ Controller produtoDetalhe.js: Contexto do produto não encontrado na view para onBuyNow.");
+                MessageToast.show("Erro: Não foi possível identificar o produto.");
+                console.error("🛍️ Controller produtoDetalhe.js: Contexto do produto não encontrado.");
                 return;
             }
         
-            const oProduto = oContext.getObject();
-            let sProdutoNome = oProduto ? oProduto.nome : undefined; // Tenta pegar o nome do objeto
+            // Usando a forma que funcionou para você pegar o nome e os outros dados
+            const oProduto = oContext.getObject(); 
+            let sProdutoNome = oProduto ? oProduto.nome : undefined;
+            const oTitleControl = this.getView().byId("nomeProduto"); // Certifique-se do ID
         
-            // Se o nome não veio no objeto, tenta pegar do controle Title que já está renderizado
-            if (!sProdutoNome) {
-                const oTitleControl = this.getView().byId("nomeProduto"); // Certifique-se que o ID do seu Title é "nomeProduto"
-                if (oTitleControl) {
-                    sProdutoNome = oTitleControl.getText();
-                    console.log("🛍️ Controller produtoDetalhe.js: 'nome' do produto pego do controle Title:", sProdutoNome);
-                }
+            if (!sProdutoNome && oTitleControl) {
+                sProdutoNome = oTitleControl.getText();
             }
+            
+            const sProdutoID = oProduto ? oProduto.ID : undefined;
+            const fProdutoPreco = oProduto ? oProduto.preco : undefined;
         
-            console.log("🛍️ Controller produtoDetalhe.js: Produto para compra imediata (objeto):", oProduto);
-            console.log("🛍️ Controller produtoDetalhe.js: Nome do produto para compra imediata (processado):", sProdutoNome);
+            console.log("🛍️ Controller produtoDetalhe.js: Dados coletados para compra imediata - ID:", sProdutoID, "Nome:", sProdutoNome, "Preço:", fProdutoPreco);
         
-        
-            if (!oProduto || !oProduto.ID || !sProdutoNome || oProduto.preco === undefined) { // Usa sProdutoNome na verificação
+            if (!sProdutoID || !sProdutoNome || fProdutoPreco === undefined) {
                 MessageToast.show("Erro: Dados do produto incompletos para compra imediata.");
-                // Log mais detalhado do que está faltando:
-                console.error(
-                    "🛍️ Controller produtoDetalhe.js: Dados incompletos do produto. ID:", oProduto ? oProduto.ID : "N/A",
-                    "Nome:", sProdutoNome || "N/A", 
-                    "Preco:", oProduto ? oProduto.preco : "N/A",
-                    "Objeto completo recebido:", oProduto
-                );
+                console.error("🛍️ Controller produtoDetalhe.js: Dados incompletos. ID:", sProdutoID, "Nome:", sProdutoNome, "Preco:", fProdutoPreco);
                 return;
             }
+        
+            // Coloca os dados no modelo 'navArgs'
+            this.getOwnerComponent().getModel("navArgs").setData({
+                buyNowProductId: sProdutoID,
+                buyNowProductQty: 1,
+                buyNowProductPreco: fProdutoPreco,
+                buyNowProdutoNome: sProdutoNome
+            });
+            console.log("🛍️ Controller produtoDetalhe.js: Dados do produto único colocados no modelo 'navArgs'.");
         
             var oRouter = this.getOwnerComponent().getRouter();
-            oRouter.navTo("RoutePayment", {
-                buyNowProductId: oProduto.ID,
-                buyNowProductQty: 1, 
-                buyNowProductPreco: oProduto.preco,
-                buyNowProdutoNome: sProdutoNome // Passa o sProdutoNome que pegamos
-            });
-            console.log("🛍️ Controller produtoDetalhe.js: Navegando para RoutePayment com produto único:", sProdutoNome);
+            oRouter.navTo("RoutePayment"); // Navega sem passar parâmetros aqui
+            console.log("🛍️ Controller produtoDetalhe.js: Navegando para RoutePayment.");
         }
 
     });

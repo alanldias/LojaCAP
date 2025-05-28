@@ -3,43 +3,58 @@ sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/m/library",
     "sap/m/MessageToast",
-    "sap/ui/model/json/JSONModel" // Path correto para JSONModel
-], function(Controller, mobileLibrary, MessageToast, JSONModel) { // <<< --- CORREÇÃO: JSONModel adicionado aqui
+    "sap/ui/model/json/JSONModel"
+], function(Controller, mobileLibrary, MessageToast, JSONModel) {
     "use strict";
 
-    // const URLHelper = mobileLibrary.URLHelper; // Descomente se for usar em outra parte
+    return Controller.extend("lojacap.controller.home-page", {
+        oHeaderModel: null, // Declare a propriedade aqui também
 
-    return Controller.extend("lojacap.controller.home-page", { 
         onInit: function () {
-        
+            // Inicialize o oHeaderModel AQUI!
+            this.oHeaderModel = new JSONModel({
+                isLoggedIn: false,
+                userName: "",
+                loginButtonVisible: true,
+                logoutButtonVisible: false,
+                welcomeTextVisible: false
+            });
+            this.getView().setModel(this.oHeaderModel, "headerModel"); // Atribua à view
 
             var oRouter = this.getOwnerComponent().getRouter();
-            
-            var oRoute = oRouter.getRoute("Routehome-page"); 
+            var oRoute = oRouter.getRoute("Routehome-page");
             if (oRoute) {
                  oRoute.attachPatternMatched(this._updateHeaderState, this);
             } else {
-                console.error("Rota 'Routehome-page' não encontrada no manifest para home-page.controller.js. Verifique o nome da rota no manifest.json.");
-                // Como fallback, atualiza o header uma vez no init
-                this._updateHeaderState();
+                console.warn("home-page.controller: Rota 'Routehome-page' não encontrada. A lógica de atualização do header pode não funcionar como esperado na navegação.");
+                this._updateHeaderState(); // Chamar uma vez no onInit como fallback
             }
         },
 
         _updateHeaderState: function () {
             const isLoggedIn = localStorage.getItem("logado") === "true";
-            const userName = localStorage.getItem("userName") || ""; 
+            const userName = localStorage.getItem("userName") || "";
 
-            console.log("home-page.controller: _updateHeaderState - isLoggedIn (localStorage):", isLoggedIn, "userName (localStorage):", userName);
+            console.log("home-page.controller: _updateHeaderState - isLoggedIn:", isLoggedIn, "userName:", userName); // DEBUG
 
-            if (isLoggedIn && userName) {
-                this.oHeaderModel.setData({
-                    isLoggedIn: true,
-                    userName: userName,
-                    loginButtonVisible: false,
-                    logoutButtonVisible: true,
-                    welcomeTextVisible: true
-                });
-            } else {
+            if (!this.oHeaderModel) { // Verificação de segurança
+                console.error("home-page.controller: oHeaderModel não está definido em _updateHeaderState!");
+                return;
+            }
+
+            this.oHeaderModel.setData({
+                isLoggedIn: isLoggedIn,
+                userName: userName,
+                loginButtonVisible: !isLoggedIn,
+                logoutButtonVisible: isLoggedIn,
+                welcomeTextVisible: isLoggedIn && !!userName // !!userName converte para booleano
+            });
+
+            // Lógica adicional para limpar 'logado' se 'userName' não existir
+            if (isLoggedIn && !userName) {
+                console.warn("home-page.controller: 'logado' era true no localStorage, mas 'userName' não. Limpando 'logado'.");
+                localStorage.removeItem("logado");
+                // Re-set data para refletir a limpeza
                 this.oHeaderModel.setData({
                     isLoggedIn: false,
                     userName: "",
@@ -47,18 +62,12 @@ sap.ui.define([
                     logoutButtonVisible: false,
                     welcomeTextVisible: false
                 });
-                if (isLoggedIn && !userName) {
-                    console.warn("home-page.controller: 'logado' era true no localStorage, mas 'userName' não. Limpando 'logado'.");
-                    localStorage.removeItem("logado"); 
-                }
             }
-            console.log("home-page.controller: headerModel atualizado:", this.oHeaderModel.getData());
+            console.log("home-page.controller: headerModel atualizado:", this.oHeaderModel.getData()); // DEBUG
         },
 
         onIrParaProdutos: function () {
-            this.getOwnerComponent().getRouter().navTo("RouteProdutos"); 
-        },
-
-        
+            this.getOwnerComponent().getRouter().navTo("RouteProdutos");
+        }
     });
 });

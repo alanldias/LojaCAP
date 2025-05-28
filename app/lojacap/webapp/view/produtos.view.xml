@@ -56,32 +56,14 @@
           search=".onSearchProduto"
           liveChange=".onSearchProdutoLive" />
 
-        <!-- Campo de busca por categoria -->
-        <SearchField
-          id="categorySearchField"
-          width="18%"
-          placeholder="Buscar por Categoria..."
-          search=".onFilterCategory"
-          liveChange=".onFilterCategory"
-          class="sapUiSmallMarginTop" />
+          <Button
+          id="btnAbrirDialogFiltro"
+          text="Filtro"
+          icon="sap-icon://filter"
+          press=".onAbrirDialogFiltro"
+          class="sapUiTinyMarginTop"/>
 
-        <HBox id = "aaaa" alignItems="Center" class="sapUiSmallMarginTop">
-        <Input
-          id="precoMinInput"
-          type="Number"
-          placeholder="Preço mínimo (R$)"
-          width="84%" />
-        <Input
-          id="precoMaxInput"
-          type="Number"
-          placeholder="Preço máximo (R$)"
-          width="84%"
-          class="sapUiTinyMarginBegin" />
-        <Button id = "aaaaa" 
-          text="Filtrar Preço"
-          press=".onFiltrarPorPreco"
-          class="sapUiTinyMarginBegin" />
-      </HBox>  
+
 
         <!-- Botão de cadastro -->
         <Button

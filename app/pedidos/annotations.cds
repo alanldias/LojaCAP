@@ -1,7 +1,7 @@
 using ShopService as service from '../../srv/services';
 
 annotate service.Pedidos with @(
-    // --- FieldGroup e Facets permanecem os mesmos ---
+   
     UI.FieldGroup #GeneratedGroup : {
         $Type : 'UI.FieldGroupType',
         Data : [
@@ -54,13 +54,6 @@ annotate service.Pedidos with @(
         },
     ],
 
-    // --- Adiciona o Highlight para colorir a linha inteira ---
-    UI.Highlight : {
-        $Type : 'UI.HighlightType',
-        Criticality : statusCriticality // Usa o mesmo campo para a cor da linha
-        // Opcional: Você pode adicionar 'Description' se quiser
-        // Description : status
-    }
 );
 
 // --- ValueList para o status permanece o mesmo ---
@@ -68,7 +61,7 @@ annotate service.Pedidos with {
   status @Common.ValueList: {
     $Type: 'Common.ValueListType',
     Label: 'Status do Pedido',
-    CollectionPath: 'StatusPedidoEnum', // Certifique-se que StatusPedidoEnum está disponível
+    CollectionPath: 'StatusPedidoEnum', 
     Parameters: [
       {
         $Type: 'Common.ValueListParameterInOut',

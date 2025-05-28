@@ -120,8 +120,12 @@
           "name": "RoutePayment",
           "pattern": "payment",
           "target": ["TargetPayment"]
+        },
+        {
+          "name": "produtoDetalhe",
+          "pattern": "Produtos/{produtoId}",
+          "target": ["TargetProdutoDetalhe"]
         }
-        
       ],
       "targets": {
         "Targethome-page": {
@@ -141,14 +145,20 @@
           "viewId": "login-page"
         },
         "TargetRegister": {
-        "viewName": "register-page",
-        "viewId": "register-page"
+          "viewName": "register-page",
+          "viewId": "register-page"
         },
         "TargetPayment": {
-        "viewName": "payment-page",
-        "viewId": "payment-page"
+          "viewName": "payment-page",
+          "viewId": "payment-page"
+        },
+        "TargetProdutoDetalhe": {
+          "viewType": "XML",
+          "transition": "slide",
+          "clearControlAggregation": false,
+          "viewId": "produtoDetalhe",
+          "viewName": "produtoDetalhe"
         }
-
       }
     },
     "rootView": {

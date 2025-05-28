@@ -1,0 +1,52 @@
+<mvc:View
+    controllerName="lojacap.controller.produtoDetalhe"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+    xmlns:layout="sap.ui.layout">
+    
+    <Page
+        id="produtoDetalhePage"
+        title="Detalhe do Produto"
+        showNavButton="true"
+        navButtonPress=".onNavBack">
+
+        <content>
+            <VBox id="vboxContainer" class="sapUiSmallMargin">
+                <f:Card id="produtoCard" class="sapUiSmallMarginBottom">
+                   <f:content>
+                        <HBox id="hboxDetalhes">
+                            <items>
+                                <Image id="imagemProduto" src="{imagemURL}" width="150px" class="sapUiTinyMarginEnd" />
+                                <VBox id="vboxInfo">
+                                    <Title id="nomeProduto" text="{nome}" />
+                                    <Text id="descricaoProduto" text="{descricao}" />
+                                    <Text id="productPrice2" text="{= 'R$ ' + ${preco}}" />
+                                    <Text id="estoqueProduto" text="Em Estoque: {estoque}" />
+                                </VBox>
+                            </items>
+                        </HBox>
+                    </f:content>    
+                </f:Card>
+            </VBox>
+        </content>
+
+        <footer>
+            <OverflowToolbar id="toolbarRodape">
+                <ToolbarSpacer id="toolbarSpacer"/>
+                <Button
+                    id="addToCartBtn"
+                    text="Adicionar ao Carrinho"
+                    type="Emphasized"
+                    icon="sap-icon://cart-3"
+                    press=".onAddToCart"/>
+                <Button
+                    id="buyNowBtn"
+                    text="Comprar"
+                    type="Accept"
+                    icon="sap-icon://money-bills"
+                    press=".onBuyNow"/>
+            </OverflowToolbar>
+        </footer>
+    </Page>
+</mvc:View>

@@ -1,0 +1,170 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "pedidos",
+    "type": "application",
+    "i18n": "i18n/i18n.properties",
+    "applicationVersion": {
+      "version": "0.0.1"
+    },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "resources": "resources.json",
+    "sourceTemplate": {
+      "id": "@sap/generator-fiori:lrop",
+      "version": "1.17.6",
+      "toolsId": "56e871dd-970b-44bb-ae79-beab2003e09f"
+    },
+    "dataSources": {
+      "mainService": {
+        "uri": "/odata/v4/shop/",
+        "type": "OData",
+        "settings": {
+         
+          "annotations": [
+            "annotations.cds" 
+          ],
+          "odataVersion": "4.0"
+        }
+      }
+    }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "icons": {
+      "icon": "",
+      "favIcon": "",
+      "phone": "",
+      "phone@2": "",
+      "tablet": "",
+      "tablet@2": ""
+    },
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
+  },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "dependencies": {
+      "minUI5Version": "1.136.1",
+      "libs": {
+        "sap.m": {},
+        "sap.ui.core": {},
+        "sap.fe.templates": {}
+      }
+    },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": {
+          "bundleName": "pedidos.i18n.i18n"
+        }
+      },
+      "": {
+        "dataSource": "mainService",
+        "preload": true,
+        "settings": {
+          "operationMode": "Server",
+          "autoExpandSelect": true,
+          "earlyRequests": true
+        }
+      },
+      "@i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "uri": "i18n/i18n.properties"
+      }
+    },
+    "resources": {
+      "css": []
+    },
+    "routing": {
+      "config": {},
+      "routes": [
+        {
+          "pattern": ":?query:",
+          "name": "PedidosList",
+          "target": "PedidosList"
+        },
+        {
+          "pattern": "Pedidos({key}):?query:",
+          "name": "PedidosObjectPage",
+          "target": "PedidosObjectPage"
+        },
+        {
+          "pattern": "Pedidos({key})/itens({key2}):?query:",
+          "name": "ItemPedidoObjectPage",
+          "target": "ItemPedidoObjectPage"
+        }
+      ],
+      "targets": {
+        "PedidosList": {
+          "type": "Component",
+          "id": "PedidosList",
+          "name": "sap.fe.templates.ListReport",
+          "options": {
+            "settings": {
+              "contextPath": "/Pedidos",
+              "variantManagement": "Page",
+              "navigation": {
+                "Pedidos": {
+                  "detail": {
+                    "route": "PedidosObjectPage"
+                  }
+                }
+              },
+              "controlConfiguration": {
+                "@com.sap.vocabularies.UI.v1.LineItem": {
+                  "tableSettings": {
+                    "type": "ResponsiveTable",
+                    "rowSettings": {
+                      "highlightPath": "statusCriticality"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "PedidosObjectPage": {
+          "type": "Component",
+          "id": "PedidosObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "editableHeaderContent": false,
+              "contextPath": "/Pedidos",
+              "navigation": {
+                "itens": {
+                  "detail": {
+                    "route": "ItemPedidoObjectPage"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ItemPedidoObjectPage": {
+          "type": "Component",
+          "id": "ItemPedidoObjectPage",
+          "name": "sap.fe.templates.ObjectPage",
+          "options": {
+            "settings": {
+              "editableHeaderContent": false,
+              "contextPath": "/Pedidos/itens"
+            }
+          }
+        }
+      }
+    }
+  },
+  "sap.fiori": {
+    "registrationIds": [],
+    "archeType": "transactional"
+  }
+}

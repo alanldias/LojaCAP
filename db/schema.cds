@@ -17,6 +17,11 @@ type StatusPedido : String enum {
   CANCELADO;
 }
 
+entity StatusPedidoEnum {
+  key code : String;
+  text     : String;
+}
+
 // Entidades principais
 entity Produto : cuid, managed{
   nome         : String      not null;
@@ -54,6 +59,9 @@ entity Pedido  : cuid, managed {
   status       : StatusPedido             not null;
   itens        : Composition of many ItemPedido
                 on itens.pedido = $self;
+
+  @cds.api.ignore
+  statusCriticality : Integer;
 }
 
 entity ItemPedido : cuid, managed{

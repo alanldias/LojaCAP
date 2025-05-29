@@ -2,183 +2,208 @@ sap.ui.define([
     "sap/ui/core/mvc/Controller",
     "sap/ui/core/routing/History",
     "sap/m/MessageToast",
-    "sap/ui/model/Filter",            
-    "sap/ui/model/FilterOperator" 
-], function (Controller, History, MessageToast, Filter, FilterOperator) {
+    "sap/ui/model/Filter",
+    "sap/ui/model/FilterOperator",
+    "sap/ui/model/json/JSONModel",
+    "sap/m/MessageBox"
+], function (Controller, History, MessageToast, Filter, FilterOperator, JSONModel, MessageBox) {
     "use strict";
 
     return Controller.extend("lojacap.controller.produtoDetalhe", {
 
         onInit: function () {
-            console.log("🎮 Controller produtoDetalhe.js: onInit - Iniciando...");
-            var oRouter = this.getOwnerComponent().getRouter();
+            console.log("🎮 Controller produtoDetalhe.js: onInit");
+            const oRouter = this.getOwnerComponent().getRouter();
             oRouter.getRoute("produtoDetalhe").attachPatternMatched(this._onObjectMatched, this);
-            console.log("🎮 Controller produtoDetalhe.js: onInit - Rota 'produtoDetalhe' monitorada.");
+
+            const oRelatedProductsModel = new JSONModel({ itens: [] });
+            this.getView().setModel(oRelatedProductsModel, "relatedProductsView");
+            console.log("🎮 Controller produtoDetalhe.js: Modelo 'relatedProductsView' inicializado.");
         },
 
         _onObjectMatched: function (oEvent) {
-            var sProdutoId = oEvent.getParameter("arguments").produtoId;
-            console.log("🎮 Controller produtoDetalhe.js: _onObjectMatched - ID do Produto recebido:", sProdutoId);
+            const sProdutoId = oEvent.getParameter("arguments").produtoId;
+            this._sCurrentProductId = sProdutoId;
+            console.log("🎮 Controller produtoDetalhe.js: _onObjectMatched - ID Produto Atual da Rota:", sProdutoId);
 
-            // MUDANÇA FINAL (🤞): Adicionando IsActiveEntity=true para DRAFT!
-            var sPath = "/Produtos(ID=" + sProdutoId + ",IsActiveEntity=true)"; 
+            const oView = this.getView();
+            oView.getModel("relatedProductsView").setData({ itens: [] }); // Limpa modelo de relacionados
+            console.log("🎮 Controller produtoDetalhe.js: Modelo 'relatedProductsView' resetado.");
 
-            console.log("🎮 Controller produtoDetalhe.js: _onObjectMatched - Tentando fazer Binding com Path (DRAFT):", sPath);
+            const sPath = "/Produtos(ID=" + sProdutoId + ",IsActiveEntity=true)";
+            console.log("🎮 Controller produtoDetalhe.js: Configurando bindElement para path:", sPath);
 
-            this.getView().bindElement({
-                path: sPath, // Caminho atualizado
+            oView.bindElement({
+                path: sPath,
                 events: {
-                    dataRequested: function() {
-                        console.log("📡 Controller produtoDetalhe.js: bindElement - Pedido de dados iniciado para:", sPath);
+                    dataRequested: () => {
+                        console.log("📡 Controller produtoDetalhe.js: bindElement (Produto Principal) - Pedido de dados iniciado para:", sPath);
                     },
-                    dataReceived: function(oDataEvent) {
-                        var oData = oDataEvent ? oDataEvent.getParameter("data") : null;
-                        console.log("✅ Controller produtoDetalhe.js: bindElement - Dados recebidos!", oData || "(Nenhum dado retornado ou evento nulo)");
-                        if (oData) {
-                            console.log("🎉 Controller produtoDetalhe.js: Dados do produto:", JSON.stringify(oData)); // Log extra para ver os dados!
+                    dataReceived: (oDataEvent) => {
+                        const oRawData = oDataEvent ? oDataEvent.getParameter("data") : null;
+                        console.log("✅ Controller produtoDetalhe.js: bindElement (Produto Principal) - Evento dataReceived. Dados brutos da requisição:", JSON.stringify(oRawData));
+                        // Continuamos confiando no 'change'
+                    },
+                    change: async () => { // Marcado como async
+                        console.log("🔄️ Controller produtoDetalhe.js: bindElement (Produto Principal) - Evento 'change' disparado.");
+                        const oContext = oView.getBindingContext();
+
+                        if (oContext) {
+                            console.log("✨ Controller produtoDetalhe.js (change): Contexto da view OBTIDO. Path:", oContext.getPath());
+                            try {
+                                const oProdutoPrincipal = await oContext.requestObject(); // Pede o objeto do contexto
+                                console.log("🎉 Controller produtoDetalhe.js (change): Objeto do produto principal via oContext.requestObject():", JSON.stringify(oProdutoPrincipal));
+
+                                if (oProdutoPrincipal && typeof oProdutoPrincipal.categoria === 'string' && oProdutoPrincipal.categoria.trim() !== "" && oProdutoPrincipal.ID) {
+                                    console.log("🏷️ Controller produtoDetalhe.js (change): Categoria:", oProdutoPrincipal.categoria, "| ID:", oProdutoPrincipal.ID, "-> Chamando _loadRelatedProducts");
+                                    this._loadRelatedProducts(oProdutoPrincipal.categoria, oProdutoPrincipal.ID);
+                                } else {
+                                    console.warn("⚠️ Controller produtoDetalhe.js (change): Categoria ou ID não encontrado no produto principal. Produto:", JSON.stringify(oProdutoPrincipal));
+                                    oView.getModel("relatedProductsView").setProperty("/itens", []);
+                                }
+                            } catch (error) {
+                                console.error("❌ Controller produtoDetalhe.js (change): Erro ao fazer oContext.requestObject():", error, JSON.stringify(error));
+                                oView.getModel("relatedProductsView").setProperty("/itens", []);
+                                MessageBox.error("Erro ao obter os dados detalhados do produto principal: " + error.message);
+                            }
                         } else {
-                            console.error("🚨 Controller produtoDetalhe.js: NENHUM DADO RECEBIDO! Verifique o path e o serviço OData. Veja a aba Network (F12)!");
+                            console.error("❌ Controller produtoDetalhe.js (change): Contexto da view (oView.getBindingContext()) é NULO.");
+                            oView.getModel("relatedProductsView").setProperty("/itens", []);
+                            MessageBox.error("Falha crítica: Não foi possível estabelecer o contexto de dados para o produto principal.");
                         }
-                    },
-                    change: function() {
-                         console.log("🔄️ Controller produtoDetalhe.js: bindElement - Binding alterado (dados provavelmente aplicados)!");
                     }
                 }
             });
-            console.log("🎮 Controller produtoDetalhe.js: _onObjectMatched - Chamada bindElement concluída.");
+            console.log("🎮 Controller produtoDetalhe.js: bindElement para produto principal configurado.");
         },
 
-        onNavBack: function () {
-            console.log("🎮 Controller produtoDetalhe.js: onNavBack - Navegando para trás...");
-            var oHistory = History.getInstance();
-            var sPreviousHash = oHistory.getPreviousHash();
+        _loadRelatedProducts: function (sCategoria, sProdutoAtualID) {
+            console.log("🔍 Controller produtoDetalhe.js: _loadRelatedProducts - Categoria:", sCategoria, "Excluir ID:", sProdutoAtualID);
+            const oView = this.getView();
+            const oMainModel = oView.getModel();
+            const oRelatedModelJson = oView.getModel("relatedProductsView");
 
+            if (!sCategoria || !sProdutoAtualID) {
+                console.warn("⚠️ Controller produtoDetalhe.js: _loadRelatedProducts - Parâmetros inválidos.");
+                oRelatedModelJson.setProperty("/itens", []);
+                return;
+            }
+
+            const aFilters = [
+                new Filter("categoria", FilterOperator.EQ, sCategoria),
+                new Filter("ID", FilterOperator.NE, sProdutoAtualID),
+                new Filter("IsActiveEntity", FilterOperator.EQ, true)
+            ];
+            const iMaxRelated = 4;
+            const sSelectFields = "ID,nome,preco,imagemURL,categoria"; // Campos que você precisa
+
+            console.log("🔍 Controller produtoDetalhe.js: _loadRelatedProducts - Filtros:", JSON.stringify(aFilters.map(f => ({ path: f.sPath, op: f.sOperator, val1: f.oValue1 }))));
+
+            // *** MUDANÇA PRINCIPAL AQUI ***
+            // Remover o parâmetro de custom query options ($top, $select) do bindList,
+            // e controlar o $select e o limite via parâmetros do requestContexts ou setParameter na lista.
+            // O $select pode ser passado como um parâmetro no 'mParameters' do bindList.
+            const oListBinding = oMainModel.bindList("/Produtos", undefined, [], aFilters, {
+                 $select: sSelectFields // Tentar passar o $select aqui
+            });
+
+            console.log("⏳ Controller produtoDetalhe.js: _loadRelatedProducts - Solicitando produtos relacionados...");
+            // Usar o parâmetro 'length' do requestContexts para limitar os resultados (equivalente ao $top)
+            oListBinding.requestContexts(0, iMaxRelated).then(aContexts => {
+                const aProdutosRelacionados = aContexts.map(context => context.getObject());
+                console.log("✅ Controller produtoDetalhe.js: _loadRelatedProducts - Produtos relacionados RECEBIDOS (" + aProdutosRelacionados.length + ").");
+                if (aProdutosRelacionados.length > 0) {
+                    console.log("👍 Controller produtoDetalhe.js: _loadRelatedProducts - Definindo itens. Primeiro item:", JSON.stringify(aProdutosRelacionados[0]));
+                } else {
+                    console.log("🍃 Controller produtoDetalhe.js: _loadRelatedProducts - Nenhum produto relacionado encontrado.");
+                }
+                oRelatedModelJson.setProperty("/itens", aProdutosRelacionados);
+            }).catch(oError => {
+                // ESTE CATCH AGORA É O MAIS RELEVANTE PARA O ERRO "$top not supported" SE ELE VIER DAQUI
+                console.error("❌ Controller produtoDetalhe.js: _loadRelatedProducts - ERRO ao buscar/processar produtos relacionados:", oError, JSON.stringify(oError));
+                MessageBox.error("Erro ao carregar produtos sugeridos: " + (oError.message || "Verifique o console."));
+                oRelatedModelJson.setProperty("/itens", []);
+            });
+        },
+
+        // ... (onNavBack, onAddToCart, onBuyNow, onProdutoRelacionadoPress permanecem os mesmos)
+        onNavBack: function () {
+            const oHistory = History.getInstance();
+            const sPreviousHash = oHistory.getPreviousHash();
             if (sPreviousHash !== undefined) {
                 window.history.go(-1);
             } else {
-                var oRouter = this.getOwnerComponent().getRouter();
+                const oRouter = this.getOwnerComponent().getRouter();
                 oRouter.navTo("RouteProdutos", {}, true);
             }
         },
 
-        onAddToCart: async function (oEvent) {
-            console.log("🛒 Controller produtoDetalhe.js: onAddToCart - Iniciando...");
-
-            // --- LÓGICA PARA OBTER CARRINHO ID (ASSUMINDO localStorage) ---
-            // !!! ATENÇÃO: Verifique como o ID é realmente guardado no seu app!
-            // !!! Pode ser que esteja em outro lugar (Component.js, etc.)
-            var sCarrinhoID = localStorage.getItem("carrinhoID"); 
-
-            if (!sCarrinhoID) {
-                MessageToast.show("Erro: Carrinho não encontrado. Volte para a lista de produtos para inicializar.");
-                console.error("🛒 Controller produtoDetalhe.js: ID do Carrinho não encontrado no localStorage.");
-                return; // Para aqui se não achar o carrinho
-            }
-            console.log("🛒 Controller produtoDetalhe.js: Usando Carrinho ID:", sCarrinhoID);
-            // --- FIM DA LÓGICA DO CARRINHO ID ---
-
-            try {
-                const oModel = this.getView().getModel(); // Modelo OData padrão
-                const oContext = this.getView().getBindingContext(); // Contexto da view (já está no produto certo)
-
-                if (!oContext) {
-                    MessageToast.show("Erro: Não foi possível identificar o produto.");
-                    console.error("🛒 Controller produtoDetalhe.js: Contexto do produto não encontrado na view.");
-                    return;
-                }
-
-                const oProduto = oContext.getObject();
-                console.log("🛒 Controller produtoDetalhe.js: Produto a adicionar:", oProduto.nome, "(ID:", oProduto.ID, ")");
-
-                // Filtros para achar o ItemCarrinho (carrinho E produto)
-                const oListBindingItems = oModel.bindList("/ItemCarrinho", undefined, undefined, [
-                    new Filter("carrinho_ID", FilterOperator.EQ, sCarrinhoID),
-                    new Filter("produto_ID", FilterOperator.EQ, oProduto.ID)
-                ]);
-
-                console.log("🛒 Controller produtoDetalhe.js: Verificando se item já existe...");
-
-                // Pede o contexto (o item) para o backend
-                oListBindingItems.requestContexts(0, 1).then(aContexts => {
-                    if (aContexts.length > 0) {
-                        // JÁ EXISTE: Atualiza a quantidade
-                        const oItemContext = aContexts[0];
-                        const oItemData = oItemContext.getObject();
-                        const novaQuantidade = (oItemData.quantidade || 0) + 1; // Garante que começa com 0 se for nulo
-                        
-                        console.log("🛒 Controller produtoDetalhe.js: Item encontrado. Atualizando quantidade para", novaQuantidade);
-                        oItemContext.setProperty("quantidade", novaQuantidade);
-                        // NOTA: OData V4 pode precisar de model.submitBatch("$auto"); se não salvar sozinho.
-                        
-                        MessageToast.show(`Quantidade de produto atualizada para ${novaQuantidade}!`);
-
-                    } else {
-                        // NÃO EXISTE: Cria um novo item
-                        console.log("🛒 Controller produtoDetalhe.js: Item não encontrado. Criando novo...");
-                        const oNewCollectionBinding = oModel.bindList("/ItemCarrinho");
-                        
-                        oNewCollectionBinding.create({
-                            carrinho_ID: sCarrinhoID,
-                            produto_ID: oProduto.ID,
-                            quantidade: 1,
-                            precoUnitario: oProduto.preco // Usando o preço do produto
-                        });
-                        
-                        MessageToast.show(`produto adicionado ao carrinho com sucesso!`);
-                    }
-                }).catch(err => {
-                    MessageToast.show("Erro ao adicionar/verificar produto: " + err.message);
-                    console.error("🛒 Controller produtoDetalhe.js: Erro no requestContexts:", err);
-                });
-
-            } catch (error) {
-                MessageToast.show("Erro inesperado ao adicionar ao carrinho: " + error.message);
-                console.error("🛒 Controller produtoDetalhe.js: Erro geral:", error);
-            }
-        },
-        
-        onBuyNow: async function () { // Mantemos async se você usar requestProperty, senão pode ser síncrono
-            console.log("🛍️ Controller produtoDetalhe.js: onBuyNow - Iniciando compra imediata...");
+        onAddToCart: async function () {
             const oContext = this.getView().getBindingContext();
-        
-            if (!oContext) {
-                MessageToast.show("Erro: Não foi possível identificar o produto.");
-                console.error("🛍️ Controller produtoDetalhe.js: Contexto do produto não encontrado.");
-                return;
-            }
-        
-            // Usando a forma que funcionou para você pegar o nome e os outros dados
-            const oProduto = oContext.getObject(); 
-            let sProdutoNome = oProduto ? oProduto.nome : undefined;
-            const oTitleControl = this.getView().byId("nomeProduto"); // Certifique-se do ID
-        
-            if (!sProdutoNome && oTitleControl) {
-                sProdutoNome = oTitleControl.getText();
-            }
-            
-            const sProdutoID = oProduto ? oProduto.ID : undefined;
-            const fProdutoPreco = oProduto ? oProduto.preco : undefined;
-        
-            console.log("🛍️ Controller produtoDetalhe.js: Dados coletados para compra imediata - ID:", sProdutoID, "Nome:", sProdutoNome, "Preço:", fProdutoPreco);
-        
-            if (!sProdutoID || !sProdutoNome || fProdutoPreco === undefined) {
-                MessageToast.show("Erro: Dados do produto incompletos para compra imediata.");
-                console.error("🛍️ Controller produtoDetalhe.js: Dados incompletos. ID:", sProdutoID, "Nome:", sProdutoNome, "Preco:", fProdutoPreco);
-                return;
-            }
-        
-            // Coloca os dados no modelo 'navArgs'
-            this.getOwnerComponent().getModel("navArgs").setData({
-                buyNowProductId: sProdutoID,
-                buyNowProductQty: 1,
-                buyNowProductPreco: fProdutoPreco,
-                buyNowProdutoNome: sProdutoNome
+            if (!oContext) { MessageToast.show("Produto não carregado."); return; }
+            const oProduto = await oContext.requestObject();
+            if (!oProduto || !oProduto.ID) { MessageToast.show("Dados do produto incompletos."); console.error("🛒 addCart: oProduto ou ID nulo", oProduto); return; }
+
+            const sCarrinhoID = localStorage.getItem("carrinhoID");
+            if (!sCarrinhoID) { MessageToast.show("Erro: Carrinho não encontrado."); return; }
+
+            const oModel = this.getView().getModel();
+            const oListBindingItems = oModel.bindList("/ItemCarrinho", undefined, undefined, [
+                new Filter("carrinho_ID", FilterOperator.EQ, sCarrinhoID),
+                new Filter("produto_ID", FilterOperator.EQ, oProduto.ID)
+            ]);
+            oListBindingItems.requestContexts(0, 1).then(aContexts => {
+                if (aContexts.length > 0) {
+                    const oItemContext = aContexts[0];
+                    const oItemData = oItemContext.getObject();
+                    const novaQuantidade = (oItemData.quantidade || 0) + 1;
+                    oItemContext.setProperty("quantidade", novaQuantidade);
+                    MessageToast.show(`Quantidade de ${oProduto.nome} atualizada para ${novaQuantidade}!`);
+                } else {
+                    const oNewCollectionBinding = oModel.bindList("/ItemCarrinho");
+                    oNewCollectionBinding.create({
+                        carrinho_ID: sCarrinhoID,
+                        produto_ID: oProduto.ID,
+                        quantidade: 1,
+                        precoUnitario: oProduto.preco
+                    });
+                    MessageToast.show(`${oProduto.nome} adicionado ao carrinho!`);
+                }
+            }).catch(err => {
+                MessageToast.show("Erro ao adicionar produto: " + err.message);
+                console.error("Erro ao adicionar/atualizar item no carrinho:", err);
             });
-            console.log("🛍️ Controller produtoDetalhe.js: Dados do produto único colocados no modelo 'navArgs'.");
-        
-            var oRouter = this.getOwnerComponent().getRouter();
-            oRouter.navTo("RoutePayment"); // Navega sem passar parâmetros aqui
-            console.log("🛍️ Controller produtoDetalhe.js: Navegando para RoutePayment.");
+        },
+
+        onBuyNow: async function () {
+            const oContext = this.getView().getBindingContext();
+            if (!oContext) { MessageToast.show("Produto não carregado."); return; }
+            const oProduto = await oContext.requestObject();
+            if (!oProduto || !oProduto.ID) { MessageToast.show("Dados do produto incompletos."); console.error("🛍️ buyNow: oProduto ou ID nulo", oProduto); return; }
+
+            const sProdutoNome = oProduto.nome;
+            const sProdutoID = oProduto.ID;
+            const fProdutoPreco = oProduto.preco;
+
+            if (!sProdutoID || typeof sProdutoNome === 'undefined' || typeof fProdutoPreco === 'undefined') {
+                MessageToast.show("Erro: Dados do produto incompletos para compra."); return;
+            }
+            this.getOwnerComponent().getModel("navArgs").setData({
+                buyNowProductId: sProdutoID, buyNowProductQty: 1, buyNowProductPreco: fProdutoPreco, buyNowProdutoNome: sProdutoNome
+            });
+            this.getOwnerComponent().getRouter().navTo("RoutePayment");
+        },
+
+        onProdutoRelacionadoPress: function (oEvent) {
+            const oContext = oEvent.getSource().getBindingContext("relatedProductsView");
+            if (oContext) {
+                const sProdutoId = oContext.getProperty("ID");
+                console.log("🖱️ Controller produtoDetalhe.js: onProdutoRelacionadoPress - Navegando para ID:", sProdutoId);
+                this.getOwnerComponent().getRouter().navTo("produtoDetalhe", { produtoId: sProdutoId });
+            } else {
+                MessageToast.show("Não foi possível navegar para este produto.");
+                console.error("❌ Controller produtoDetalhe.js: onProdutoRelacionadoPress - Contexto não encontrado.");
+            }
         }
 
     });

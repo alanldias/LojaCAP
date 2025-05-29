@@ -4,7 +4,7 @@
     xmlns="sap.m"
     xmlns:f="sap.f"
     xmlns:layout="sap.ui.layout">
-    
+
     <Page
         id="produtoDetalhePage"
         title="Detalhe do Produto"
@@ -13,39 +13,73 @@
 
         <content>
             <VBox id="vboxContainer" class="sapUiSmallMargin">
+
                 <f:Card id="produtoCard" class="sapUiSmallMarginBottom">
-                   <f:content>
-                        <HBox id="hboxDetalhes">
+                    <f:content>
+                        <HBox id="hboxDetalhes" wrap="Wrap">
                             <items>
-                                <Image id="imagemProduto" src="{imagemURL}" width="150px" class="sapUiTinyMarginEnd" />
-                                <VBox id="vboxInfo">
-                                    <Title id="nomeProduto" text="{nome}" />
+                                <Image
+                                    id="imagemProduto"
+                                    src="{imagemURL}"
+                                    width="200px" class="sapUiSmallMarginEnd sapUiSmallMarginBottom" />
+                                <VBox id="vboxInfo" class="sapUiSmallMarginBegin">
+                                    <Title id="nomeProduto" text="{nome}" level="H2"/>
+                                    <Label id="asdaas2s12312" text="Descrição:" design="Bold" class="sapUiTinyMarginTop"/>
                                     <Text id="descricaoProduto" text="{descricao}" />
-                                    <Text id="productPrice2" text="{= 'R$ ' + ${preco}}" />
-                                    <Text id="estoqueProduto" text="Em Estoque: {estoque}" />
-                                </VBox>
+                                    <Label id="asdas12312" text="Preço:" design="Bold" class="sapUiTinyMarginTop"/>
+                                    <Text id="productPrice2" text="{= ${preco} ? 'R$ ' + parseFloat(${preco}).toFixed(2) : 'Consultar preço'}" class="sapMObjectNumberLarge"/>
+                                    <Label id="as12das12312" text="Estoque:" design="Bold" class="sapUiTinyMarginTop"/>
+                                    <Text id="estoqueProduto" text="{= ${estoque} ? ${estoque} + ' unidades' : 'Indisponível'}" />
+                                    <Label id="asdas12234312" text="Categoria:" design="Bold" class="sapUiTinyMarginTop" visible="{= ${categoria} ? true : false }"/>
+                                    <Text id="categoriaProdutoPrincipal" text="{categoria}" visible="{= ${categoria} ? true : false }"/>
+                                    </VBox>
                             </items>
                         </HBox>
-                    </f:content>    
+                    </f:content>
                 </f:Card>
+
+                <VBox
+                    id="idVboxSecaoProdutosRelacionados"
+                    visible="{= !!${relatedProductsView>/itens} &amp;&amp; ${relatedProductsView>/itens}.length > 0 }"
+                    class="sapUiSmallMarginTop">
+                    <Title id="idTituloProdutosRelacionados" text="Você também pode gostar" level="H3" class="sapUiSmallMarginBottom" />
+                    
+                    <List
+                        id="idListaProdutosRelacionados"
+                        items="{path: 'relatedProductsView>/itens'}"
+                        noDataText="Nenhum produto similar encontrado."
+                        growing="true"
+                        growingThreshold="4">
+                        <StandardListItem
+                            id="idItemListaProdutosRelacionadosTemplate"
+                            title="{relatedProductsView>nome}"
+                            description="{= ${relatedProductsView>preco} ? 'R$ ' + parseFloat(${relatedProductsView>preco}).toFixed(2) : ''}"
+                            icon="{relatedProductsView>imagemURL}"
+                            iconDensityAware="false"
+                            iconInset="false"
+                            type="Navigation"
+                            press=".onProdutoRelacionadoPress" />
+                    </List>
+                </VBox>
+
             </VBox>
         </content>
 
         <footer>
             <OverflowToolbar id="toolbarRodape">
-                <ToolbarSpacer id="toolbarSpacer"/>
+                <ToolbarSpacer id="toolbarSpacer" />
                 <Button
                     id="addToCartBtn"
                     text="Adicionar ao Carrinho"
                     type="Emphasized"
                     icon="sap-icon://cart-3"
-                    press=".onAddToCart"/>
+                    press=".onAddToCart" />
                 <Button
                     id="buyNowBtn"
                     text="Comprar"
                     type="Accept"
                     icon="sap-icon://money-bills"
-                    press=".onBuyNow"/>
+                    press=".onBuyNow" />
             </OverflowToolbar>
         </footer>
     </Page>

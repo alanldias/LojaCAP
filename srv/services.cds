@@ -11,19 +11,21 @@ service ShopService {
 
   entity Carrinhos  as projection on shop.Carrinho;
 
-  @odata.draft.enabled
-  entity Pedidos    as projection on shop.Pedido {
-    *,
   
-    statusCriticality : Integer 
-  };
+    entity Pedidos as projection on shop.Pedido {
+        *, 
+        @Core.Computed 
+        statusCriticality : Integer 
+    } actions { // <<< Bloco de ações para a entidade Pedidos
+        action avancarStatus(); 
+        action retrocederStatus();
+    }
   
  entity ItemCarrinho as projection on shop.ItemCarrinho;
 
  entity StatusPedidoEnum as projection on shop.StatusPedidoEnum;
 
 
-  // Suas ações personalizadas existentes
   action registerCliente(nome: String, email: String, senha: String) returns String;
   action loginCliente(email: String, senha: String) returns String;
   action realizarPagamento(clienteID: UUID, tipoPagamento: shop.TipoPagamento) returns UUID;

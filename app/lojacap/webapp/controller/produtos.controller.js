@@ -219,6 +219,19 @@ sap.ui.define([
                 this._oFiltroDialog.close();
             }
         },
+        onProductPress: function (oEvent) {
+            var oItem = oEvent.getSource(); // O item da lista que foi clicado
+            var oContext = oItem.getBindingContext(); // O contexto de dados do item
+            var sProdutoId = oContext.getProperty("ID"); // Pega o ID do produto (Certifique-se que 'ID' é o nome da sua chave primária)
+
+            console.log("🖱️ Controller produtos.js: onProductPress - Produto clicado! ID:", sProdutoId);
+
+            var oRouter = this.getOwnerComponent().getRouter();
+            oRouter.navTo("produtoDetalhe", {
+                produtoId: sProdutoId // Passa o ID como parâmetro para a rota
+            });
+            console.log("🖱️ Controller produtos.js: onProductPress - Navegando para produtoDetalhe...");
+        },
 
 
         _updateHeaderState: function () {

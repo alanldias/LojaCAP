@@ -1,104 +1,99 @@
 <mvc:View
-  controllerName="lojacap.controller.produtos"
-  xmlns="sap.m"
-  xmlns:f="sap.f"
-  xmlns:mvc="sap.ui.core.mvc">
+    controllerName="lojacap.controller.produtos"
+    xmlns="sap.m"
+    xmlns:f="sap.f"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:grid="sap.ui.layout.cssgrid">
 
-  <Page id="produtos" title="Catálogo de Produtos">
-    <headerContent>
-      <Button
-        id="btnVoltarProdutos"
-        icon="sap-icon://nav-back"
-        tooltip="Voltar"
-        type="Transparent"
-        press=".onVoltar" />
-      <ToolbarSpacer id="spacerProdutos" />
+    <Page id="produtos" title="Catálogo de Produtos">
+        <headerContent>
+            <Button
+                id="btnVoltarProdutos"
+                icon="sap-icon://nav-back"
+                tooltip="Voltar"
+                type="Transparent"
+                press=".onVoltar" />
+            <ToolbarSpacer id="spacerProdutos" />
 
-      <Button
-        id="loginButtonProdutos"
-        text="{i18n>loginButtonText}" press=".onGoToLoginHeader"
-        type="Transparent"
-        visible="{headerModel>/loginButtonVisible}" />
+            <Button
+                id="loginButtonProdutos"
+                text="Login" press=".onGoToLoginHeader"
+                type="Transparent"
+                visible="{headerModel>/loginButtonVisible}" />
 
-      <Button
-        id="cadastreseButtonHeader"
-        text="{i18n>cadastreseButtonText}"
-        press=".onIrCadastroClientes" type="Emphasized"
-        visible="{headerModel>/loginButtonVisible}" />
+            <Button
+                id="cadastreseButtonHeader"
+                text="Cadastre-se" press=".onIrCadastroClientes" type="Emphasized"
+                visible="{headerModel>/loginButtonVisible}" />
 
-      <Text
-        id="welcomeTextProdutos"
-        text="{= ${headerModel>/userName} ? (${i18n>welcomeHeaderPrefix} + ' ' + ${headerModel>/userName} + '!') : ''}"
-        visible="{headerModel>/welcomeTextVisible}"
-        class="sapUiSmallMarginBeginEnd sapMTitleStyleH6" />
+            <Text
+                id="welcomeTextProdutos"
+                text="{= ${headerModel>/userName} ? ('Bem-vindo ' + ${headerModel>/userName} + '!') : ''}" visible="{headerModel>/welcomeTextVisible}"
+                class="sapUiSmallMarginBeginEnd sapMTitleStyleH6" />
 
-      <Button
-        id="logoutButtonProdutos"
-        icon="sap-icon://log"
-        tooltip="{i18n>logoutButtonTooltip}" press=".onLogoutPressHeader"
-        type="Transparent"
-        visible="{headerModel>/logoutButtonVisible}" />
+            <Button
+                id="logoutButtonProdutos"
+                icon="sap-icon://log"
+                tooltip="Sair" press=".onLogoutPressHeader"
+                type="Transparent"
+                visible="{headerModel>/logoutButtonVisible}" />
 
-      <Button
-        id="carrinhoBtnProdutos"
-        icon="sap-icon://cart"
-        tooltip="{i18n>irParaCarrinhoTooltip}" press=".onIrParaCarrinho"
-        type="Transparent" />
-    </headerContent>
+            <Button
+                id="carrinhoBtnProdutos"
+                icon="sap-icon://cart"
+                tooltip="Ir para Carrinho" press=".onIrParaCarrinho"
+                type="Transparent" />
+        </headerContent>
 
-    <content>
-      <VBox id = "a" class="sapUiSmallMargin">
-        <!-- Campo de busca por nome -->
-        <SearchField
-          id="searchFieldProdutos"
-          width="18%"
-          placeholder="{i18n>searchProductPlaceholder}"
-          search=".onSearchProduto"
-          liveChange=".onSearchProdutoLive" />
+        <content>
+            <VBox id="a" class="sapUiSmallMargin">
+                <SearchField
+                    id="searchFieldProdutos"
+                    width="18%"
+                    placeholder="Buscar Produto" search=".onSearchProduto"
+                    liveChange=".onSearchProdutoLive" />
 
-          <Button
-          id="btnAbrirDialogFiltro"
-          text="Filtro"
-          icon="sap-icon://filter"
-          press=".onAbrirDialogFiltro"
-          class="sapUiTinyMarginTop"/>
+                <Button
+                    id="btnAbrirDialogFiltro"
+                    text="Filtro"
+                    icon="sap-icon://filter"
+                    press=".onAbrirDialogFiltro"
+                    class="sapUiTinyMarginTop"/>
 
+                <Button
+                    id="cadastrarProduto"
+                    text="Cadastrar Produto" press=".onIrCadastroProdutos"
+                    type="Transparent"
+                    visible="{headerModel>/logoutButtonVisible}"
+                    class="sapUiSmallMarginTop"
+                    icon="sap-icon://add" />
 
+                <f:GridList
+                    id="productGrid"
+                    items="{/Produtos}"
+                    growing="true"
+                    width="95%"
+                    class="sapUiResponsiveMargin sapUiSmallMarginTop">
 
-        <!-- Botão de cadastro -->
-        <Button
-          id="cadastrarProduto"
-          text="{i18n>viewCadastroProdutoButton}"
-          press=".onIrCadastroProdutos"
-          type="Transparent"
-          visible="{headerModel>/logoutButtonVisible}"
-          class="sapUiSmallMarginTop"
-          icon="sap-icon://add" />
+                    <f:GridListItem
+                        id="productItem"
+                        press=".onProductPress"
+                        type="Navigation">
+                        <VBox id="productBox" width="100%" class="sapUiSmallMargin">
+                            <Image
+                                id="imagem"
+                                src="{imagemURL}"
+                                width="90%"
+                                height="150px" />
+                            <Text id="productName" text="{nome}" wrapping="true" />
+                            <Text id="productPrice" text="{= 'R$ ' + ${preco}}" />
+                            <ObjectStatus id="productItemCategory" text="{categoria}" />
+                            <Button id="buyButton" text="Comprar" type="Emphasized" press="onComprar" />
+                        </VBox>
+                    </f:GridListItem>
 
-        <!-- Lista de produtos -->
-        <f:GridList
-          id="productGrid"
-          items="{/Produtos}"
-          growing="true"
-          width="95%"
-          class="sapUiResponsiveMargin sapUiSmallMarginTop">
-
-          <f:GridListItem id="productItem">
-            <VBox id="productBox" width="100%" class="sapUiSmallMargin">
-              <Image
-                id="imagem"
-                src="{imagemURL}"
-                width="90%"
-                height="150px" />
-              <Text id="productName" text="{nome}" wrapping="true" />
-              <Text id="productPrice" text="{= 'R$ ' + ${preco}}" />
-              <ObjectStatus id="productItemCategory" text="{categoria}" />
-              <Button id="buyButton" text="Comprar" type="Emphasized" press="onComprar" />
+                </f:GridList>
             </VBox>
-          </f:GridListItem>
-
-        </f:GridList>
-      </VBox>
-    </content>
-  </Page>
+        </content>
+    </Page>
 </mvc:View>

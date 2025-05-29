@@ -62,6 +62,7 @@ entity Pedido  : cuid, managed {
 
   @cds.api.ignore
   statusCriticality : Integer;
+  
 }
 
 entity ItemPedido : cuid, managed{

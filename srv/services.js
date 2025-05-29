@@ -135,6 +135,77 @@ module.exports = cds.service.impl(async function (srv) {
     return pedidoCriadoID;
   });
 
+  srv.on('realizarPagamentoItemUnico', async (req) => {
+    const { clienteID, tipoPagamento, produtoID, quantidade, precoUnitario } = req.data;
+    console.log("🛍️ Backend: Ação 'realizarPagamentoItemUnico' chamada com clienteID:", clienteID, "produtoID:", produtoID);
+
+    if (!clienteID || !tipoPagamento || !produtoID || !quantidade || precoUnitario === undefined) {
+        return req.error(400, 'clienteID, tipoPagamento, produtoID, quantidade e precoUnitario são obrigatórios.');
+    }
+    if (quantidade <= 0) {
+        return req.error(400, 'Quantidade deve ser maior que zero.');
+    }
+
+    const tx = cds.transaction(req);
+    try {
+        // 1. Verifica se o produto existe. 
+        //    Vamos tentar sem IsActiveEntity: true para ver se o erro some,
+        //    espelhando a leitura no realizarPagamento que funciona.
+        //    O CAP geralmente resolve para a entidade ativa por padrão em leituras.
+        console.log("🛍️ Backend: 'realizarPagamentoItemUnico' - Buscando produto SEM IsActiveEntity explícito:", produtoID);
+        const produto = await tx.run(SELECT.one.from(Produtos).where({ ID: produtoID })); // << MUDANÇA AQUI
+        
+        if (!produto) {
+            // Se o produto não for encontrado aqui, pode ser que ele só exista como draft e não como ativo.
+            // Nesse caso, você pode querer adicionar uma checagem secundária ou decidir o comportamento.
+            // Por agora, vamos manter simples. Se não achar, é erro.
+            console.error("🛍️ Backend: 'realizarPagamentoItemUnico' - Produto não encontrado (ou apenas draft existente) para ID:", produtoID);
+            return req.error(404, `Produto com ID ${produtoID} não encontrado.`);
+        }
+        console.log("🛍️ Backend: 'realizarPagamentoItemUnico' - Produto encontrado:", JSON.stringify(produto));
+
+
+        // Se o produto encontrado não for o ativo (raro se o SELECT padrão funcionar bem),
+        // e você PRECISAR garantir que é o ativo, você poderia checar produto.IsActiveEntity aqui.
+        // Mas se a query acima já te dá o ativo, ótimo.
+
+        const totalPedido = parseFloat(precoUnitario) * parseInt(quantidade);
+
+        // 2. Cria o Pedido
+        const novoPedidoID = cds.utils.uuid();
+        await tx.run(INSERT.into(Pedidos).entries({
+            ID: novoPedidoID,
+            cliente_ID: clienteID,
+            total: totalPedido,
+            pagamento: tipoPagamento,
+            status: 'AGUARDANDO_PAGAMENTO'
+        }));
+        console.log("🛍️ Backend: 'realizarPagamentoItemUnico' - Pedido criado:", novoPedidoID);
+
+        // 3. Cria o ItemPedido
+        await tx.run(INSERT.into(ItemPedido).entries({
+            pedido_ID: novoPedidoID,
+            produto_ID: produtoID, // Usamos o produtoID original, já validado
+            quantidade: quantidade,
+            precoUnitario: parseFloat(precoUnitario)
+        }));
+        console.log("🛍️ Backend: 'realizarPagamentoItemUnico' - ItemPedido criado para o pedido:", novoPedidoID);
+
+        await tx.commit();
+        return novoPedidoID;
+
+    } catch (error) {
+        console.error("🛍️ Backend: Erro em 'realizarPagamentoItemUnico':", error);
+        await tx.rollback(error);
+        if (!req.errors && error.message && !error.message.includes("Virtual elements")) { // Evita duplicar o erro de virtual elements se ele voltar
+            req.error(500, "Erro interno ao processar o pedido do item único: " + error.message);
+        } else if (!req.errors) { // Erro genérico se não for o de virtual elements
+             req.error(500, "Erro interno desconhecido ao processar o pedido do item único.");
+        }
+        // Se o erro de "Virtual elements" persistir, ele será propagado pelo CAP.
+        }
+    });
+
 
   this.on('mergeCarrinho', async (req) => {
     const { carrinhoAnonimoID } = req.data; // ID do localStorage
@@ -218,5 +289,154 @@ module.exports = cds.service.impl(async function (srv) {
         return { carrinhoID: idCarrinhoFinal };
       }
     }
-  })
+});
+
+  const statusOrder = [
+    'CANCELADO',            // 0
+    'AGUARDANDO_PAGAMENTO', // 1
+    'PAGO',                 // 2
+    'ENVIADO',              // 3
+    'ENTREGUE'              // 4
+  ];
+
+
+  function getNextStatus(currentStatus) {
+    console.log(`🚦 Backend (getNextStatus - SEM DRAFT): Status atual: ${currentStatus}`);
+    const currentIndex = statusOrder.indexOf(currentStatus);
+    if (currentIndex === -1) {
+        console.warn(`🚦 Backend (getNextStatus - SEM DRAFT): Status '${currentStatus}' não reconhecido.`);
+        return null;
+    }
+    if (currentIndex === statusOrder.length - 1) {
+        console.log(`🚦 Backend (getNextStatus - SEM DRAFT): Status '${currentStatus}' já é o último.`);
+        return null;
+    }
+    const next = statusOrder[currentIndex + 1];
+    console.log(`🚦 Backend (getNextStatus - SEM DRAFT): Próximo status: ${next}`);
+    return next;
+}
+
+  function getPreviousStatus(currentStatus) {
+    const currentIndex = statusOrder.indexOf(currentStatus);
+    if (currentIndex === -1) {
+        console.warn(`🚦 Backend (getPreviousStatus): Status atual '${currentStatus}' não reconhecido.`);
+        return null; // Status atual não está na lista
+    }
+    if (currentIndex === 0) {
+        console.log(`🚦 Backend (getPreviousStatus): Status '${currentStatus}' já é o primeiro.`);
+        return null; // Já está no primeiro status
+    }
+    return statusOrder[currentIndex - 1];
+  }
+
+  srv.on('avancarStatus', 'Pedidos', async (req) => {
+    const tx = cds.transaction(req);
+
+    // Normalizar o valor da chave
+    const aRawParams = req.params;
+    const aPedidoKeys = [];
+
+    // 💡 Corrigido: transforma string em objeto { ID: ... }
+    for (const rawParam of aRawParams) {
+        if (typeof rawParam === 'string') {
+            aPedidoKeys.push({ ID: rawParam });
+        } else if (rawParam && rawParam.ID) {
+            aPedidoKeys.push(rawParam);
+        } else {
+            req.warn(`Chave de pedido inválida recebida: ${JSON.stringify(rawParam)}`);
+        }
+    }
+
+    if (aPedidoKeys.length === 0) {
+        console.error("🔴 Backend 'avancarStatus' (SEM DRAFT): Nenhuma chave válida.");
+        return req.error(400, "Nenhum pedido selecionado ou chave inválida.");
+    }
+
+    let iSuccessCount = 0;
+
+    for (const { ID: sPedidoID } of aPedidoKeys) {
+        console.log(`🛠️ Atualizando pedido: ${sPedidoID}`);
+
+        const pedido = await tx.run(SELECT.one.from(Pedidos).where({ ID: sPedidoID }));
+        if (!pedido) {
+            req.warn(`Pedido ${sPedidoID} não encontrado.`);
+            continue;
+        }
+
+        const sNextStatus = getNextStatus(pedido.status);
+        if (!sNextStatus) {
+            req.warn(`Status '${pedido.status}' não pode ser avançado.`);
+            continue;
+        }
+
+        await tx.run(UPDATE(Pedidos).set({ status: sNextStatus }).where({ ID: sPedidoID }));
+        req.notify(`Pedido ${sPedidoID} avançado para '${sNextStatus}'.`);
+        iSuccessCount++;
+    }
+
+    if (iSuccessCount === 0) {
+        return req.error(400, "Nenhum pedido pôde ser atualizado.");
+    }
+
+    console.log(`✅ ${iSuccessCount} pedido(s) atualizados com sucesso.`);
+});
+
+srv.on('retrocederStatus', 'Pedidos', async (req) => {
+  const tx = cds.transaction(req);
+  const aRawParams = req.params;
+  const aPedidoKeys = [];
+
+  for (const raw of aRawParams) {
+      if (typeof raw === 'string') {
+          aPedidoKeys.push({ ID: raw });
+      } else if (raw && raw.ID) {
+          aPedidoKeys.push(raw);
+      }
+  }
+
+  if (aPedidoKeys.length === 0) {
+      return req.error(400, "Nenhum pedido selecionado.");
+  }
+  if (aPedidoKeys.length > 1) {
+      return req.error(400, "Apenas um pedido pode ser selecionado para retroceder o status.");
+  }
+
+  const { ID: pedidoID } = aPedidoKeys[0];
+  console.log(`⏪ Backend (SEM DRAFT): Retrocedendo status do pedido ${pedidoID}`);
+  const pedido = await tx.run(SELECT.one.from(Pedidos).where({ ID: pedidoID }));
+
+  if (!pedido) {
+      return req.error(404, `Pedido ${pedidoID} não encontrado.`);
+  }
+
+  const previousStatus = getPreviousStatus(pedido.status);
+  if (!previousStatus) {
+      req.warn(`Status '${pedido.status}' não pode ser retrocedido.`);
+      return;
+  }
+
+  await tx.run(
+      UPDATE(Pedidos).set({ status: previousStatus }).where({ ID: pedidoID })
+  );
+  req.notify(`Status do Pedido ${pedidoID} retrocedido para '${previousStatus}'.`);
+  console.log(`✅ Pedido ${pedidoID} atualizado com sucesso.`);
+});
+
+// SEU HANDLER PARA statusCriticality (MUITO IMPORTANTE PARA A UI)
+srv.after('READ', 'Pedidos', each => {
+    if (each.status) { // Certifique-se que 'each' existe e tem 'status'
+        switch (each.status) {
+            case 'AGUARDANDO_PAGAMENTO': each.statusCriticality = 2; break; // Amarelo/Laranja (Warning)
+            case 'PAGO':                 each.statusCriticality = 3; break; // Verde (Success)
+            case 'ENVIADO':              each.statusCriticality = 5; break; // Azul (Information)
+            case 'ENTREGUE':             each.statusCriticality = 3; break; // Verde (Success) ou 0 (Neutro)
+            case 'CANCELADO':            each.statusCriticality = 1; break; // Vermelho (Error)
+            default:                     each.statusCriticality = 0; // Cinza (Neutral)
+        }
+    } else {
+        each.statusCriticality = 0; // Default se status for nulo
+    }
+});
+
+
 });

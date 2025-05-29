@@ -4,8 +4,9 @@ sap.ui.define([
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "sap/ui/core/routing/History",    // Esta é a 5ª dependência
-    "sap/ui/model/json/JSONModel"  // Esta é a 6ª dependência
-], function (Controller, MessageToast, Filter, FilterOperator, History, JSONModel) { // <<< --- CORREÇÃO: History e JSONModel adicionados aqui
+    "sap/ui/model/json/JSONModel",  // Esta é a 6ª dependência
+    "sap/ui/core/Fragment"
+], function (Controller, MessageToast, Filter, FilterOperator, History, JSONModel, Fragment) { // <<< --- CORREÇÃO: History e JSONModel adicionados aqui
     "use strict";
 
     return Controller.extend("lojacap.controller.produtos", {
@@ -119,23 +120,119 @@ sap.ui.define([
             this._applySearchFilter(sQuery);
             console.log("onSearchProdutoLive acionado com newValue:", sQuery);
         },
-
-        onFilterCategory: function (oEvent) {
-            const sQuery = oEvent.getParameter("query") || this.byId("categorySearchField").getValue();
-            const oList = this.byId("productGrid");
-            const oBinding = oList.getBinding("items");
-            let aFilters = [];
+         
+        onAbrirDialogFiltro: async function () {
+            console.log("✅ Botão de Filtro clicado");
         
-            if (sQuery && sQuery.length > 0) {
-                aFilters.push(new sap.ui.model.Filter({
-                    path: "categoria", // Nome do campo da categoria no backend
-                    operator: sap.ui.model.FilterOperator.Contains, // Ou EQ para busca exata
-                    value1: sQuery,
+            if (!this._oFiltroDialog || !this._oFiltroDialog.isOpen?.()) {
+                if (!this._oFiltroDialog) {
+                    this._oFiltroDialog = await Fragment.load({
+                        name: "lojacap.view.fragments.FiltroDialog",
+                        controller: this
+                    });
+                    this.getView().addDependent(this._oFiltroDialog);
+                }
+                this._oFiltroDialog.open();
+            } else {
+                console.log("⚠️ Dialog já estava aberto ou visível, ignorando novo open.");
+            }
+        },
+        
+        onCancelarDialogFiltro: function () {
+            if (this._oFiltroDialog) {
+                this._oFiltroDialog.close();
+            }
+        },
+        
+        onLimparFiltrosDialog: function () {
+            sap.ui.getCore().byId("filtroNomeInput").setValue("");
+            sap.ui.getCore().byId("filtroCategoriaSelect").setSelectedKey("");
+            sap.ui.getCore().byId("filtroPrecoMinInput").setValue("");
+            sap.ui.getCore().byId("filtroPrecoMaxInput").setValue("");
+        },
+        
+        onAplicarFiltrosDialog: function () {
+        
+            const nome = sap.ui.getCore().byId("filtroNomeInput").getValue().trim();
+            const categoria = sap.ui.getCore().byId("filtroCategoriaSelect").getSelectedKey();
+            const precoMin = sap.ui.getCore().byId("filtroPrecoMinInput").getValue();
+            const precoMax = sap.ui.getCore().byId("filtroPrecoMaxInput").getValue();
+        
+            const aFilters = [];
+            console.log("Valores do diálogo - Nome:", nome, "Categoria:", categoria, "Preço Min:", precoMin, "Preço Max:", precoMax);
+        
+            if (nome) {
+                // Use a mesma estrutura do filtro principal
+                aFilters.push(new Filter({
+                    path: "nome",
+                    operator: FilterOperator.Contains,
+                    value1: nome,
+                    caseSensitive: false // Adicione para consistência, embora o backend decida no OData V4
+                }));
+                console.log("Filtro de nome do diálogo adicionado:", nome);
+            }
+        
+            if (categoria) {
+                // Supondo que 'categoria' seja o nome do campo no seu modelo
+                aFilters.push(new Filter({
+                    path: "categoria", // Verifique se este é o nome correto do campo no seu modelo de dados
+                    operator: FilterOperator.Contains,
+                    value1: categoria,
                     caseSensitive: false
                 }));
+                console.log("Filtro de categoria do diálogo adicionado:", categoria);
             }
-            oBinding.filter(aFilters);
+        
+            if (precoMin) {
+                const fPrecoMin = parseFloat(precoMin);
+                if (!isNaN(fPrecoMin)) { // Verifique se a conversão é válida
+                    aFilters.push(new Filter("preco", FilterOperator.GE, fPrecoMin));
+                    console.log("Filtro de preço mínimo do diálogo adicionado:", fPrecoMin);
+                } else {
+                    console.warn("Valor de preço mínimo inválido:", precoMin);
+                }
+            }
+        
+            if (precoMax) {
+                const fPrecoMax = parseFloat(precoMax);
+                if (!isNaN(fPrecoMax)) { // Verifique se a conversão é válida
+                    aFilters.push(new Filter("preco", FilterOperator.LE, fPrecoMax));
+                    console.log("Filtro de preço máximo do diálogo adicionado:", fPrecoMax);
+                } else {
+                    console.warn("Valor de preço máximo inválido:", precoMax);
+                }
+            }
+        
+            const oGrid = this.byId("productGrid"); // Confirmado que é a GridList da view principal
+            const oBinding = oGrid.getBinding("items");
+        
+            if (oBinding) {
+                // Se aFilters estiver vazio, oBinding.filter([]) limpa os filtros.
+                // Se tiver filtros, eles são aplicados com AND.
+                oBinding.filter(aFilters.length > 0 ? new Filter({ filters: aFilters, and: true }) : []);
+                console.log("Filtros aplicados pelo diálogo:", JSON.stringify(aFilters));
+            } else {
+                console.error("Binding 'items' da GridList (aplicado pelo diálogo) não encontrado.");
+            }
+        
+            if (this._oFiltroDialog) {
+                this._oFiltroDialog.close();
+            }
         },
+        onProductPress: function (oEvent) {
+            var oItem = oEvent.getSource(); // O item da lista que foi clicado
+            var oContext = oItem.getBindingContext(); // O contexto de dados do item
+            var sProdutoId = oContext.getProperty("ID"); // Pega o ID do produto (Certifique-se que 'ID' é o nome da sua chave primária)
+
+            console.log("🖱️ Controller produtos.js: onProductPress - Produto clicado! ID:", sProdutoId);
+
+            var oRouter = this.getOwnerComponent().getRouter();
+            oRouter.navTo("produtoDetalhe", {
+                produtoId: sProdutoId // Passa o ID como parâmetro para a rota
+            });
+            console.log("🖱️ Controller produtos.js: onProductPress - Navegando para produtoDetalhe...");
+        },
+
 
         _updateHeaderState: function () {
             const isLoggedIn = localStorage.getItem("logado") === "true";
@@ -351,6 +448,8 @@ sap.ui.define([
             localStorage.removeItem("carrinhoID");
             MessageToast.show("Você foi desconectado.");
             this._updateHeaderState();
+
+            this.getOwnerComponent().getRouter().navTo("Routehome-page", {}, true);
             
         }
     });

@@ -2,16 +2,18 @@
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
     xmlns:core="sap.ui.core"
-    xmlns:f="sap.ui.layout.form">          <Page id="payment-page" title="Revisão do Pedido e Pagamento" class="sapUiResponsiveContentPadding">
+    xmlns:f="sap.ui.layout.form">
+    
+    <Page id="payment-page" title="Revisão do Pedido e Pagamento" class="sapUiResponsiveContentPadding">
         <VBox id="payment-page-vbox" class="sapUiSmallMargin sapUiResponsiveMargin" alignItems="Stretch">
 
             <Title id="payment-page-title-review" text="Revise seu Pedido" level="H2" class="sapUiSmallMarginBottom" />
 
             <Table id="payment-page-cartTable"
-                   inset="false"
-                   items="{paymentView>/itens}" noDataText="Seu carrinho para pagamento está vazio."
-                   width="100%"
-                   class="sapUiSmallMarginBottom">
+                    inset="false"
+                    items="{paymentView>/itens}" noDataText="Seu carrinho para pagamento está vazio."
+                    width="100%"
+                    class="sapUiSmallMarginBottom">
                 <columns>
                     <Column id="payment-page-col-produto">
                         <Text id="payment-page-col-text-produto" text="Produto" />
@@ -67,20 +69,20 @@
             </HBox>
 
             <f:SimpleForm id="paymentForm"
-                          editable="true"
-                          layout="ResponsiveGridLayout"
-                          title="Forma de Pagamento"
-                          labelSpanXL="3" labelSpanL="3" labelSpanM="3" labelSpanS="12"
-                          adjustLabelSpan="false"
-                          emptySpanXL="0" emptySpanL="0" emptySpanM="0" emptySpanS="0"
-                          columnsXL="1" columnsL="1" columnsM="1"
-                          singleContainerFullSize="false"
-                          class="sapUiMediumMarginTop">
+                                editable="true"
+                                layout="ResponsiveGridLayout"
+                                title="Forma de Pagamento"
+                                labelSpanXL="3" labelSpanL="3" labelSpanM="3" labelSpanS="12"
+                                adjustLabelSpan="false"
+                                emptySpanXL="0" emptySpanL="0" emptySpanM="0" emptySpanS="0"
+                                columnsXL="1" columnsL="1" columnsM="1"
+                                singleContainerFullSize="false"
+                                class="sapUiMediumMarginTop">
                 <f:content>
                     <Label id="payment-page-label-forma-pagamento" text="Escolha como pagar" required="true"/>
                     <Select id="selectPayment"
-                            items="{enum>/}"
-                            width="100%">
+                                items="{enum>/}"
+                                width="100%">
                         <items>
                             <core:Item id="payment-page-select-item" key="{enum>key}" text="{enum>text}" />
                         </items>
@@ -95,6 +97,23 @@
                     type="Emphasized"
                     width="100%"
                     icon="sap-icon://cart-approval"
-                    enabled="{= ${paymentView>/itensNoCarrinho} &amp;&amp; !!${paymentView>/clienteID} }" /> </VBox>
+                    enabled="{= ${paymentView>/itensNoCarrinho} &amp;&amp; !!${paymentView>/clienteID} }" />
+        </VBox>
+        <footer>
+            <OverflowToolbar id = "botaoimprimir">
+                <ToolbarSpacer id = "botaoimprimirr"/>
+                <Button id = "botaoimprimirrr"
+                    text="Imprimir Pedido"
+                    icon="sap-icon://print"
+                    type="Emphasized"
+                    press=".onPrintOrder"
+                />
+                <Button id = "botaovoltar"
+                    text="Voltar ao Carrinho"
+                    press=".onNavToCart"
+                    type="Back"
+                />
+            </OverflowToolbar>
+        </footer>
     </Page>
 </mvc:View>

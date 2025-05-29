@@ -1,0 +1,48 @@
+<core:FragmentDefinition 
+  xmlns="http://schemas.sap.com/sapui5/extension/sap.ui.core.FragmentDefinition"
+  xmlns:core="sap.ui.core" 
+  xmlns:m="sap.m">
+
+  <m:Dialog id="filtroDialog" title="Filtros Avançados" draggable="true" resizable="true">
+    <m:VBox id = "aa" class="sapUiSmallMargin">
+      <m:Label id = "aaasdsaabs" text="Nome do Produto"/>
+      <m:Input id="filtroNomeInput" />
+
+      <m:Label id = "categoriaselect" text="Categoria"/>
+      <m:Select id="filtroCategoriaSelect" forceSelection="false" showSecondaryValues="false">
+        <m:items>
+          <core:Item id = "select" key="" text="(Todas)" />
+          <core:Item id = "selectvestuario" key="Vestuário" text="Vestuário" />
+          <core:Item id = "selectcalcado" key="Calçados" text="Calçados" />
+          <core:Item id = "selectacesserio" key="Acessórios" text="Acessórios" />
+          <core:Item id = "selecteletronico" key="Eletrônicos" text="Eletrônicos" />
+          <core:Item id = "selectcasa" key="Casa" text="Casa" />
+          <core:Item id = "selectmoveis" key="Móveis" text="Móveis" />
+          <core:Item id = "selectiluminacao" key="Iluminação" text="Iluminação" />
+          <core:Item id = "selectinformatica" key="Informática" text="Informática" />
+          <core:Item id = "selectesporte" key="Esportes" text="Esportes" />
+          <core:Item id = "selectutilidade" key="Utilidades" text="Utilidades" />
+        </m:items>
+      </m:Select>
+
+      <m:Label id = "aab" text="Preço mínimo (R$)" />
+      <m:Input id="filtroPrecoMinInput" type="Number" />
+
+      <m:Label id = "aabb" text="Preço máximo (R$)" />
+      <m:Input id="filtroPrecoMaxInput" type="Number" />
+    </m:VBox>
+    <m:beginButton>
+      <m:Button id = "aabbb" text="Aplicar" type="Emphasized" press=".onAplicarFiltrosDialog"/>
+    </m:beginButton>
+    <m:endButton>
+      <m:Button id = "aac" text="Cancelar" press=".onCancelarDialogFiltro"/>
+    </m:endButton>
+    <m:customHeader>
+      <m:Bar id = "aad" >
+        <m:contentRight>
+          <m:Button id = "aas" icon="sap-icon://delete" text="Limpar Filtros" tooltip="Limpar Filtros" press=".onLimparFiltrosDialog" />
+        </m:contentRight>
+      </m:Bar>
+    </m:customHeader>
+  </m:Dialog>
+</core:FragmentDefinition>

@@ -125,6 +125,11 @@
           "name": "produtoDetalhe",
           "pattern": "Produtos/{produtoId}",
           "target": ["TargetProdutoDetalhe"]
+        },
+        {
+          "name": "RoutePedidosFree",
+          "pattern": "pedidosfree",
+          "target": ["TargetPedidosFree"]
         }
       ],
       "targets": {
@@ -158,6 +163,10 @@
           "clearControlAggregation": false,
           "viewId": "produtoDetalhe",
           "viewName": "produtoDetalhe"
+        },
+        "TargetPedidosFree": {
+          "viewName": "PedidosFree",
+          "viewId": "PedidosFree"
         }
       }
     },

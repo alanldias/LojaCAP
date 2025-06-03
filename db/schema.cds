@@ -59,6 +59,13 @@ entity Pedido  : cuid, managed {
   status       : StatusPedido             not null;
   itens        : Composition of many ItemPedido
                 on itens.pedido = $self;
+  log                 : String; // << NOVO CAMPO ADICIONADO
+  orderIdPl           : String; // Correspondente a "order id da pl"
+  chaveDocumentoMae   : String; // Correspondente a "chave do documento mãe"
+  numeroDocExterno    : String; // Correspondente a "nº" (um número de documento/referência externa)
+  idParceiro          : String; // Correspondente a "id parceiro"
+  nomeParceiro        : String; // Correspondente a "nome parceiro"
+  numeroNfeM          : String; // Correspondente a "nº nf-e M"
 
   @cds.api.ignore
   statusCriticality : Integer;

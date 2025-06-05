@@ -35,6 +35,12 @@ sap.ui.define([
             this.getOwnerComponent().getRouter().navTo("RoutePedidosFree");
           },
 
+        onGonotafiscal: function () {
+            this.getOwnerComponent().getRouter().navTo("Routenota-fiscal");
+          },
+
+
+
         _updateHeaderState: function () {
             const isLoggedIn = localStorage.getItem("logado") === "true";
             const userName = localStorage.getItem("userName") || "";

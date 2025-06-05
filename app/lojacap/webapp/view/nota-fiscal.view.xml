@@ -1,0 +1,144 @@
+<mvc:View
+  controllerName="lojacap.controller.nota-fiscal" 
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:core="sap.ui.core">
+
+    <VBox id="vboxNotaFiscalMonitor">
+
+        <Toolbar id="toolbarCabecalhoTopoNf" class="cabecalhoTopo">
+            <HBox id="hboxCabecalhoNf" width="100%" alignItems="Center" justifyContent="SpaceBetween">
+                <HBox id="hboxEsquerdaNf" alignItems="Center">
+                    <Button id="btnVoltarTopoNf"
+                            icon="sap-icon://nav-back"
+                            type="Transparent"
+                            tooltip="Voltar"/>
+                    <Image id="logoTopoNf"
+                          src="https://upload.wikimedia.org/wikipedia/commons/5/59/SAP_2011_logo.svg"
+                          height="2rem"
+                          width="auto"
+                          class="sapUiTinyMarginBegin" />
+                </HBox>
+                <HBox id="hboxCentroNf" width="100%" justifyContent="Center">
+                    <Text id="tituloCabecalhoNf"
+                          text="NTTTESTE - Plataforma logística - Monitor de Notas Fiscais de Serviço"
+                          class="cabecalhoTexto" />
+                </HBox>
+                <HBox id="hboxDireitaNf" width="2rem" />
+            </HBox>
+        </Toolbar>
+
+        <Toolbar id="toolbarAcoesNfse" class="sapUiSmallMarginBottom">
+            <HBox id="hboxFiltrosAcoesNfse" alignItems="Center" wrap="Wrap" renderType="Bare">
+                <Input id="inputFiltroNfse" placeholder="Buscar NFSe..." width="15rem" />
+                <Button id="btnAtribuirNfse" icon="sap-icon://accept" text="Atribuir NF (01->05)" class="sapUiTinyMarginBegin" press="onAtribuirNotaFiscal"/>
+                <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginBegin" />
+                <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginBegin" />
+                <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar NFSe" class="sapUiTinyMarginBegin" />
+                <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginBegin" />
+                <Button id="btnVerLogsNfse" icon="sap-icon://newspaper" text="Ver logs" class="sapUiTinyMarginBegin" />
+            </HBox>
+        </Toolbar>
+
+        <Toolbar id="toolbarIconesFiltrosNfse" class="sapUiTinyMarginBottom">
+            <HBox id="hboxIconesFiltrosNfse" alignItems="Center" renderType="Bare">
+                <Button id="filtroIconeTodosNfse"
+                        icon="sap-icon://documents" 
+                        type="Transparent"
+                        tooltip="Todas as NFSe" />
+                <Button id="filtroIconeNaoAtribuidasNfse"
+                        icon="sap-icon://document-text" 
+                        type="Transparent"
+                        tooltip="Status: Não Atribuída (01)"
+                        class="sapUiSmallMarginBegin" />
+                <Button id="filtroIconeAtribuidasNfse"
+                        icon="sap-icon://order-status" 
+                        type="Transparent"
+                        tooltip="Status: Atribuída (05)" />
+                <Button id="filtroIconeErroNfse"
+                        icon="sap-icon://status-error" 
+                        type="Transparent"
+                        tooltip="Status: Erro (99)" />
+                 <Button id="filtroIconeFinalizadoPLNfse"
+                        icon="sap-icon://sys-enter-2"
+                        type="Transparent"
+                        tooltip="Status: Processo Finalizado - Retorno PL (50)" 
+                        class="sapUiSmallMarginBegin" />
+            </HBox>
+        </Toolbar>
+
+        <Table
+            id="tableNotaFiscalServicoMonitor"
+            items="{/NotaFiscalServicoMonitor}" mode="MultiSelect"
+            updateFinished=".onUpdateFinishedNotaFiscal"
+            class="tabelaComBorda">
+
+            <columns>
+                <Column id="colLogIconsNfse" hAlign="Center" width="3rem">
+                    <Text id="txtColLogIconsNfse" text="Log" />
+                </Column>
+                <Column id="colIdAlocacaoSAP">
+                    <Text id="txtColIdAlocacaoSAP" text="ID Aloc. SAP" />
+                </Column>
+                <Column id="colOrderIdPL">
+                    <Text id="txtColOrderIdPL" text="Order ID PL" />
+                </Column>
+                <Column id="colChaveDocumentoMae">
+                    <Text id="txtColChaveDocumentoMae" text="Chave Doc. Mãe" />
+                </Column>
+                <Column id="colChaveDocumentoFilho">
+                    <Text id="txtColChaveDocumentoFilho" text="Chave Doc. Filho" />
+                </Column>
+                <Column id="colStatusNfse">
+                    <Text id="txtColStatusNfse" text="Status Proc." />
+                </Column>
+                <Column id="colNumeroNfseServico">
+                    <Text id="txtColNumeroNfseServico" text="Nº NFS-e" />
+                </Column>
+                <Column id="colSerieNfseServico">
+                    <Text id="txtColSerieNfseServico" text="Série NFS-e" />
+                </Column>
+                <Column id="colDataEmissaoNfseServico">
+                    <Text id="txtColDataEmissaoNfseServico" text="Dt. Emissão NFS-e" />
+                </Column>
+                <Column id="colChaveAcessoNfseServico" width="20rem">
+                    <Text id="txtColChaveAcessoNfseServico" text="Chave Acesso NFS-e" />
+                </Column>
+                <Column id="colCodigoVerificacaoNfse">
+                    <Text id="txtColCodigoVerificacaoNfse" text="Cód. Verificação" />
+                </Column>
+                <Column id="colNumeroDocumentoMIRO">
+                    <Text id="txtColNumeroDocumentoMIRO" text="Nº Doc. MIRO" />
+                </Column>
+            </columns>
+
+            <items>
+                <ColumnListItem id="itemNotaFiscalServicoMonitor" type="Active">
+                    <cells>
+                        <HBox id="hboxLogIconsCellNfse" justifyContent="Start" renderType="Bare">
+                            <core:Icon id="iconLogStatusNfse"
+                                src="{= ${status} === '99' ? 'sap-icon://status-error' : (${status} === '55' ? 'sap-icon://alert' : 'sap-icon://status-inactive') }"
+                                size="0.8rem"
+                                color="{= ${status} === '99' ? 'red' : (${status} === '55' ? 'orange' : 'grey') }" />
+                        </HBox>
+                        <Text id="txtCellIdAlocacaoSAP" text="{idAlocacaoSAP}" />
+                        <Text id="txtCellOrderIdPL" text="{orderIdPL}" />
+                        <Text id="txtCellChaveDocumentoMae" text="{chaveDocumentoMae}" />
+                        <Text id="txtCellChaveDocumentoFilho" text="{chaveDocumentoFilho}" />
+                        <ObjectStatus
+                            id="objStatusCellNfse"
+                            text="{status} - {parts: [{path: 'status'}], formatter: '.formatter.formatStatusNfseText'}"
+                            state="{parts: [{path: 'status'}], formatter: '.formatter.formatStatusNfseState'}" />
+                        <Text id="txtCellNumeroNfseServico" text="{numeroNfseServico}" />
+                        <Text id="txtCellSerieNfseServico" text="{serieNfseServico}" />
+                        <Text id="txtCellDataEmissaoNfseServico" text="{path: 'dataEmissaoNfseServico', type: 'sap.ui.model.type.Date', formatOptions: { style: 'short'}}" />
+                        <Text id="txtCellChaveAcessoNfseServico" text="{chaveAcessoNfseServico}" />
+                        <Text id="txtCellCodigoVerificacaoNfse" text="{codigoVerificacaoNfse}" />
+                        <Text id="txtCellNumeroDocumentoMIRO" text="{numeroDocumentoMIRO}" />
+                    </cells>
+                </ColumnListItem>
+            </items>
+        </Table>
+
+    </VBox>
+</mvc:View>

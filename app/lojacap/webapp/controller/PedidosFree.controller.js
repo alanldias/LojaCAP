@@ -16,14 +16,14 @@ sap.ui.define([
 
       aItems.forEach(function (oItem) {
         const oCtx = oItem.getBindingContext();
-        const valorTotal = oCtx.getProperty("total");
+        const valorTotal = oCtx.getProperty("status");
 
         // Remove qualquer classe antiga, se quiser evitar acúmulo
         oItem.removeStyleClass("linhaVerde");
         oItem.removeStyleClass("linhaVermelha");
 
         // Adiciona a classe conforme valor
-        const sClasse = valorTotal > 400 ? "linhaVermelha" : "linhaVerde";
+        const sClasse = valorTotal == "AGUARDANDO_PAGAMENTO" ? "linhaVermelha" : "linhaVerde";
         oItem.addStyleClass(sClasse);
       });
     }

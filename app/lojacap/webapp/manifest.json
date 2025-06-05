@@ -130,6 +130,11 @@
           "name": "RoutePedidosFree",
           "pattern": "pedidosfree",
           "target": ["TargetPedidosFree"]
+        },
+        {
+          "name": "Routenota-fiscal",
+          "pattern": "nota-fiscal",
+          "target": ["Targetnota-fiscal"]
         }
       ],
       "targets": {
@@ -167,6 +172,10 @@
         "TargetPedidosFree": {
           "viewName": "PedidosFree",
           "viewId": "PedidosFree"
+        },
+        "Targetnota-fiscal": {
+          "viewName": "nota-fiscal",
+          "viewId": "nota-fiscal"
         }
       }
     },

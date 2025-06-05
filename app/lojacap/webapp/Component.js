@@ -1,7 +1,8 @@
 sap.ui.define([
     "sap/ui/core/UIComponent",
-    "lojacap/model/models"
-], (UIComponent, models) => {
+    "lojacap/model/models",
+    "sap/ui/model/json/JSONModel"
+], (UIComponent, models, JSONModel) => {
     "use strict";
 
     return UIComponent.extend("lojacap.Component", {
@@ -21,6 +22,9 @@ sap.ui.define([
 
             // enable routing
             this.getRouter().initialize();
+
+            this.setModel(new JSONModel({}), "navArgs"); 
+            console.log("🌀 Component.js: Modelo 'navArgs' criado.");
         }
     });
 });

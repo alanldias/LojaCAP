@@ -289,7 +289,7 @@ sap.ui.define([
 
       aItems.forEach(function (oItem) {
         const oCtx = oItem.getBindingContext();
-        const valorTotal = oCtx.getProperty("total");
+        const valorTotal = oCtx.getProperty("status");
 
         // Remove qualquer classe antiga, se quiser evitar acúmulo
         oItem.removeStyleClass("linhaVerde");

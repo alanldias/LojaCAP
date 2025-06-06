@@ -9,6 +9,22 @@ sap.ui.define([
   "use strict";
 
   return Controller.extend("lojacap.controller.PedidosFree", {
+
+    /**
+         * @function _getClasseParaTotal
+         * @description Função auxiliar (privada) para determinar a classe CSS com base no valor total.
+         * Isso centraliza a lógica e a torna reutilizável.
+         * @param {number} valorTotal - O valor numérico a ser verificado.
+         * @returns {string} - O nome da classe CSS ('linhaVerde', 'linhaVermelha') ou uma string vazia.
+    */
+
+    _getClasseParaTotal: function (valorTotal) {
+        if(typeof valorTotal === 'number') {
+            return valorTotal > 300 ? "linhaVerde" : "linhaVermelha";
+        }
+        return "";
+    },
+
     onInit: function () {
       MessageToast.show("PedidosFree carregado!");
     },
@@ -34,17 +50,43 @@ sap.ui.define([
       oBinding.sort(aSorter);
 
       this.updateSortButtons("descending");
-      console.log("Tabela ordenada por Nome em ordem crescente.")
+      console.log("Tabela ordenada por Nome em ordem decrescente.")
+    },
+
+    /**
+         * @function onUpdateFinished
+         * @description Chamado quando a tabela termina de ser renderizada/atualizada.
+         * Usa a função auxiliar para aplicar as classes CSS nas linhas da tabela.
+    */
+
+    onUpdateFinished: function (oEvent) {
+        const oTable = oEvent.getSource();
+        const aItems = oTable.getItems();
+
+        aItems.forEach(oItem => {
+            const oCtx = oItem.getBindingContext();
+            if (!oCtx) return;
+
+            const valorTotal = oCtx.getProperty("total");
+            const sClasse = this._getClasseParaTotal(valorTotal);
+
+            oItem.removeStyleClass("linhaVerde");
+            oItem.removeStyleClass("linhaVermelha");
+
+            if(sClasse) {
+                oItem.addStyleClass(sClasse);
+            }
+        });
     },
 
     onPrintTable: function () {
-        var oTable = this.byId("tablePedidosFree"); // <-- ID da sua tabela no View.xml
+        const oTable = this.byId("tablePedidosFree"); // <-- ID da sua tabela no View.xml
         if (!oTable) {
             MessageToast.show("Tabela não encontrada para impressão.");
             return;
         }
     
-        var oBinding = oTable.getBinding("items");
+        const oBinding = oTable.getBinding("items");
         if (!oBinding) {
             MessageToast.show("Nenhum binding de itens encontrado na tabela.");
             return;
@@ -54,42 +96,27 @@ sap.ui.define([
         // se a tabela tiver rolagem e você quiser imprimir tudo.
         // Se a tabela já estiver mostrando todos os itens (sem paginação do lado do cliente que esconde dados),
         // requestContexts() deve funcionar bem. Considere o parâmetro de comprimento se necessário.
-        oBinding.requestContexts(0, oBinding.getLength()).then(function(aContexts) { // Solicita todos os contextos
-            // --- DEPURANDO: Console Logs para verificar dados ---
-            console.log("Número de Contextos retornados:", aContexts.length);
-            if (aContexts.length > 0) {
-                console.log("Primeiro Contexto:", aContexts[0]);
-                console.log("Dados do primeiro Contexto (oContext.getObject()):", aContexts[0].getObject());
-            } else {
-                console.warn("Nenhum contexto retornado. Verifique se há dados ou filtros.");
-                MessageToast.show("Nenhum dado na tabela para imprimir."); // Informa o usuário
-                return; // Não prossegue se não há dados
+        oBinding.requestContexts(0, oBinding.getLength()).then(aContexts => { // Usando arrow function
+            if (!aContexts || aContexts.length === 0) {
+                MessageToast.show("Nenhum dado na tabela para imprimir.");
+                return;
             }
-            // ---------------------------------------------------
-    
-            var aDadosTabela = [];
-    
-            var oCurrencyFormat = sap.ui.core.format.NumberFormat.getCurrencyInstance({ // Certifique-se que NumberFormat está no escopo correto
-                currencyCode: true, // Para exibir o código da moeda, ex: BRL
+
+            const oCurrencyFormat = NumberFormat.getCurrencyInstance({
+                currencyCode: false, // O símbolo já deve vir do formatador
                 maxFractionDigits: 2,
                 minFractionDigits: 2
             });
-            var oDateFormat = sap.ui.core.format.DateFormat.getDateInstance({ // Certifique-se que DateFormat está no escopo correto
-                pattern: "dd/MM/yyyy"
-            });
-            var oTimeFormat = sap.ui.core.format.DateFormat.getTimeInstance({ // Certifique-se que DateFormat está no escopo correto
-                pattern: "HH:mm:ss"
-            });
-    
-    
-            aContexts.forEach(function(oContext) {
-                var oRowData = oContext.getObject(); // Obtém o objeto de dados da linha
-    
-                aDadosTabela.push({
+            const oDateFormat = DateFormat.getDateInstance({ pattern: "dd/MM/yyyy" });
+            const oTimeFormat = DateFormat.getTimeInstance({ pattern: "HH:mm:ss" });
+
+            const aDadosTabela = aContexts.map(oContext => {
+                const oRowData = oContext.getObject();
+                return {
                     log: oRowData.log || "",
                     clienteNome: oRowData.cliente ? oRowData.cliente.nome : "",
                     total: oRowData.total ? oCurrencyFormat.format(oRowData.total, "BRL") : "",
-                    rawTotal: oRowData.total, // <-- Armazena o valor numérico original do total
+                    rawTotal: oRowData.total, // Valor numérico original para a lógica
                     pagamento: oRowData.pagamento || "",
                     status: oRowData.status || "",
                     orderIdPl: oRowData.orderIdPl || "",
@@ -98,7 +125,7 @@ sap.ui.define([
                     idParceiro: oRowData.idParceiro || "",
                     nomeParceiro: oRowData.nomeParceiro || "",
                     numeroNfeM: oRowData.numeroNfeM || ""
-                });
+                };
             });
     
             // --- Gerar HTML dinamicamente ---
@@ -210,11 +237,11 @@ sap.ui.define([
                 <body>
                     <div class="header">
                         <h1>Relatório de Detalhes do Documento</h1>
-                        <div class="info">
+                        
                             <span>Data: ${oDateFormat.format(new Date())}</span>
                             <span>Hora: ${oTimeFormat.format(new Date())}</span>
                             <span>Total de Registros: ${aDadosTabela.length}</span>
-                        </div>
+                        
                     </div>
                     <table>
                         <thead>
@@ -233,20 +260,15 @@ sap.ui.define([
                             </tr>
                         </thead>
                         <tbody>
-                            ${aDadosTabela.map(function(row) {
-                                var statusClass = 'status-' + (row.status || '').replace(/\s+/g, '_').toUpperCase(); // Normaliza o nome do status para a classe CSS
-                                var corLinhaClass = '';
-                                // Aplica a lógica da cor da linha baseada no valor numérico 'rawTotal'
-                                if (typeof row.rawTotal === 'number') {
-                                    corLinhaClass = row.rawTotal > 400 ? "linhaVerde" : "linhaVermelha";
-                                }
+                            ${aDadosTabela.map(row => {
+                                const corLinhaClass = this._getClasseParaTotal(row.rawTotal);
                                 return `
                                     <tr class="${corLinhaClass}">
                                         <td class="col-log">${row.log}</td>
                                         <td class="col-cliente">${row.clienteNome}</td>
                                         <td class="col-total">${row.total}</td>
                                         <td class="col-pagamento">${row.pagamento}</td>
-                                        <td class="col-status ${statusClass}">${row.status}</td>
+                                        <td class="col-status">${row.status}</td>
                                         <td class="col-orderidpl">${row.orderIdPl}</td>
                                         <td class="col-chaveDocMae">${row.chaveDocumentoMae}</td>
                                         <td class="col-numeroDocExterno">${row.numeroDocExterno}</td>
@@ -271,34 +293,16 @@ sap.ui.define([
             oJanelaImpressao.document.close();
     
             // Adiciona um pequeno delay para garantir que o CSS seja aplicado
-            setTimeout(function() {
+            setTimeout(() => {
                 oJanelaImpressao.focus(); // Foca na janela de impressão
                 oJanelaImpressao.print();
                 // oJanelaImpressao.close(); // Descomente se quiser fechar a janela automaticamente após a impressão
             }, 750); // Aumentei um pouco o timeout
     
-        }.bind(this)).catch(function(oError) {
+        }).catch(oError => {
             console.error("Erro ao carregar dados da tabela para impressão:", oError);
             MessageToast.show("Erro ao gerar relatório: " + oError.message);
         });
     },
-
-    onUpdateFinished: function () {
-      const oTable = this.byId("tablePedidosFree");
-      const aItems = oTable.getItems();
-
-      aItems.forEach(function (oItem) {
-        const oCtx = oItem.getBindingContext();
-        const valorTotal = oCtx.getProperty("status");
-
-        // Remove qualquer classe antiga, se quiser evitar acúmulo
-        oItem.removeStyleClass("linhaVerde");
-        oItem.removeStyleClass("linhaVermelha");
-
-        // Adiciona a classe conforme valor
-        const sClasse = valorTotal > 400 ? "linhaVerde" : "linhaVermelha";
-        oItem.addStyleClass(sClasse);
-      });
-    }
   });
 });

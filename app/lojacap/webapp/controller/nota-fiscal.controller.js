@@ -28,49 +28,64 @@ sap.ui.define([
             console.log("▶️ Botão 'Próxima etapa' pressionado.");
         
             const oTable = this.byId("tableNotaFiscalServicoMonitor");
-            const aSel   = oTable.getSelectedItems();
-        
-            if (!aSel.length) {
-                MessageToast.show("Por favor, selecione pelo menos uma NFSe.");
-                return;
-            }
-        
-            // trocar por id se eu quiser
-            const aIds = aSel.map(i => i.getBindingContext().getProperty("idAlocacaoSAP"));
-            console.log("🆔 IDs das NFSe selecionadas:", aIds);
-        
-            const oModel = this.getView().getModel();          // ODataModel V4
-            const oAction = oModel.bindContext("/avancarStatusNFs(...)", null, {
-                $$groupId : "$direct"        // dispara logo, sem batch
-            });
-        
-            oAction.setParameter("notasFiscaisIDs", aIds);
+            const oModel = this.getView().getModel();
         
             try {
-                const oResult = await oAction.execute();       // chama a action
-                console.log("✅ Sucesso:", oResult);
+                const aSelectedContexts = oTable.getSelectedContexts();
+                if (aSelectedContexts.length === 0) {
+                    MessageToast.show("Por favor, selecione ao menos uma NFSe.");
+                    return;
+                }
         
-                let ok = 0, erros = [];
-                (oResult?.value || []).forEach(r =>
-                    r.success ? ok++ : erros.push(`NF ${r.idAlocacaoSAP}: ${r.message}`)
-                );
+                const aNotasIDs = aSelectedContexts.map(context => context.getProperty("idAlocacaoSAP"));
+                console.log("🆔 IDs das NFSe selecionadas:", aNotasIDs);
         
-                if (erros.length) {
+                // Criar e configurar a chamada da action
+                const oActionBinding = oModel.bindContext("/avancarStatusNFs(...)");
+                oActionBinding.setParameter("notasFiscaisIDs", aNotasIDs);
+        
+                // Executar
+                console.log("Frontend: Executando a action...");
+                await oActionBinding.execute();
+                
+                // Obter e processar o payload
+                const oPayload = oActionBinding.getBoundContext().getObject();
+                console.log("Frontend: Payload recebido do backend:", oPayload);
+                
+                const resultados = Array.isArray(oPayload) ? oPayload : (oPayload?.value || []);
+        
+                let ok = 0;
+                const mensagensDeErro = [];
+        
+                resultados.forEach(r => {
+                    if (r.success) {
+                        ok++;
+                    } else {
+                        mensagensDeErro.push(`NF ${r.idAlocacaoSAP}: ${r.message}`);
+                    }
+                });
+        
+                console.log(`Frontend: Processamento finalizado. Sucessos: ${ok}, Erros: ${mensagensDeErro.length}`);
+        
+                // Apresentar o resultado para o usuário
+                if (mensagensDeErro.length > 0) {
                     MessageBox.warning(
-                        `Processamento: ${ok} ok, ${erros.length} erro(s).\n\n${erros.join("\n")}`,
-                        { title: "Resultado" }
+                        `Processamento concluído com ${ok} sucesso(s) e ${mensagensDeErro.length} erro(s).\n\n` +
+                        `Detalhes dos erros:\n${mensagensDeErro.join("\n")}`,
+                        { title: "Resultado do Processamento" }
                     );
                 } else {
                     MessageToast.show(`${ok} NFSe(s) processada(s) com sucesso!`);
                 }
         
-                oTable.getBinding("items").refresh();   // recarrega lista
+                // Atualizar a UI
+                oTable.getBinding("items").refresh();
                 oTable.removeSelections(true);
         
             } catch (e) {
-                console.error("❌ Erro na action:", e);
+                console.error("❌ Frontend: Erro na action capturado pelo CATCH:", e);
                 MessageBox.error("Falha ao processar as NFSe.", {
-                    details : e.message || e
+                    details: e.message || JSON.stringify(e)
                 });
             }
         },

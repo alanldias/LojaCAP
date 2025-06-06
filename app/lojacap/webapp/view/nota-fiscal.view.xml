@@ -32,19 +32,19 @@
             <HBox id="hboxFiltrosAcoesNfse" alignItems="Center" wrap="Wrap" renderType="Bare">
                 <Input id="inputFiltroNfse" placeholder="Buscar NFSe..." width="12rem" />
                 <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginEnd" press=".onProximaEtapa"/>
-                <ToolbarSeparator />
+                <ToolbarSeparator id="separador1"/>
                 <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginEnd" />
-                <ToolbarSeparator />
+                <ToolbarSeparator id="separador2"/>
                 <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar Frete" class="sapUiTinyMarginEnd" />
-                <ToolbarSeparator />
+                <ToolbarSeparator id="separador3"/>
                 <Button id="btnFreteManual" icon="sap-icon://display" text="Adicionar Frete Manual" class="sapUiTinyMarginEnd" />
-                <ToolbarSeparator />
+                <ToolbarSeparator id="separador4"/>
                 <Button id="btnUpload" icon="sap-icon://add-document" text="Upload Arquivo de Frete" class="sapUiTinyMarginEnd" />
-                <ToolbarSeparator />
+                <ToolbarSeparator id="separador5"/>
                 <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginEnd" />
-                <ToolbarSeparator />
+                <ToolbarSeparator id="separador6"/>
                 <Button id="btnVerLogsNfse" icon="sap-icon://newspaper" text="Ver logs" class="sapUiTinyMarginEnd" />
-                <ToolbarSeparator />
+                <ToolbarSeparator id="separador7"/>
                 <MenuButton id="btnMais" text="Mais">
 			        <menu>
 				        <Menu id="btnMenuMais" itemSelected="onMenuAction">
@@ -65,7 +65,7 @@
                         tooltip="Todas as NFSe"
                         class="sapUiTinyMargin" />
 
-                    <ToolbarSeparator /> 
+                    <ToolbarSeparator id="separador8"/> 
 
                 <Button id="filtroIconeNaoAtribuidasNfse"
                         icon="sap-icon://sort-ascending" 
@@ -89,39 +89,39 @@
                         type="Ghost"
                         tooltip="Status: Processo Finalizado - Retorno PL (50)" />
 
-                <MenuButton class="sapUiTinyMargin" icon="sap-icon://filter" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
+                <MenuButton id="menuFiltro" class="sapUiTinyMargin" icon="sap-icon://filter" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
                     <menu>
-                        <Menu itemSelected="onMenuAction">
-                        <MenuItem text="Edit" icon="sap-icon://edit" />
-                        <MenuItem text="Save" icon="sap-icon://save" />
-                        <MenuItem text="Open" icon="sap-icon://open-folder" />
+                        <Menu id="menuFiltroSelect" itemSelected="onMenuAction">
+                        <MenuItem id="menuFiltroSelect1" text="Edit" icon="sap-icon://edit" />
+                        <MenuItem id="menuFiltroSelect2" text="Save" icon="sap-icon://save" />
+                        <MenuItem id="menuFiltroSelect3" text="Open" icon="sap-icon://open-folder" />
                         </Menu>
                     </menu>
                 </MenuButton>
 
-                    <ToolbarSeparator /> 
+                    <ToolbarSeparator id="separador9" /> 
                 
-                <MenuButton class="sapUiTinyMargin" icon="sap-icon://sum" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
+                <MenuButton id="menuSomar" class="sapUiTinyMargin" icon="sap-icon://sum" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
                     <menu>
-                        <Menu itemSelected="onMenuAction">
-                        <MenuItem text="Edit" icon="sap-icon://edit" />
-                        <MenuItem text="Save" icon="sap-icon://save" />
-                        <MenuItem text="Open" icon="sap-icon://open-folder" />
+                        <Menu id="menuSomarSelect" itemSelected="onMenuAction">
+                        <MenuItem id="menuSomarSelect1" icon="sap-icon://edit" />
+                        <MenuItem id="menuSomarSelect2" icon="sap-icon://save" />
+                        <MenuItem id="menuSomarSelect3" icon="sap-icon://open-folder" />
                         </Menu>
                     </menu>
                 </MenuButton>
 
-                <MenuButton class="sapUiTinyMarginEnd" icon="sap-icon://sum" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
+                <MenuButton id="menuSomar2" class="sapUiTinyMarginEnd" icon="sap-icon://sum" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
                     <menu>
-                        <Menu itemSelected="onMenuAction">
-                        <MenuItem text="Edit" icon="sap-icon://edit" />
-                        <MenuItem text="Save" icon="sap-icon://save" />
-                        <MenuItem text="Open" icon="sap-icon://open-folder" />
+                        <Menu id="menuSomar2Select" itemSelected="onMenuAction">
+                        <MenuItem id="menuSomar2Select1" text="Edit" icon="sap-icon://edit" />
+                        <MenuItem id="menuSomar2Select2" text="Save" icon="sap-icon://save" />
+                        <MenuItem id="menuSomar2Select3" text="Open" icon="sap-icon://open-folder" />
                         </Menu>
                     </menu>
                 </MenuButton>
 
-                <ToolbarSeparator />
+                <ToolbarSeparator id="separador10"/>
 
                 <Button id="filtroIconeFinalizadoPLNfseas"
                         icon="sap-icon://print"
@@ -149,17 +149,17 @@
 			        </menu>
 		        </MenuButton>
 
-                <MenuButton class="sapUiTinyMarginEnd" icon="sap-icon://provision" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
+                <MenuButton id="menuGrid" class="sapUiTinyMarginEnd" icon="sap-icon://provision" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
                     <menu>
-                        <Menu itemSelected="onMenuAction">
-                        <MenuItem text="Edit" icon="sap-icon://edit" />
-                        <MenuItem text="Save" icon="sap-icon://save" />
-                        <MenuItem text="Open" icon="sap-icon://open-folder" />
+                        <Menu id="menuGridSelect" itemSelected="onMenuAction">
+                        <MenuItem id="menuGridSelect1" text="Edit" icon="sap-icon://edit" />
+                        <MenuItem id="menuGridSelect2" text="Save" icon="sap-icon://save" />
+                        <MenuItem id="menuGridSelect3" text="Open" icon="sap-icon://open-folder" />
                         </Menu>
                     </menu>
                 </MenuButton>
 
-                <ToolbarSeparator />
+                <ToolbarSeparator id="separador11"/>
 
                 <Button id="filtroIconeFinalizadoPLNfsae"
                         icon="sap-icon://message-information"

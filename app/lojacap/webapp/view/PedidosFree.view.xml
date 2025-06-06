@@ -62,16 +62,18 @@
               type="Transparent"
               tooltip="Todos os pedidos" />
 
-      <Button id="filtroIconeAguardando"
+      <Button id="filtroAscending"
               icon="sap-icon://sort-ascending"
-              type="Transparent"
-              tooltip="Aguardando"
-              class="sapUiSmallMarginBegin" />
+              type="Ghost"
+              tooltip="A - z"
+              class="sapUiSmallMarginBegin"
+              press=".onPressAscending" />
 
-      <Button id="filtroIconeConcluido"
+      <Button id="filtroDescending"
               icon="sap-icon://sort-descending"
-              type="Transparent"
-              tooltip="Concluído" />
+              type="Ghost"
+              tooltip="Z - a"
+              press=".onPressDescending" />
 
       <Button id="filtroIconeCancelado"
               icon="sap-icon://zoom-in"
@@ -98,13 +100,15 @@
               icon="sap-icon://sum"
               type="Transparent"
               tooltip="Com frete" />
+
       <Button id="filtroIconeFrete3"
               icon="sap-icon://print"
-              type="Transparent"
-              tooltip="Com frete"
-              class = "sapUiSmallMarginBegin"  />
+              type="Ghost"
+              tooltip="Imprimir"
+              class = "sapUiSmallMarginBegin" 
+              press=".onPrintTable"/>
 
-              <Button id="filtroIconeConcluido3"
+        <Button id="filtroIconeConcluido3"
               icon="sap-icon://check-availability"
               type="Transparent"
               tooltip="Concluído" />
@@ -119,12 +123,11 @@
               type="Transparent"
               tooltip="Com frete" />
 
-              <Button id="filtroIconeFrete5"
-              icon="sap-icon://hint"
-              type="Transparent"
-              tooltip="Com frete"
-              class = "sapUiTinyMarginBegin" />
-
+        <Button id="filtroIconeFrete5"
+                icon="sap-icon://hint"
+                type="Transparent"
+                tooltip="Com frete"
+                class = "sapUiTinyMarginBegin" />
     </HBox>
 </Toolbar>
     <!-- Tabela de Pedidos -->
@@ -137,9 +140,7 @@
 
 
   <columns>
-    <Column id="colLogIcons" hAlign="Center" width="3rem">
-      <Text id="txtColLogIcons" text="Log" />
-    </Column>
+    <Column id="colLogIcons" hAlign="Center" width="3rem"><Text id="txtColLogIcons" text="Log" /></Column>
     <Column id="colCliente"><Text id="txtColCliente" text="Cliente" /></Column>
     <Column id="colTotal"><Text id="txtColTotal" text="Total" /></Column>
     <Column id="colPagamento"><Text id="txtColPagamento" text="Pagamento" /></Column>

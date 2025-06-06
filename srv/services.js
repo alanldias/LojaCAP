@@ -439,92 +439,148 @@ srv.after('READ', 'Pedidos', each => {
 });
 
 this.on('avancarStatusNFs', async (req) => {
+
   const { notasFiscaisIDs } = req.data || {};
-  const tx = this.transaction(req);
-  const results = [];
+  if (!notasFiscaisIDs?.length) return req.error(400, 'Selecione ao menos uma NFSe.');
 
-  if (!notasFiscaisIDs?.length) {
-    return req.error(400, 'Selecione ao menos uma NFSe.');
-  }
-
-  /* ------------------------------------------------------------------
-   * 1. Carrega TODAS as NFs de uma vez (menos round-trips)
-   * -----------------------------------------------------------------*/
+  const tx    = this.transaction(req);
   const notas = await tx.read(NotaFiscalServicoMonitor)
                         .where({ idAlocacaoSAP: { in: notasFiscaisIDs } });
 
-  if (notas.length !== notasFiscaisIDs.length) {
+  if (notas.length !== notasFiscaisIDs.length)
     return req.error(400, 'Alguma NFSe selecionada não foi encontrada.');
-  }
 
-  /* ------------------------------------------------------------------
-   * 2. Verifica unicidade de chaveDocumentoFilho e status
-   * -----------------------------------------------------------------*/
-  const uniqueChild  = new Set(notas.map(n => n.chaveDocumentoFilho));
-  const uniqueStatus = new Set(notas.map(n => n.status));
+  const filhos  = new Set(notas.map(n => n.chaveDocumentoFilho));
+  const status  = new Set(notas.map(n => n.status));
 
-  if (uniqueChild.size > 1) {
-    return req.error(400,
-      'Os registros selecionados têm chaves-filho diferentes. Seleção deve ter o mesmo documento filho.');
-  }
-  if (uniqueStatus.size > 1) {
-    return req.error(400,
-      'Os registros selecionados estão em status diferentes. Seleção deve ter o mesmo status.');
-  }
+  if (filhos.size  > 1) return req.error(400, 'Selecione registros com o mesmo documento filho.');
+  if (status.size  > 1) return req.error(400, 'Selecione registros com o mesmo status.');
 
-  /* ------------------------------------------------------------------
-   * 3. Decide próximo status
-   * -----------------------------------------------------------------*/
-  const statusAtual = [...uniqueStatus][0];
-  let proximoStatus;
-  let precisaNumeroNF = false;
+  const statusAtual = [...status][0];
+  let resultados;
 
   switch (statusAtual) {
-    case '01':
-      proximoStatus     = '05';
-      precisaNumeroNF   = true;
-      break;
-    case '05':
-      proximoStatus     = '15';
-      break;
-    default:
-      return req.error(400,
-        `Não há transição definida para o status ${statusAtual}.`);
+    case '01': resultados = await trans01para05(tx, notasFiscaisIDs); break;
+    case '05': resultados = await trans05para15(tx, notasFiscaisIDs); break;
+    case '15': resultados = await trans15para30(tx, notas);          break;
+    default :  return req.error(400, `Transição não definida para status ${statusAtual}.`);
   }
 
-  /* ------------------------------------------------------------------
-   * 4. Atualiza em massa (bulk update)
-   * -----------------------------------------------------------------*/
-  const dataToSet = { status: proximoStatus };
-  if (precisaNumeroNF) {
-    // gera o mesmo número para todas ou, se quiser, gere um por NF
-    dataToSet.numeroNfseServico =
-      Math.floor(1_000_000_000 + Math.random() * 900_000_000).toString();
-  }
-
-  const rows = await tx.update(NotaFiscalServicoMonitor)
-                       .set(dataToSet)
-                       .where({ idAlocacaoSAP: { in: notasFiscaisIDs } });
-
-  /* ------------------------------------------------------------------
-   * 5. Monta o retorno
-   * -----------------------------------------------------------------*/
-  notasFiscaisIDs.forEach(id => {
-    const ok = rows > 0; // rows é o total de registros afetados
-    results.push({
-      idAlocacaoSAP     : id,
-      success           : ok,
-      message           : ok
-        ? `NF avançada para ${proximoStatus}.`
-        : 'Falha ao atualizar.',
-      novoStatus        : ok ? proximoStatus : statusAtual,
-      numeroNfseServico : precisaNumeroNF ? dataToSet.numeroNfseServico : null
-    });
-  });
-
-  return results;
+  return resultados;
 });
 
+
+
+function gerarNumeroNF() {
+  return Math.floor(1_000_000_000 + Math.random() * 900_000_000).toString();
+}
+
+/** Monta array de resultados-padrão (sucesso = true). */
+function sucesso(ids, proximoStatus, extra = {}) {
+  return ids.map(id => ({
+    idAlocacaoSAP     : id,
+    success           : true,
+    message           : `NF avançada para ${proximoStatus}.`,
+    novoStatus        : proximoStatus,
+    ...extra
+  }));
+}
+
+/** Monta array de resultados-padrão (falha = false). */
+function falha(ids, statusAtual, motivo) {
+  return ids.map(id => ({
+    idAlocacaoSAP     : id,
+    success           : false,
+    message           : motivo,
+    novoStatus        : statusAtual
+  }));
+}
+
+
+ //  Transições encapsuladas
+
+
+/** 01 → 05  (gera número NF e atualiza em massa) */
+async function trans01para05(tx, ids) {
+  const numeroNF = gerarNumeroNF();
+  await tx.update(NotaFiscalServicoMonitor)
+          .set({ status: '05', numeroNfseServico: numeroNF })
+          .where({ idAlocacaoSAP: { in: ids } });
+
+  return sucesso(ids, '05', { numeroNfseServico: numeroNF });
+}
+
+/** 05 → 15  (apenas status) */
+async function trans05para15(tx, ids) {
+  await tx.update(NotaFiscalServicoMonitor)
+          .set({ status: '15' })
+          .where({ idAlocacaoSAP: { in: ids } });
+
+  return sucesso(ids, '15');
+}
+
+/** 15 → 30  (item-a-item, usando BAPI) */
+async function trans15para30(tx, notas) {
+  const resultados = [];
+
+  for (const nota of notas) {
+    const { idAlocacaoSAP: id } = nota;
+    const resp = await BAPI_PO_CREATE1(nota);
+
+    if (!resp.ok) {
+      await BAPI_TRANSACTION_ROLLBACK(resp.msg);
+      resultados.push({
+        idAlocacaoSAP : id,
+        success       : false,
+        message       : resp.msg,
+        novoStatus    : '15'
+      });
+      continue;
+    }
+
+    await tx.update(NotaFiscalServicoMonitor)
+            .set({ status: '30', ...resp.valores })
+            .where({ idAlocacaoSAP: id });
+
+    resultados.push({
+      idAlocacaoSAP : id,
+      success       : true,
+      message       : 'Status 15→30 e valores gravados.',
+      novoStatus    : '30'
+    });
+  }
+
+  return resultados;
+}
+
+//  BAPI mocks 
+
+async function BAPI_PO_CREATE1(nota) {
+  const { valorBrutoNfse, valorEfetivoFrete, valorLiquidoFreteNfse } = nota;
+  const temValor = (valorBrutoNfse        && valorBrutoNfse        > 0) ||
+                   (valorEfetivoFrete     && valorEfetivoFrete     > 0) ||
+                   (valorLiquidoFreteNfse && valorLiquidoFreteNfse > 0);
+
+  if (temValor) return { ok: false, msg: 'Campos de valores já preenchidos.' };
+
+  const bruto   = Math.floor(10_000 + Math.random() * 90_000);
+  const efetivo = +(bruto * 0.10).toFixed(2);
+  const liquido = +(efetivo * 0.80).toFixed(2);
+
+  return {
+    ok: true,
+    valores: {
+      valorBrutoNfse       : bruto,
+      valorEfetivoFrete    : efetivo,
+      valorLiquidoFreteNfse: liquido
+    }
+  };
+}
+
+async function BAPI_TRANSACTION_ROLLBACK(motivo) {
+  console.warn('↩️  Rollback:', motivo);
+  return { ok: true, msg: motivo };
+}
 
 
 });

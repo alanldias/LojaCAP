@@ -27,6 +27,17 @@ service ShopService {
 
     entity NotaFiscalServicoMonitor as projection on shop.NotaFiscalServicoMonitor;
 
+    
+   action avancarStatusNFs(
+        notasFiscaisIDs : array of NotaFiscalServicoMonitor:idAlocacaoSAP // Usando o tipo da chave primária
+    ) returns array of {
+        idAlocacaoSAP     : String;
+        success           : Boolean;
+        message           : String;
+        novoStatus        : String;
+        numeroNfseServico : String;
+    };
+    
     action registerCliente(nome: String, email: String, senha: String) returns String;
     action loginCliente(email: String, senha: String) returns String;
     action realizarPagamento(clienteID: UUID, tipoPagamento: shop.TipoPagamento) returns UUID;

@@ -31,8 +31,7 @@
         <Toolbar id="toolbarAcoesNfse" class="sapUiSmallMarginBottom">
             <HBox id="hboxFiltrosAcoesNfse" alignItems="Center" wrap="Wrap" renderType="Bare">
                 <Input id="inputFiltroNfse" placeholder="Buscar NFSe..." width="15rem" />
-                <Button id="btnAtribuirNfse" icon="sap-icon://accept" text="Atribuir NF (01->05)" class="sapUiTinyMarginBegin" press="onAtribuirNotaFiscal"/>
-                <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginBegin" />
+                <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginBegin" press="onProximaEtapa" />
                 <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginBegin" />
                 <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar NFSe" class="sapUiTinyMarginBegin" />
                 <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginBegin" />

@@ -7,7 +7,7 @@ sap.ui.define([
 ], function(Controller, Filter, FilterOperator, MessageToast, ValueState) {
     "use strict";
 
-    return Controller.extend("lojacap.controller.NotaFiscal", { // Seu controller name
+    return Controller.extend("lojacap.controller.nota-fiscal", { // Seu controller name
 
         formatter: { // Objeto para agrupar nossos formatters
             /**
@@ -78,6 +78,57 @@ sap.ui.define([
         onInit: function() {
             console.log("[CONTROLLER_LOG] NotaFiscal.controller.js onInit chamado.");
             // Aqui você pode inicializar modelos, buscar dados iniciais, etc.
+        },
+
+        /**
+         * @override
+         * Chamado quando a seleção na tabela de notas fiscais é alterada.
+         * Garante que apenas um grupo de 'Chave Doc. Filho' possa ser selecionado por vez.
+         * @param {sap.ui.base.Event} oEvent O objeto do evento selectionChange.
+         */
+        onSelectionChange: function(oEvent) {
+            console.log("[CONTROLLER_LOG] onSelectionChange acionado.");
+
+            // Informações essenciais do evento
+            const oListItem = oEvent.getParameter("listItem");
+            const bIsSelected = oEvent.getParameter("selected"); // true se selecionou, false se desmarcou
+            const oTable = this.byId("tableNotaFiscalServicoMonitor");
+
+            if (!oListItem) {
+                return;
+            }
+
+            const oBindingContext = oListItem.getBindingContext();
+            const sChaveFilhoSelecionada = oBindingContext.getProperty("chaveDocumentoFilho");
+            console.log(`[CONTROLLER_LOG] Chave Filho: '${sChaveFilhoSelecionada}', Ação: ${bIsSelected ? 'Selecionar' : 'Desmarcar'}`);
+
+            // --- LÓGICA PRINCIPAL MODIFICADA ---
+
+            // Se o usuário está SELECIONANDO uma nova linha...
+            if (bIsSelected) {
+                // PASSO 1 (NOVO): Limpar todas as seleções anteriores.
+                // O parâmetro 'true' é importante para não disparar o evento selectionChange novamente e causar um loop.
+                console.log("[CONTROLLER_LOG] Limpando seleções antigas...");
+                oTable.removeSelections(true);
+
+                // PASSO 2: Percorrer todos os itens e selecionar APENAS o novo grupo.
+                oTable.getItems().forEach(function(oItem) {
+                    const sChaveFilhoAtual = oItem.getBindingContext().getProperty("chaveDocumentoFilho");
+                    if (sChaveFilhoAtual === sChaveFilhoSelecionada) {
+                        oItem.setSelected(true); // Seleciona este item
+                    }
+                });
+
+            } else {
+                // Se o usuário está DESMARCANDO uma linha, o comportamento é o mesmo de antes:
+                // apenas desmarca todos os itens do seu próprio grupo.
+                oTable.getItems().forEach(function(oItem) {
+                    const sChaveFilhoAtual = oItem.getBindingContext().getProperty("chaveDocumentoFilho");
+                    if (sChaveFilhoAtual === sChaveFilhoSelecionada) {
+                        oItem.setSelected(false); // Desmarca este item
+                    }
+                });
+            }
         },
 
         onAtribuirNotaFiscal: function(oEvent) {

@@ -3,12 +3,13 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageBox",
     "sap/m/MessageToast",
+    "sap/ui/model/Sorter",
     // Seus formatters estão referenciados na view como '.formatter.nomeDaFuncao'
     // Isso significa que eles devem estar em um arquivo separado e carregados,
     // ou definidos diretamente no controller e a view ajustada para chamá-los como 'nomeDaFuncao'
     // Exemplo de como carregar formatter: "./formatter" (se existir um arquivo formatter.js na mesma pasta)
     "lojacap/controller/formatter" // Assumindo que você tem um formatter.js
-], function(Controller, JSONModel, MessageBox, MessageToast, formatter) {
+], function(Controller, JSONModel, MessageBox, MessageToast, Sorter, formatter) {
     "use strict";
 
     return Controller.extend("lojacap.controller.nota-fiscal", {
@@ -77,6 +78,8 @@ sap.ui.define([
             }
         },
 
+        // -------------- FUNCIONALIDADES BOTÕES -------------- // 
+
         onProximaEtapa: async function () {
             console.log("▶️ Botão 'Próxima etapa' pressionado.");
         
@@ -142,6 +145,32 @@ sap.ui.define([
                 });
             }
         },
+
+        onPressAscending: function () {
+            var oTable = this.byId("tableNotaFiscalServicoMonitor")
+            var oBinding = oTable.getBinding("items")
+
+            var aSorter = [new Sorter("status", false)]
+
+            oBinding.sort(aSorter)
+
+            this.updateSortButtons("ascending")
+            console.log("Tabela ordenada por Status em ordem crescente.")
+        },
+
+        onPressDescending: function () {
+            var oTable = this.byId("tableNotaFiscalServicoMonitor")
+            var oBinding = oTable.getBinding("items")
+
+            var aSorter = [new Sorter("status", true)]
+
+            oBinding.sort(aSorter)
+
+            this.updateSortButtons("descending")
+            console.log("Tabela ordenada por Status em ordem descrescente")
+        },
+
+        // -------------- FIM FUNCIONALIDADES BOTÕES -------------- // 
 
         onUpdateFinishedNotaFiscal: function(oEvent) {
             var sTitle = "Notas Fiscais de Serviço";

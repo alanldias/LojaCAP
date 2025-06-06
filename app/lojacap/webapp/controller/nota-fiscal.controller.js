@@ -44,6 +44,7 @@ sap.ui.define([
 
             const oBindingContext = oListItem.getBindingContext();
             const sChaveFilhoSelecionada = oBindingContext.getProperty("chaveDocumentoFilho");
+            const sStatusSelecionado = oBindingContext.getProperty("status");
             console.log(`[CONTROLLER_LOG] Chave Filho: '${sChaveFilhoSelecionada}', Ação: ${bIsSelected ? 'Selecionar' : 'Desmarcar'}`);
 
             // --- LÓGICA PRINCIPAL MODIFICADA ---
@@ -58,7 +59,8 @@ sap.ui.define([
                 // PASSO 2: Percorrer todos os itens e selecionar APENAS o novo grupo.
                 oTable.getItems().forEach(function(oItem) {
                     const sChaveFilhoAtual = oItem.getBindingContext().getProperty("chaveDocumentoFilho");
-                    if (sChaveFilhoAtual === sChaveFilhoSelecionada) {
+                    const sStatusAtual = oItem.getBindingContext().getProperty("status");
+                    if (sChaveFilhoAtual === sChaveFilhoSelecionada && sStatusAtual === sStatusSelecionado) {
                         oItem.setSelected(true); // Seleciona este item
                     }
                 });

@@ -31,7 +31,7 @@
         <Toolbar id="toolbarAcoesNfse" class="sapUiSmallMarginBottom">
             <HBox id="hboxFiltrosAcoesNfse" alignItems="Center" wrap="Wrap" renderType="Bare">
                 <Input id="inputFiltroNfse" placeholder="Buscar NFSe..." width="12rem" />
-                <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginEnd"/>
+                <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginEnd" press=".onProximaEtapa"/>
                 <ToolbarSeparator />
                 <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginEnd" />
                 <ToolbarSeparator />

@@ -3,7 +3,7 @@ const validator = require('validator')
 const { serve } = require('@sap/cds');
 
 module.exports = cds.service.impl(async function (srv) {
-  const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos } = srv.entities;
+  const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos, NotaFiscalServicoMonitor  } = srv.entities;
 
   console.log("✅ CAP Service inicializado");
 
@@ -437,6 +437,94 @@ srv.after('READ', 'Pedidos', each => {
         each.statusCriticality = 0; // Default se status for nulo
     }
 });
+
+this.on('avancarStatusNFs', async (req) => {
+  const { notasFiscaisIDs } = req.data || {};
+  const tx = this.transaction(req);
+  const results = [];
+
+  if (!notasFiscaisIDs?.length) {
+    return req.error(400, 'Selecione ao menos uma NFSe.');
+  }
+
+  /* ------------------------------------------------------------------
+   * 1. Carrega TODAS as NFs de uma vez (menos round-trips)
+   * -----------------------------------------------------------------*/
+  const notas = await tx.read(NotaFiscalServicoMonitor)
+                        .where({ idAlocacaoSAP: { in: notasFiscaisIDs } });
+
+  if (notas.length !== notasFiscaisIDs.length) {
+    return req.error(400, 'Alguma NFSe selecionada não foi encontrada.');
+  }
+
+  /* ------------------------------------------------------------------
+   * 2. Verifica unicidade de chaveDocumentoFilho e status
+   * -----------------------------------------------------------------*/
+  const uniqueChild  = new Set(notas.map(n => n.chaveDocumentoFilho));
+  const uniqueStatus = new Set(notas.map(n => n.status));
+
+  if (uniqueChild.size > 1) {
+    return req.error(400,
+      'Os registros selecionados têm chaves-filho diferentes. Seleção deve ter o mesmo documento filho.');
+  }
+  if (uniqueStatus.size > 1) {
+    return req.error(400,
+      'Os registros selecionados estão em status diferentes. Seleção deve ter o mesmo status.');
+  }
+
+  /* ------------------------------------------------------------------
+   * 3. Decide próximo status
+   * -----------------------------------------------------------------*/
+  const statusAtual = [...uniqueStatus][0];
+  let proximoStatus;
+  let precisaNumeroNF = false;
+
+  switch (statusAtual) {
+    case '01':
+      proximoStatus     = '05';
+      precisaNumeroNF   = true;
+      break;
+    case '05':
+      proximoStatus     = '15';
+      break;
+    default:
+      return req.error(400,
+        `Não há transição definida para o status ${statusAtual}.`);
+  }
+
+  /* ------------------------------------------------------------------
+   * 4. Atualiza em massa (bulk update)
+   * -----------------------------------------------------------------*/
+  const dataToSet = { status: proximoStatus };
+  if (precisaNumeroNF) {
+    // gera o mesmo número para todas ou, se quiser, gere um por NF
+    dataToSet.numeroNfseServico =
+      Math.floor(1_000_000_000 + Math.random() * 900_000_000).toString();
+  }
+
+  const rows = await tx.update(NotaFiscalServicoMonitor)
+                       .set(dataToSet)
+                       .where({ idAlocacaoSAP: { in: notasFiscaisIDs } });
+
+  /* ------------------------------------------------------------------
+   * 5. Monta o retorno
+   * -----------------------------------------------------------------*/
+  notasFiscaisIDs.forEach(id => {
+    const ok = rows > 0; // rows é o total de registros afetados
+    results.push({
+      idAlocacaoSAP     : id,
+      success           : ok,
+      message           : ok
+        ? `NF avançada para ${proximoStatus}.`
+        : 'Falha ao atualizar.',
+      novoStatus        : ok ? proximoStatus : statusAtual,
+      numeroNfseServico : precisaNumeroNF ? dataToSet.numeroNfseServico : null
+    });
+  });
+
+  return results;
+});
+
 
 
 });

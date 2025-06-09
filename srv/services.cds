@@ -27,6 +27,9 @@ service ShopService {
 
     entity NotaFiscalServicoMonitor as projection on shop.NotaFiscalServicoMonitor;
 
+    entity NotaFiscalServicoLog     as projection on shop.NotaFiscalServicoLog;
+
+
     
    action avancarStatusNFs(
         notasFiscaisIDs : array of NotaFiscalServicoMonitor:idAlocacaoSAP // Usando o tipo da chave primária

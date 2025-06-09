@@ -156,3 +156,16 @@ entity NotaFiscalServicoMonitor : cuid, managed {
     classeMensagemErro         : String(20) @title : 'Classe Mensagem Erro';   // Corresponde a SYMSGID [cite: 72]
     numeroMensagemErro         : String(3) @title : 'Número Mensagem Erro';   // Corresponde a SYMSGNO [cite: 72]
 }
+
+entity NotaFiscalServicoLog : managed {
+    key ID              : UUID;
+    nota_ID             : Association to NotaFiscalServicoMonitor
+                          on nota_ID.idAlocacaoSAP = $self.idAlocacaoSAP;
+
+    idAlocacaoSAP       : String(13);   // mesmo comprimento do principal
+    mensagemErro        : String(120);
+    tipoMensagemErro    : String(1);
+    classeMensagemErro  : String(20);
+    numeroMensagemErro  : String(3);
+    origem              : String(30);   // 'avancarStatusNFs', 'BAPI_XYZ', e tals
+}

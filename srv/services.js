@@ -2,7 +2,7 @@ const cds = require('@sap/cds');
 const validator = require('validator')
 
 module.exports = cds.service.impl(async function (srv) {
-  const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos, NotaFiscalServicoMonitor  } = srv.entities;
+  const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos, NotaFiscalServicoMonitor, NotaFiscalServicoLog } = srv.entities;
 
   console.log("✅ CAP Service inicializado");
 
@@ -504,59 +504,72 @@ function falha(ids, statusAtual, motivo) {
 /** 01 → 05  (gera número NF e atualiza em massa) */
 async function trans01para05(tx, ids) {
   const numeroNF = gerarNumeroNF();
-  await tx.update(NotaFiscalServicoMonitor)
-          .set({ status: '05', numeroNfseServico: numeroNF })
-          .where({ idAlocacaoSAP: { in: ids } });
 
-  return sucesso(ids, '05', { numeroNfseServico: numeroNF });
+  try {
+    await tx.update(NotaFiscalServicoMonitor)
+            .set({ status: '05', numeroNfseServico: numeroNF })
+            .where({ idAlocacaoSAP: { in: ids } });
+
+    /* sucesso para todos */
+    return sucesso(ids, '05', { numeroNfseServico: numeroNF });
+
+  } catch (e) {
+    /* algo falhou no update → log e devolve falha p/ todo lote */
+    for (const id of ids) {
+      await gravarLog(tx, id, e.message, 'E', 'TRANS_01_05', '002');
+    }
+    return falha(ids, '01', 'Erro na transição 01→05: ' + e.message);
+  }
 }
 
 /** 05 → 15  (apenas status) */
 async function trans05para15(tx, ids) {
-  await tx.update(NotaFiscalServicoMonitor)
-          .set({ status: '15' })
-          .where({ idAlocacaoSAP: { in: ids } });
+  try {
+    await tx.update(NotaFiscalServicoMonitor)
+            .set({ status: '15' })
+            .where({ idAlocacaoSAP: { in: ids } });
 
-  return sucesso(ids, '15');
+    return sucesso(ids, '15');
+
+  } catch (e) {
+    for (const id of ids) {
+      await gravarLog(tx, id, e.message, 'E', 'TRANS_05_15', '003');
+    }
+    return falha(ids, '05', 'Erro na transição 05→15: ' + e.message);
+  }
 }
 
 /** 15 → 30  (all-or-nothing, lista **todos** os erros) */
 async function trans15para30(tx, notas) {
   const resultados     = [];
-  const valoresPorNota = new Map();           // <id, valores gerados>
-  const erros          = new Map();           // <id, msgErro>
+  const valoresPorNota = new Map();
+  const erros          = new Map();
 
-  /* 1. Valida TODAS as NFs ---------------------------------------- */
   for (const nota of notas) {
     const id   = nota.idAlocacaoSAP;
     const resp = await BAPI_PO_CREATE1(nota);
 
     if (!resp.ok) {
-      erros.set(id, resp.msg);                        // guarda erro
-      await BAPI_TRANSACTION_ROLLBACK(resp.msg);      // compensação
-      continue;                                       // mas continua validando para achar +erros
+      erros.set(id, resp.msg);
+      await gravarLog(tx, id, resp.msg, 'E', 'BAPI_PO_CREATE1', '100');
+      continue;                               // continua validando
     }
-    valoresPorNota.set(id, resp.valores);             // ok → guarda p/ update
+    valoresPorNota.set(id, resp.valores);
   }
 
-  /* 2. Se houve qualquer erro → devolve falha para TODAS ---------- */
-  if (erros.size > 0) {
-    const idsComErro = [...erros.keys()].join(', ');  // para msg nos “abordados”
-
-    for (const nota of notas) {
-      const id   = nota.idAlocacaoSAP;
-      const msg  = erros.has(id)
-        ? `NF ${id}: ${erros.get(id)}`                          // erro específico
-        : `Processo abortado — erros nas NFs: ${idsComErro}.`;  // demais
-
+  if (erros.size) {
+    const idsComErro = [...erros.keys()].join(', ');
+    notas.forEach(nota => {
+      const id  = nota.idAlocacaoSAP;
       resultados.push({
         idAlocacaoSAP : id,
         success       : false,
-        message       : msg,
+        message       : erros.get(id) ||
+                        `Processo abortado — erros nas NFs: ${idsComErro}.`,
         novoStatus    : '15'
       });
-    }
-    return resultados;   // nada foi atualizado no BD
+    });
+    return resultados;
   }
 
   /* 3. Nenhum erro → grava todas e devolve sucesso ---------------- */
@@ -716,6 +729,27 @@ async function BAPI_J_1B_NF_CREATEFROMDATA(nota, miroDocNumber) {
   //    return { ok: false, msg: "Erro simulado: dados fiscais inválidos." };
   // }
   return { ok: true }; // Apenas confirma o sucesso
+}
+  async function gravarLog(
+    tx,                        // transação CAP
+    id,                        // idAlocacaoSAP da NF
+    msg,
+    tipo   = 'E',              // E=Error, W=Warning, I=Info
+    classe = 'TRANSICAO',      // origem/classe mensagem
+    num    = '001',            // código
+    origem = 'avancarStatusNFs'
+  ) {
+  await tx.run(
+    INSERT.into(NotaFiscalServicoLog).entries({
+      ID                 : cds.utils.uuid(),
+      idAlocacaoSAP      : id,      // FK lógico p/ a NF
+      mensagemErro       : msg,
+      tipoMensagemErro   : tipo,
+      classeMensagemErro : classe,
+      numeroMensagemErro : num,
+      origem
+    })
+);
 }
 
 });

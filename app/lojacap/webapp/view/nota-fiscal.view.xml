@@ -43,7 +43,7 @@
                 <ToolbarSeparator id="separador5"/>
                 <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginEnd" />
                 <ToolbarSeparator id="separador6"/>
-                <Button id="btnVerLogsNfse" icon="sap-icon://newspaper" text="Ver logs" class="sapUiTinyMarginEnd" />
+                <Button id="btnVerLogsNfse" icon="sap-icon://newspaper" text="Ver logs" class="sapUiTinyMarginEnd" press="onLogPress" />
                 <ToolbarSeparator id="separador7"/>
                 <MenuButton id="btnMais" text="Mais">
 			        <menu>

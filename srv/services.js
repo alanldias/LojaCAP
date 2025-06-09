@@ -463,6 +463,7 @@ this.on('avancarStatusNFs', async (req) => {
     case '01': resultados = await trans01para05(tx, notasFiscaisIDs); break;
     case '05': resultados = await trans05para15(tx, notasFiscaisIDs); break;
     case '15': resultados = await trans15para30(tx, notas);          break;
+    case '30': resultados = await trans30para35(tx, notas); break;
     default :  return req.error(400, `Transição não definida para status ${statusAtual}.`);
   }
 
@@ -581,6 +582,107 @@ async function BAPI_TRANSACTION_ROLLBACK(motivo) {
   console.warn('↩️  Rollback:', motivo);
   return { ok: true, msg: motivo };
 }
+/**
+ * MOCK da BAPI_INCOMINGINVOICE_CREATE1 para criar a MIRO (fatura).
+ * @returns {{ok: boolean, msg?: string, valores?: {numeroDocumentoMIRO: string}}}
+ */
+async function BAPI_INCOMINGINVOICE_CREATE1(nota) {
+  console.log(`[BAPI_SIMULATION] Criando MIRO para NF ${nota.idAlocacaoSAP}...`);
+  // Aqui você pode adicionar lógicas de falha para teste, se quiser
+  // if (nota.algumaCondicaoDeErro) {
+  //    return { ok: false, msg: "Erro simulado na criação da MIRO." };
+  // }
+  return {
+      ok: true,
+      valores: {
+          // Gera um número de documento de MIRO simulado
+          numeroDocumentoMIRO: `510${Math.floor(1000000 + Math.random() * 9000000)}`
+      }
+  };
+}
 
+/**
+* MOCK da BAPI_J_1B_NF_CREATEFROMDATA para criar a Nota Fiscal de Serviço.
+* @returns {{ok: boolean, msg?: string}}
+*/
+async function BAPI_J_1B_NF_CREATEFROMDATA(nota, miroDocNumber) {
+  console.log(`[BAPI_SIMULATION] Criando NF de Serviço para MIRO ${miroDocNumber}...`);
+  // if (miroDocNumber.endsWith('7')) { // Exemplo de condição de erro
+  //    return { ok: false, msg: "Erro simulado: dados fiscais inválidos." };
+  // }
+  return { ok: true }; // Apenas confirma o sucesso
+}
+
+
+/**
+* Função de transição para o status 30 -> 35.
+* Orquestra a chamada das BAPIs de MIRO e NF.
+* @param {object} tx - A transação CAP.
+* @param {Array<object>} notas - O array de notas a serem processadas.
+* @returns {Promise<Array<object>>} Um array com os resultados do processamento.
+*/
+async function trans30para35(tx, notas) {
+  const resultados = [];
+
+  // Esta etapa é complexa e geralmente processada uma a uma (ou por documento filho)
+  for (const nota of notas) {
+      const { idAlocacaoSAP: id } = nota;
+      console.log(`[TRANSITION_LOG] Iniciando 30->35 para a NF ${id}`);
+
+      try {
+          // --- ETAPA 1: Criar a MIRO ---
+          const respMiro = await BAPI_INCOMINGINVOICE_CREATE1(nota);
+          if (!respMiro.ok) {
+              // Se a primeira BAPI falha, logamos o erro e pulamos para a próxima nota
+              throw new Error(respMiro.msg);
+          }
+          console.log(`[TRANSITION_LOG] MIRO criada para NF ${id}. Documento: ${respMiro.valores.numeroDocumentoMIRO}`);
+
+          // --- ETAPA 2: Criar a Nota Fiscal ---
+          const respNF = await BAPI_J_1B_NF_CREATEFROMDATA(nota, respMiro.valores.numeroDocumentoMIRO);
+          if (!respNF.ok) {
+              // Se a segunda BAPI falha, a MIRO já foi "criada".
+              // No mundo real, aqui teríamos uma lógica de compensação (cancelar a MIRO).
+              // Na simulação, vamos apenas registrar o erro.
+              console.error(`[TRANSITION_LOG] MIRO criada, mas criação da NF falhou para ${id}. Requer ação manual!`);
+              throw new Error(respNF.msg);
+          }
+          console.log(`[TRANSITION_LOG] NF de serviço criada para ${id}.`);
+
+          // --- ETAPA 3: Sucesso! Atualizar o status e gravar os dados ---
+          await tx.update(NotaFiscalServicoMonitor)
+              .set({
+                  status: '35',
+                  numeroDocumentoMIRO: respMiro.valores.numeroDocumentoMIRO,
+                  // Adicione outros campos que a BAPI de NF retornaria, se houver
+              })
+              .where({ idAlocacaoSAP: id });
+          
+          resultados.push({
+              idAlocacaoSAP: id,
+              success: true,
+              message: 'Fatura e Nota Fiscal criadas com sucesso.',
+              novoStatus: '35'
+          });
+
+      } catch (error) {
+          // Se qualquer passo falhar, o CATCH captura
+          console.error(`[TRANSITION_LOG] Erro no fluxo 30->35 para NF ${id}:`, error.message);
+          
+          // Atualiza a NF para o status de erro
+          await tx.update(NotaFiscalServicoMonitor)
+                    .set({ status: '99', MSG_TEXT: error.message.substring(0,120) }) // Adicionei MSG_TEXT
+                    .where({ idAlocacaoSAP: id });
+          
+          resultados.push({
+              idAlocacaoSAP: id,
+              success: false,
+              message: error.message,
+              novoStatus: '99'
+          });
+      }
+  }
+  return resultados;
+}
 
 });

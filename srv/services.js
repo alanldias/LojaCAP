@@ -1,6 +1,5 @@
 const cds = require('@sap/cds');
 const validator = require('validator')
-const { serve } = require('@sap/cds');
 
 module.exports = cds.service.impl(async function (srv) {
   const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos, NotaFiscalServicoMonitor  } = srv.entities;
@@ -443,7 +442,7 @@ this.on('avancarStatusNFs', async (req) => {
   const { notasFiscaisIDs } = req.data || {};
   if (!notasFiscaisIDs?.length) return req.error(400, 'Selecione ao menos uma NFSe.');
 
-  const tx    = this.transaction(req);
+  const tx = cds.transaction(req);
   const notas = await tx.read(NotaFiscalServicoMonitor)
                         .where({ idAlocacaoSAP: { in: notasFiscaisIDs } });
 

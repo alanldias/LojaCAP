@@ -133,7 +133,7 @@ sap.ui.define([
         
                 // Atualizar a UI
                 oTable.getBinding("items").refresh();
-                oTable.removeSelections(true);
+            
         
             } catch (e) {
                 console.error("❌ Frontend: Erro na action capturado pelo CATCH:", e);

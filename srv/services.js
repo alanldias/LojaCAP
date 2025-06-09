@@ -1,6 +1,5 @@
 const cds = require('@sap/cds');
 const validator = require('validator')
-const { serve } = require('@sap/cds');
 
 module.exports = cds.service.impl(async function (srv) {
   const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos, NotaFiscalServicoMonitor  } = srv.entities;
@@ -443,7 +442,7 @@ this.on('avancarStatusNFs', async (req) => {
   const { notasFiscaisIDs } = req.data || {};
   if (!notasFiscaisIDs?.length) return req.error(400, 'Selecione ao menos uma NFSe.');
 
-  const tx    = this.transaction(req);
+  const tx = cds.transaction(req);
   const notas = await tx.read(NotaFiscalServicoMonitor)
                         .where({ idAlocacaoSAP: { in: notasFiscaisIDs } });
 
@@ -462,8 +461,9 @@ this.on('avancarStatusNFs', async (req) => {
   switch (statusAtual) {
     case '01': resultados = await trans01para05(tx, notasFiscaisIDs); break;
     case '05': resultados = await trans05para15(tx, notasFiscaisIDs); break;
-    case '15': resultados = await trans15para30(tx, notas);          break;
-    case '30': resultados = await trans30para35(tx, notas); break;
+    case '15': resultados = await trans15para30(tx, notas);           break;
+    case '30': resultados = await trans30para35(tx, notas);           break;
+    case '35': resultados = await trans35para50(tx,notasFiscaisIDs);  break;
     default :  return req.error(400, `Transição não definida para status ${statusAtual}.`);
   }
 
@@ -520,27 +520,52 @@ async function trans05para15(tx, ids) {
   return sucesso(ids, '15');
 }
 
-/** 15 → 30  (item-a-item, usando BAPI) */
+/** 15 → 30  (all-or-nothing, lista **todos** os erros) */
 async function trans15para30(tx, notas) {
-  const resultados = [];
+  const resultados     = [];
+  const valoresPorNota = new Map();           // <id, valores gerados>
+  const erros          = new Map();           // <id, msgErro>
 
+  /* 1. Valida TODAS as NFs ---------------------------------------- */
   for (const nota of notas) {
-    const { idAlocacaoSAP: id } = nota;
+    const id   = nota.idAlocacaoSAP;
     const resp = await BAPI_PO_CREATE1(nota);
 
     if (!resp.ok) {
-      await BAPI_TRANSACTION_ROLLBACK(resp.msg);
+      erros.set(id, resp.msg);                        // guarda erro
+      await BAPI_TRANSACTION_ROLLBACK(resp.msg);      // compensação
+      continue;                                       // mas continua validando para achar +erros
+    }
+    valoresPorNota.set(id, resp.valores);             // ok → guarda p/ update
+  }
+
+  /* 2. Se houve qualquer erro → devolve falha para TODAS ---------- */
+  if (erros.size > 0) {
+    const idsComErro = [...erros.keys()].join(', ');  // para msg nos “abordados”
+
+    for (const nota of notas) {
+      const id   = nota.idAlocacaoSAP;
+      const msg  = erros.has(id)
+        ? `NF ${id}: ${erros.get(id)}`                          // erro específico
+        : `Processo abortado — erros nas NFs: ${idsComErro}.`;  // demais
+
       resultados.push({
         idAlocacaoSAP : id,
         success       : false,
-        message       : resp.msg,
+        message       : msg,
         novoStatus    : '15'
       });
-      continue;
     }
+    return resultados;   // nada foi atualizado no BD
+  }
+
+  /* 3. Nenhum erro → grava todas e devolve sucesso ---------------- */
+  for (const nota of notas) {
+    const id      = nota.idAlocacaoSAP;
+    const valores = valoresPorNota.get(id);
 
     await tx.update(NotaFiscalServicoMonitor)
-            .set({ status: '30', ...resp.valores })
+            .set({ status: '30', ...valores })
             .where({ idAlocacaoSAP: id });
 
     resultados.push({
@@ -550,69 +575,8 @@ async function trans15para30(tx, notas) {
       novoStatus    : '30'
     });
   }
-
   return resultados;
 }
-
-//  BAPI mocks 
-
-async function BAPI_PO_CREATE1(nota) {
-  const { valorBrutoNfse, valorEfetivoFrete, valorLiquidoFreteNfse } = nota;
-  const temValor = (valorBrutoNfse        && valorBrutoNfse        > 0) ||
-                   (valorEfetivoFrete     && valorEfetivoFrete     > 0) ||
-                   (valorLiquidoFreteNfse && valorLiquidoFreteNfse > 0);
-
-  if (temValor) return { ok: false, msg: 'Campos de valores já preenchidos.' };
-
-  const bruto   = Math.floor(10_000 + Math.random() * 90_000);
-  const efetivo = +(bruto * 0.10).toFixed(2);
-  const liquido = +(efetivo * 0.80).toFixed(2);
-
-  return {
-    ok: true,
-    valores: {
-      valorBrutoNfse       : bruto,
-      valorEfetivoFrete    : efetivo,
-      valorLiquidoFreteNfse: liquido
-    }
-  };
-}
-
-async function BAPI_TRANSACTION_ROLLBACK(motivo) {
-  console.warn('↩️  Rollback:', motivo);
-  return { ok: true, msg: motivo };
-}
-/**
- * MOCK da BAPI_INCOMINGINVOICE_CREATE1 para criar a MIRO (fatura).
- * @returns {{ok: boolean, msg?: string, valores?: {numeroDocumentoMIRO: string}}}
- */
-async function BAPI_INCOMINGINVOICE_CREATE1(nota) {
-  console.log(`[BAPI_SIMULATION] Criando MIRO para NF ${nota.idAlocacaoSAP}...`);
-  // Aqui você pode adicionar lógicas de falha para teste, se quiser
-  // if (nota.algumaCondicaoDeErro) {
-  //    return { ok: false, msg: "Erro simulado na criação da MIRO." };
-  // }
-  return {
-      ok: true,
-      valores: {
-          // Gera um número de documento de MIRO simulado
-          numeroDocumentoMIRO: `510${Math.floor(1000000 + Math.random() * 9000000)}`
-      }
-  };
-}
-
-/**
-* MOCK da BAPI_J_1B_NF_CREATEFROMDATA para criar a Nota Fiscal de Serviço.
-* @returns {{ok: boolean, msg?: string}}
-*/
-async function BAPI_J_1B_NF_CREATEFROMDATA(nota, miroDocNumber) {
-  console.log(`[BAPI_SIMULATION] Criando NF de Serviço para MIRO ${miroDocNumber}...`);
-  // if (miroDocNumber.endsWith('7')) { // Exemplo de condição de erro
-  //    return { ok: false, msg: "Erro simulado: dados fiscais inválidos." };
-  // }
-  return { ok: true }; // Apenas confirma o sucesso
-}
-
 
 /**
 * Função de transição para o status 30 -> 35.
@@ -683,6 +647,75 @@ async function trans30para35(tx, notas) {
       }
   }
   return resultados;
+}
+
+
+/** 35 → 50  (apenas status) mas ainda teria que fazer alguma validação com as tabelas */
+async function trans35para50(tx, ids) {
+  await tx.update(NotaFiscalServicoMonitor)
+          .set({ status: '50' })
+          .where({ idAlocacaoSAP: { in: ids } });
+
+  return sucesso(ids, '50');
+}
+
+//  BAPI mocks 
+
+async function BAPI_PO_CREATE1(nota) {
+  const { valorBrutoNfse, valorEfetivoFrete, valorLiquidoFreteNfse } = nota;
+  const temValor = (valorBrutoNfse        && valorBrutoNfse        > 0) ||
+                   (valorEfetivoFrete     && valorEfetivoFrete     > 0) ||
+                   (valorLiquidoFreteNfse && valorLiquidoFreteNfse > 0);
+
+  if (temValor) return { ok: false, msg: 'Campos de valores já preenchidos.' };
+
+  const bruto   = Math.floor(10_000 + Math.random() * 90_000);
+  const efetivo = +(bruto * 0.10).toFixed(2);
+  const liquido = +(efetivo * 0.80).toFixed(2);
+
+  return {
+    ok: true,
+    valores: {
+      valorBrutoNfse       : bruto,
+      valorEfetivoFrete    : efetivo,
+      valorLiquidoFreteNfse: liquido
+    }
+  };
+}
+
+async function BAPI_TRANSACTION_ROLLBACK(motivo) {
+  console.warn('↩️  Rollback:', motivo);
+  return { ok: true, msg: motivo };
+}
+/**
+ * MOCK da BAPI_INCOMINGINVOICE_CREATE1 para criar a MIRO (fatura).
+ * @returns {{ok: boolean, msg?: string, valores?: {numeroDocumentoMIRO: string}}}
+ */
+async function BAPI_INCOMINGINVOICE_CREATE1(nota) {
+  console.log(`[BAPI_SIMULATION] Criando MIRO para NF ${nota.idAlocacaoSAP}...`);
+  // Aqui você pode adicionar lógicas de falha para teste, se quiser
+  // if (nota.algumaCondicaoDeErro) {
+  //    return { ok: false, msg: "Erro simulado na criação da MIRO." };
+  // }
+  return {
+      ok: true,
+      valores: {
+          // Gera um número de documento de MIRO simulado
+          numeroDocumentoMIRO: `510${Math.floor(1000000 + Math.random() * 9000000)}`
+      }
+  };
+}
+
+/**
+* MOCK da BAPI_J_1B_NF_CREATEFROMDATA para criar a Nota Fiscal de Serviço.
+* @returns {{ok: boolean, msg?: string}}
+*/
+async function BAPI_J_1B_NF_CREATEFROMDATA(nota, miroDocNumber) {
+  console.log(`[BAPI_SIMULATION] Criando NF de Serviço para MIRO ${miroDocNumber}...`);
+  // if (miroDocNumber.endsWith('7')) { // Exemplo de condição de erro
+  //    return { ok: false, msg: "Erro simulado: dados fiscais inválidos." };
+  // }
+  return { ok: true }; // Apenas confirma o sucesso
 }
 
 });

@@ -125,20 +125,87 @@
                       "highlightPath": "statusCriticality"
                     }
                   },
+                  "columns": {
+                    "IconLog": {
+                      "header": "log",
+                      "width": "6%",
+                      "position": {
+                        "anchor": "DataField::total",
+                        "placement": "Before"
+                      },
+                      "template": "pedidos.ext.fragment.IconLog"
+                    }
+                  }
+                }
+              },
+              "content": {
+                "header": {
                   "actions": {
                     "nextstep": {
                       "press": "pedidos.ext.controller.Nextstep.nextstep",
                       "visible": true,
                       "enabled": true,
-                      "requiresSelection": true,
-                      "text": "proxima etapa"
+                      "text": "Proxima Etapa"
                     },
                     "backstep": {
                       "press": "pedidos.ext.controller.Backstep.backstep",
                       "visible": true,
                       "enabled": true,
-                      "requiresSelection": true,
-                      "text": "Retroceder Pedido"
+                      "text": "Voltar Etapa",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "nextstep"
+                      }
+                    },
+                    "RejeitarFrete": {
+                      "press": "pedidos.ext.controller.RejeitarFrete.RejeitarFrete",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "Rejeitar Frete",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "backstep"
+                      }
+                    },
+                    "AdicionarFreteManual": {
+                      "press": "pedidos.ext.controller.AdicionarFreteManual.AdicionarFreteManual",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "Adicionar Frete Manual",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "RejeitarFrete"
+                      }
+                    },
+                    "UploadArquivoDeFrete": {
+                      "press": "pedidos.ext.controller.UploadArquivoDeFrete.UploadArquivoDeFrete",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "Upload Arquivo De Frete",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "AdicionarFreteManual"
+                      }
+                    },
+                    "atualizar": {
+                      "press": "pedidos.ext.controller.Atualizar.atualizar",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "atualizar",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "UploadArquivoDeFrete"
+                      }
+                    },
+                    "VerLogs": {
+                      "press": "pedidos.ext.controller.VerLogs.VerLogs",
+                      "visible": true,
+                      "enabled": true,
+                      "text": "Ver Logs",
+                      "position": {
+                        "placement": "After",
+                        "anchor": "atualizar"
+                      }
                     }
                   }
                 }
@@ -175,6 +242,11 @@
             }
           }
         }
+      }
+    },
+    "extends": {
+      "extensions": {
+        "sap.ui.controllerExtensions": {}
       }
     }
   },

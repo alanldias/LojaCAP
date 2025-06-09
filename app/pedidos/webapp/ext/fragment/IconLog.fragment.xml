@@ -1,0 +1,24 @@
+<core:FragmentDefinition xmlns:core="sap.ui.core" xmlns="sap.m">
+    <HBox id = "123asdas3" justifyContent="Center" alignItems="Center">
+        <core:Icon id="circle1" 
+                   src="sap-icon://circle-task" 
+                   size="1.5rem" 
+                   color="{= ${status} === 'PAGO' || ${status} === 'ENVIADO' || ${status} === 'ENTREGUE' ? 'Positive' : (${status} === 'CANCELADO' ? 'Negative' : 'Neutral') }" 
+                   core:require="{ handler: 'pedidos/ext/fragment/IconLog'}" 
+                   press="handler.onPress"/>
+        
+        <core:Icon id="circle2" 
+                   src="sap-icon://circle-task" 
+                   size="1.5rem" 
+                   color="{= ${status} === 'ENVIADO' || ${status} === 'ENTREGUE' ? 'Positive' : (${status} === 'CANCELADO' ? 'Negative' : 'Neutral') }" 
+                   core:require="{ handler: 'pedidos/ext/fragment/IconLog'}" 
+                   press="handler.onPress"/>
+        
+        <core:Icon id="circle3" 
+                   src="sap-icon://circle-task" 
+                   size="1.5rem" 
+                   color="{= ${status} === 'ENTREGUE' ? 'Positive' : (${status} === 'CANCELADO' ? 'Negative' : 'Neutral') }" 
+                   core:require="{ handler: 'pedidos/ext/fragment/IconLog'}" 
+                   press="handler.onPress"/>
+    </HBox>
+</core:FragmentDefinition>

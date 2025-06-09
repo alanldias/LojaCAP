@@ -1,0 +1,189 @@
+<mvc:View
+  controllerName="lojacap.controller.PedidosFree"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:core="sap.ui.core">
+
+    <VBox id="vboxPedidos">
+
+              <Toolbar id="toolbarCabecalhoTopo" class="cabecalhoTopo">
+  <HBox id="hboxCabecalho" width="100%" alignItems="Center" justifyContent="SpaceBetween">
+
+          <!-- Área esquerda: botão + logo -->
+          <HBox id="hboxEsquerda" alignItems="Center">
+            <Button id="btnVoltarTopo"
+                    icon="sap-icon://nav-back"
+                    type="Transparent"
+                    tooltip="Voltar"/>
+            <Image id="logoTopo"
+                  src="https://upload.wikimedia.org/wikipedia/commons/5/59/SAP_2011_logo.svg"
+                  height="2rem"
+                  width="auto"
+                  class="sapUiTinyMarginBegin" />
+          </HBox>
+
+          <!-- Área central: texto -->
+          <HBox id="hboxCentro" width="100%" justifyContent="Center">
+            <Text id="tituloCabecalho"
+                  text="NTTTESTE - Plataforma logística - detalhamento documentos"
+                  class="cabecalhoTexto" />
+          </HBox>
+
+          <!-- Área direita: reservada (vazia por enquanto) -->
+          <HBox id="hboxDireita" width="2rem" />
+          
+        </HBox>
+      </Toolbar>
+
+    <Toolbar id="toolbarAcoesPedidos" class="sapUiSmallMarginBottom">
+    <HBox id="hboxFiltrosAcoes" alignItems="Center" wrap="Wrap" renderType="Bare">
+
+        <!-- Campo de Entrada -->
+        <Input id="inputFiltroPedidos" placeholder="Digite algo..." width="15rem" />
+
+        <!-- Botões de ação -->
+        <Button id="btnProximaEtapa" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginBegin" />
+        <Button id="btnVoltarEtapa" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginBegin" />
+        <Button id="btnRejeitarFrete" icon="sap-icon://employee-rejections" text="Rejeitar frete" class="sapUiTinyMarginBegin" />
+        <Button id="btnAdicionarFreteManual" icon="sap-icon://cart-3" text="Adicionar frete manual" class="sapUiTinyMarginBegin" />
+        <Button id="btnUploadArquivoFrete" icon = "sap-icon://upload" text="Upload arquivo de frete" class="sapUiTinyMarginBegin" />
+        <Button id="btnAtualizar" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginBegin" />
+        <Button id="btnVerLogs" icon = "sap-icon://newspaper" text="Ver logs" class="sapUiTinyMarginBegin" />
+
+    </HBox>
+    </Toolbar>
+
+
+    <Toolbar id="toolbarIconesFiltros" class="sapUiTinyMarginBottom">
+    <HBox id="hboxIconesFiltros" alignItems="Center" renderType="Bare">
+
+      <Button id="filtroIconeTodos"
+              icon="sap-icon://zoom-in"
+              type="Transparent"
+              tooltip="Todos os pedidos" />
+
+      <Button id="filtroAscending"
+              icon="sap-icon://sort-ascending"
+              type="Ghost"
+              tooltip="A - z"
+              class="sapUiSmallMarginBegin"
+              press=".onPressAscending" />
+
+      <Button id="filtroDescending"
+              icon="sap-icon://sort-descending"
+              type="Ghost"
+              tooltip="Z - a"
+              press=".onPressDescending" />
+
+      <Button id="filtroIconeCancelado"
+              icon="sap-icon://zoom-in"
+              type="Transparent"
+              tooltip="Cancelado" />
+
+      <Button id="filtroIconeFrete2"
+              icon="sap-icon://zoom-in"
+              type="Transparent"
+              tooltip="Com frete" />
+
+              <Button id="filtroIconeConcluido2"
+              icon="sap-icon://add-filter"
+              type="Transparent"
+              tooltip="Concluído" />
+
+      <Button id="filtroIconeCancelado2"
+              icon="sap-icon://sum"
+              type="Transparent"
+              tooltip="Cancelado"
+              class = "sapUiSmallMarginBegin" />
+
+      <Button id="filtroIconeFrete"
+              icon="sap-icon://sum"
+              type="Transparent"
+              tooltip="Com frete" />
+
+      <Button id="filtroIconeFrete3"
+              icon="sap-icon://print"
+              type="Ghost"
+              tooltip="Imprimir"
+              class = "sapUiSmallMarginBegin" 
+              press=".onPrintTable"/>
+
+        <Button id="filtroIconeConcluido3"
+              icon="sap-icon://check-availability"
+              type="Transparent"
+              tooltip="Concluído" />
+
+      <Button id="filtroIconeCancelado3"
+              icon="sap-icon://documents"
+              type="Transparent"
+              tooltip="Cancelado" />
+
+      <Button id="filtroIconeFrete4"
+              icon="sap-icon://settings"
+              type="Transparent"
+              tooltip="Com frete" />
+
+        <Button id="filtroIconeFrete5"
+                icon="sap-icon://hint"
+                type="Transparent"
+                tooltip="Com frete"
+                class = "sapUiTinyMarginBegin" />
+    </HBox>
+</Toolbar>
+    <!-- Tabela de Pedidos -->
+    <Table
+      id="tablePedidosFree"
+      items="{/Pedidos}"
+      mode="MultiSelect"
+      updateFinished=".onUpdateFinished"
+      class="tabelaComBorda">
+
+
+  <columns>
+    <Column id="colLogIcons" hAlign="Center" width="3rem"><Text id="txtColLogIcons" text="Log" /></Column>
+    <Column id="colCliente"><Text id="txtColCliente" text="Cliente" /></Column>
+    <Column id="colTotal"><Text id="txtColTotal" text="Total" /></Column>
+    <Column id="colPagamento"><Text id="txtColPagamento" text="Pagamento" /></Column>
+    <Column id="colStatus"><Text id="txtColStatus" text="Status" /></Column>
+    <Column id="colOrderIdPl"><Text id="txtColOrderIdPl" text="Order ID PL" /></Column>
+    <Column id="colChaveDocMae"><Text id="txtColChaveDocMae" text="Chave Doc. Mãe" /></Column>
+    <Column id="colNumeroDocExterno"><Text id="txtColNumeroDocExterno" text="Número Doc. Externo" /></Column>
+    <Column id="colIdParceiro"><Text id="txtColIdParceiro" text="ID Parceiro" /></Column>
+    <Column id="colNomeParceiro"><Text id="txtColNomeParceiro" text="Nome Parceiro" /></Column>
+    <Column id="colNumeroNfeM"><Text id="txtColNumeroNfeM" text="Nº NF-e M" /></Column>
+
+    <!-- Coluna Virtual: Log -->
+   
+  </columns>
+
+  <items>
+    <ColumnListItem
+    id="itemPedidosFree"
+    type="Active">
+    <cells>
+        <HBox id="hboxLogIcons" justifyContent="Start" renderType="Bare">
+        <core:Icon id="iconSquare1" src="sap-icon://stop" size="0.8rem" color="green" />
+        <core:Icon id="iconSquare2" src="sap-icon://stop" size="0.8rem" color="green" />
+        <core:Icon id="iconTriangle" src="sap-icon://warning" size="0.8rem" color="red" />
+      </HBox>
+
+        <ObjectIdentifier id="objIdCliente" title="{cliente/nome}" />
+        <Text id="txtTotal" text="{total}" />
+        <Text id="txtPagamento" text="{pagamento}" />
+        <Text id="txtStatus" text="{status}" />
+        <Text id="txtOrderIdPl" text="{orderIdPl}" />
+        <Text id="txtChaveDocMae" text="{chaveDocumentoMae}" />
+        <Text id="txtNumeroDocExterno" text="{numeroDocExterno}" />
+        <Text id="txtIdParceiro" text="{idParceiro}" />
+        <Text id="txtNomeParceiro" text="{nomeParceiro}" />
+        <Text id="txtNumeroNfeM" text="{numeroNfeM}" />
+
+                <!-- Coluna virtual com 3 ícones -->
+                
+            </cells>
+            </ColumnListItem>
+        </items>
+</Table>
+
+  </VBox>
+</mvc:View>

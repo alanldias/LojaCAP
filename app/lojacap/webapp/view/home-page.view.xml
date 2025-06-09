@@ -19,6 +19,10 @@
                 id="welcomeTextHeader"
                 text="{= ${headerModel>/userName} ? (${i18n>welcomeHeaderPrefix} + ' ' + ${headerModel>/userName} + '!') : ''}"
                 visible="{headerModel>/welcomeTextVisible}" class="sapUiSmallMarginBeginEnd sapMTitleStyleH6"/>
+                
+                <Button id = "telapedidos" text="Ir para Pedidos Free" press=".onGoPedidosFree" />
+
+                <Button id = "telanotafisca" text="Ir para Nota fiscal tela" press=".onGonotafiscal" />
         </headerContent>
 
         <VBox

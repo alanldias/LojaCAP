@@ -520,34 +520,34 @@ async function trans05para15(tx, ids) {
   return sucesso(ids, '15');
 }
 
-/** 15 → 30 (all-or-nothing + indica NF que falhou) */
+/** 15 → 30  (all-or-nothing, lista **todos** os erros) */
 async function trans15para30(tx, notas) {
-  const resultados       = [];
-  const valoresPorNota   = new Map();   // <id, valores para update>
-  let erroGlobal  = null;               // mensagem
-  let failedId    = null;               // qual NF causou o erro
+  const resultados     = [];
+  const valoresPorNota = new Map();           // <id, valores gerados>
+  const erros          = new Map();           // <id, msgErro>
 
-  /* 1. Validação de TODAS as NFs -------------------------------- */
+  /* 1. Valida TODAS as NFs ---------------------------------------- */
   for (const nota of notas) {
     const id   = nota.idAlocacaoSAP;
     const resp = await BAPI_PO_CREATE1(nota);
 
     if (!resp.ok) {
-      erroGlobal = resp.msg;
-      failedId   = id;
-      await BAPI_TRANSACTION_ROLLBACK(resp.msg);
-      break;                   // aborta a validação
+      erros.set(id, resp.msg);                        // guarda erro
+      await BAPI_TRANSACTION_ROLLBACK(resp.msg);      // compensação
+      continue;                                       // mas continua validando para achar +erros
     }
-    valoresPorNota.set(id, resp.valores);
+    valoresPorNota.set(id, resp.valores);             // ok → guarda p/ update
   }
 
-  /* 2. Se houve erro → devolve falha para TODAS ------------------ */
-  if (erroGlobal) {
+  /* 2. Se houve qualquer erro → devolve falha para TODAS ---------- */
+  if (erros.size > 0) {
+    const idsComErro = [...erros.keys()].join(', ');  // para msg nos “abordados”
+
     for (const nota of notas) {
-      const id = nota.idAlocacaoSAP;
-      const msg = (id === failedId)
-        ? `NF ${id}: ${erroGlobal}`                       // a que falhou
-        : `Processo abortado — erro na NF ${failedId}.`;  // as demais
+      const id   = nota.idAlocacaoSAP;
+      const msg  = erros.has(id)
+        ? `NF ${id}: ${erros.get(id)}`                          // erro específico
+        : `Processo abortado — erros nas NFs: ${idsComErro}.`;  // demais
 
       resultados.push({
         idAlocacaoSAP : id,
@@ -556,10 +556,10 @@ async function trans15para30(tx, notas) {
         novoStatus    : '15'
       });
     }
-    return resultados;
+    return resultados;   // nada foi atualizado no BD
   }
 
-  /* 3. Todas OK → faz update e devolve sucesso ------------------ */
+  /* 3. Nenhum erro → grava todas e devolve sucesso ---------------- */
   for (const nota of notas) {
     const id      = nota.idAlocacaoSAP;
     const valores = valoresPorNota.get(id);

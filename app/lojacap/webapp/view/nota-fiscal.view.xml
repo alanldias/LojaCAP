@@ -71,12 +71,14 @@
                         icon="sap-icon://sort-ascending" 
                         type="Ghost"
                         tooltip="Status: Não Atribuída (01)"
-                        class="sapUiTinyMargin" />
+                        class="sapUiTinyMargin"
+                        press=".onPressAscending" />
 
                 <Button id="filtroIconeAtribuidasNfse"
                         icon="sap-icon://sort-descending" 
                         type="Ghost"
-                        tooltip="Status: Atribuída (05)" />
+                        tooltip="Status: Atribuída (05)"
+                        press=".onPressDescending" />
 
                 <Button id="filtroIconeErroNfse"
                         icon="sap-icon://search" 

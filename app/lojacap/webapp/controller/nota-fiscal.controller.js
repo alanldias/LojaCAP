@@ -3,8 +3,9 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageBox",
     "sap/m/MessageToast",
-    "lojacap/controller/formatter"
-], function (Controller, JSONModel, MessageBox, MessageToast, formatter) {
+    "sap/ui/model/Sorter",
+    "lojacap/controller/formatter" 
+], function(Controller, JSONModel, MessageBox, MessageToast, Sorter, formatter) {
     "use strict";
 
     return Controller.extend("lojacap.controller.nota-fiscal", {
@@ -22,6 +23,7 @@ sap.ui.define([
             const oListItem = oEvent.getParameter("listItem");
             const bSel      = oEvent.getParameter("selected");
             const oTable    = this.byId("tableNotaFiscalServicoMonitor");
+            
             if (!oListItem) return;
 
             const oCtx          = oListItem.getBindingContext();
@@ -101,9 +103,36 @@ sap.ui.define([
             }
         },
 
+        onPressAscending: function () {
+            var oTable = this.byId("tableNotaFiscalServicoMonitor")
+            var oBinding = oTable.getBinding("items")
+
+            var aSorter = [new Sorter("status", false)]
+
+            oBinding.sort(aSorter)
+
+            this.updateSortButtons("ascending")
+            console.log("Tabela ordenada por Status em ordem crescente.")
+        },
+
+        onPressDescending: function () {
+            var oTable = this.byId("tableNotaFiscalServicoMonitor")
+            var oBinding = oTable.getBinding("items")
+
+            var aSorter = [new Sorter("status", true)]
+
+            oBinding.sort(aSorter)
+
+            this.updateSortButtons("descending")
+            console.log("Tabela ordenada por Status em ordem descrescente")
+        },
+
+        // -------------- FIM FUNCIONALIDADES BOTÕES -------------- // 
+  
         onUpdateFinishedNotaFiscal(oEvent) {
             const oTable = oEvent.getSource();
             const aItems = oTable.getItems();
+
 
             aItems.forEach(oItem => {
                 const ctx = oItem.getBindingContext();

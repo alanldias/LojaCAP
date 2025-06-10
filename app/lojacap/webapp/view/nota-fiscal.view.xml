@@ -1,151 +1,270 @@
 <mvc:View
-    controllerName="lojacap.controller.nota-fiscal" 
-    xmlns:mvc="sap.ui.core.mvc"
-    xmlns="sap.m"
-    displayBlock="true"   
-    xmlns:core="sap.ui.core">
+  controllerName="lojacap.controller.nota-fiscal" 
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns="sap.m"
+  xmlns:core="sap.ui.core">
 
-    <Page id="pgMonitor">
-        
-        <customHeader>
-            <Toolbar id="toolbarCabecalhoTopoNf" class="cabecalhoTopo">
-                <Button
-                    id="btnVoltarTopoNf"
-                    icon="sap-icon://nav-back"
-                    type="Transparent"
-                    tooltip="Voltar"
-                    press=".onNavBack" />
-                <Image
-                    id="logoTopoNf"
-                    src="https://upload.wikimedia.org/wikipedia/commons/5/59/SAP_2011_logo.svg"
-                    height="2rem"
-                    class="sapUiTinyMarginBegin" />
-                <ToolbarSpacer id = "asda12314sad" />
-                <Title id="pageTitle" text="GBLOG - Plataforma Logística - Detalhamento Documentos" class="cabecalhoTexto" />
-                <ToolbarSpacer id = "asda12314sa2ad"/>
-            </Toolbar>
-        </customHeader>
+<Page id="pgMonitor" showHeader="false">
+    <VBox id="vboxNotaFiscalMonitor">
 
-        <subHeader>
-            <Toolbar id="toolbarAcoesNfse">
-                <HBox id = "asda12314sas1ad" alignItems="Center" wrap="Wrap" renderType="Bare">
-                    <Input id="inputFiltroNfse" placeholder="Buscar NFSe..." width="12rem" class="sapUiTinyMarginEnd"/>
-                    <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginEnd" press=".onProximaEtapa"/>
-                    <ToolbarSeparator id = "asdas2a12314sad"/>
-                    <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginEnd" press=".onVoltarEtapa" />
-                    <ToolbarSeparator id = "aas12sda12314sad"/>
-                    <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar Frete" class="sapUiTinyMarginEnd" press=".onRejeitarFrete" />
-                    <ToolbarSeparator id = "asda12314124sad"/>
-                    <Button id="btnFreteManual" icon="sap-icon://display" text="Adicionar Frete Manual" class="sapUiTinyMarginEnd" />
-                    <ToolbarSeparator id = "asda12314ssad3ad" />
-                    <Button id="btnUpload" icon="sap-icon://add-document" text="Upload Arquivo de Frete" class="sapUiTinyMarginEnd" />
-                    <ToolbarSeparator id = "asda12sa12314sad" />
-                    <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginEnd" />
-                    <ToolbarSeparator id = "as1asda12314sad"/>
-                    <Button id="btnVerLogsNfse" icon="sap-icon://newspaper" text="Ver logs" class="sapUiTinyMarginEnd" press="onLogPress" />
-                    <ToolbarSeparator id = "asda1sa122314sad"/>
-                    <MenuButton id="btnMais" text="Mais">
-                        <menu>
-                            <Menu id="btnMenuMais" itemSelected="onMenuAction">
-                                <MenuItem id="btnMaisEdit" text="Edit" icon="sap-icon://edit" />
-                                <MenuItem id="btnMaisSave" text="Save" icon="sap-icon://save" />
-                                <MenuItem id="btnOpen" text="Open" icon="sap-icon://open-folder" />
-                            </Menu>
-                        </menu>
-                    </MenuButton>
+        <Toolbar id="toolbarCabecalhoTopoNf" class="cabecalhoTopo">
+            <HBox id="hboxCabecalhoNf" width="100%" alignItems="Center" justifyContent="SpaceBetween">
+                <HBox id="hboxEsquerdaNf" alignItems="Center">
+                    <Button id="btnVoltarTopoNf"
+                            icon="sap-icon://nav-back"
+                            type="Transparent"
+                            tooltip="Voltar"/>
+                    <Image id="logoTopoNf"
+                          src="https://upload.wikimedia.org/wikipedia/commons/5/59/SAP_2011_logo.svg"
+                          height="2rem"
+                          width="auto"
+                          class="sapUiTinyMarginBegin" />
                 </HBox>
-            </Toolbar>
-        </subHeader>
+                <HBox id="hboxCentroNf" width="100%" justifyContent="Center">
+                    <Text id="tituloCabecalhoNf"
+                          text="GBLOG - Plataforma Logística - Detalhamento Documentos"
+                          class="cabecalhoTexto" />
+                </HBox>
+                <HBox id="hboxDireitaNf" width="2rem" />
+            </HBox>
+        </Toolbar>
 
-        <content>
-            <Table
-                id="tableNotaFiscalServicoMonitor"
-                items="{/NotaFiscalServicoMonitor}"
-                mode="MultiSelect"
-                updateFinished=".onUpdateFinishedNotaFiscal"
-                selectionChange=".onSelectionChange"
-                growing="true"
-                growingScrollToLoad="true"
-                class="tabelaComBorda sapUiResponsiveMargin">
-                
-                <columns>
-                    <Column id="colLogIconsNfse" hAlign="Center" width="3rem">
-                        <Text id="txtColLogIconsNfse" text="Log" />
-                    </Column>
-                    <Column id="colIdAlocacaoSAP">
-                        <Text id="txtColIdAlocacaoSAP" text="ID Aloc. SAP" />
-                    </Column>
-                    <Column id="colOrderIdPL">
-                        <Text id="txtColOrderIdPL" text="Order ID PL" />
-                    </Column>
-                    <Column id="colChaveDocumentoMae">
-                        <Text id="txtColChaveDocumentoMae" text="Chave Doc. Mãe" />
-                    </Column>
-                    <Column id="colChaveDocumentoFilho">
-                        <Text id="txtColChaveDocumentoFilho" text="Chave Doc. Filho" />
-                    </Column>
-                    <Column id="colStatusNfse">
-                        <Text id="txtColStatusNfse" text="Status Proc." />
-                    </Column>
-                    <Column id="colNumeroNfseServico">
-                        <Text id="txtColNumeroNfseServico" text="Nº NFS-e" />
-                    </Column>
-                    <Column id="colSerieNfseServico">
-                        <Text id="txtColSerieNfseServico" text="Série NFS-e" />
-                    </Column>
-                    <Column id="colDataEmissaoNfseServico">
-                        <Text id="txtColDataEmissaoNfseServico" text="Dt. Emissão NFS-e" />
-                    </Column>
-                    <Column id="colChaveAcessoNfseServico" width="20rem">
-                        <Text id="txtColChaveAcessoNfseServico" text="Chave Acesso NFS-e" />
-                    </Column>
-                    <Column id="colCodigoVerificacaoNfse">
-                        <Text id="txtColCodigoVerificacaoNfse" text="Cód. Verificação" />
-                    </Column>
-                    <Column id="colNumeroDocumentoMIRO">
-                        <Text id="txtColNumeroDocumentoMIRO" text="Nº Doc. MIRO" />
-                    </Column>
-                    <Column id="colvalorBrutoNfse">
-                        <Text id="txtColvalorBrutoNfse" text="Valor Bruto Nfse" />
-                    </Column>
-                    <Column id="colvalorLiquidoFreteNfse">
-                        <Text id="txtcolvalorLiquidoFreteNfse" text="valor Liquido FreteNfse" />
-                    </Column>
-                    <Column id="colvalorEfetivoFrete">
-                        <Text id="txtcolvalorEfetivoFrete" text="valorEfetivoFrete" />
-                    </Column>
-                </columns>
+        <Toolbar id="toolbarAcoesNfse" class="sapUiSmallMarginBottom">
+            <HBox id="hboxFiltrosAcoesNfse" alignItems="Center" wrap="Wrap" renderType="Bare">
+                <Input id="inputFiltroNfse" placeholder="Buscar NFSe..." width="12rem" />
+                <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginEnd" press=".onProximaEtapa"/>
+                <ToolbarSeparator id="separador1"/>
+                <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginEnd" press=".onVoltarEtapa"/>
+                <ToolbarSeparator id="separador2"/>
+                <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar Frete" class="sapUiTinyMarginEnd" press=".onRejeitarFrete" />
+                <ToolbarSeparator id="separador3"/>
+                <Button id="btnFreteManual" icon="sap-icon://display" text="Adicionar Frete Manual" class="sapUiTinyMarginEnd" />
+                <ToolbarSeparator id="separador4"/>
+                <Button id="btnUpload" icon="sap-icon://add-document" text="Upload Arquivo de Frete" class="sapUiTinyMarginEnd" />
+                <ToolbarSeparator id="separador5"/>
+                <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginEnd" />
+                <ToolbarSeparator id="separador6"/>
+                <Button id="btnVerLogsNfse" icon="sap-icon://newspaper" text="Ver logs" class="sapUiTinyMarginEnd" press="onLogPress" />
+                <ToolbarSeparator id="separador7"/>
+                <MenuButton id="btnMais" text="Mais">
+			        <menu>
+				        <Menu id="btnMenuMais" itemSelected="onMenuAction">
+					    <MenuItem id="btnMaisEdit" text="Edit" icon="sap-icon://edit" />
+					    <MenuItem id="btnMaisSave" text="Save" icon="sap-icon://save" />
+					    <MenuItem id="btnOpen" text="Open" icon="sap-icon://open-folder" />
+				        </Menu>
+			        </menu>
+		        </MenuButton>
+            </HBox>
+        </Toolbar>
 
-                <items>
-                    <ColumnListItem id="itemNotaFiscalServicoMonitor" type="Active">
-                        <cells>
-                           <HBox id="hboxLogIconsCellNfse" justifyContent="Start" renderType="Bare">
-                                <core:Icon id="iconLogStatusNfse"
-                                    src="{= ${status} === '99' ? 'sap-icon://status-error' : (${status} === '55' ? 'sap-icon://alert' : 'sap-icon://status-inactive') }"
-                                    size="0.8rem"
-                                    color="{= ${status} === '99' ? 'red' : (${status} === '55' ? 'orange' : 'grey') }" />
-                           </HBox>
-                           <Text id="txtCellIdAlocacaoSAP" text="{idAlocacaoSAP}" />
-                           <Text id="txtCellOrderIdPL" text="{orderIdPL}" />
-                           <Text id="txtCellChaveDocumentoMae" text="{chaveDocumentoMae}" />
-                           <Text id="txtCellChaveDocumentoFilho" text="{chaveDocumentoFilho}" />
-                           <ObjectStatus
-                                id="objStatusCellNfse"
-                                text="{status} - {parts: [{path: 'status'}], formatter: '.formatter.formatStatusNfseText'}"
-                                state="{parts: [{path: 'status'}], formatter: '.formatter.formatStatusNfseState'}" />
-                           <Text id="txtCellNumeroNfseServico" text="{numeroNfseServico}" />
-                           <Text id="txtCellSerieNfseServico" text="{serieNfseServico}" />
-                           <Text id="txtCellDataEmissaoNfseServico" text="{path: 'dataEmissaoNfseServico', type: 'sap.ui.model.type.Date', formatOptions: { style: 'short'}}" />
-                           <Text id="txtCellChaveAcessoNfseServico" text="{chaveAcessoNfseServico}" />
-                           <Text id="txtCellCodigoVerificacaoNfse" text="{codigoVerificacaoNfse}" />
-                           <Text id="txtCellNumeroDocumentoMIRO" text="{numeroDocumentoMIRO}" />
-                           <Text id="txtCellvalorBrutoNfse" text="{valorBrutoNfse}" />
-                           <Text id="txtvalorLiquidoFreteNfse" text="{valorLiquidoFreteNfse}" />
-                           <Text id="txtvalorEfetivoFrete" text="{valorEfetivoFrete}" />  
-                        </cells>
-                    </ColumnListItem>
-                </items>
-            </Table>
-        </content>
-    </Page>
+        <Toolbar id="toolbarIconesFiltrosNfse" class="sapUiTinyMarginBottom">
+            <HBox id="hboxIconesFiltrosNfse" alignItems="Center" renderType="Bare">
+                <Button id="filtroIconeTodosNfse"
+                        icon="sap-icon://sys-enter" 
+                        type="Ghost"
+                        tooltip="Todas as NFSe"
+                        class="sapUiTinyMargin" />
+
+                    <ToolbarSeparator id="separador8"/> 
+
+                <Button id="filtroIconeNaoAtribuidasNfse"
+                        icon="sap-icon://sort-ascending" 
+                        type="Ghost"
+                        tooltip="Status: Não Atribuída (01)"
+                        class="sapUiTinyMargin"
+                        press=".onPressAscending" />
+
+                <Button id="filtroIconeAtribuidasNfse"
+                        icon="sap-icon://sort-descending" 
+                        type="Ghost"
+                        tooltip="Status: Atribuída (05)"
+                        press=".onPressDescending" />
+
+                <Button id="filtroIconeErroNfse"
+                        icon="sap-icon://search" 
+                        type="Ghost"
+                        tooltip="Status: Erro (99)"
+                        class="sapUiTinyMargin" />
+
+                <Button id="filtroIconeFinalizadoPLNfse"
+                        icon="sap-icon://sys-add"
+                        type="Ghost"
+                        tooltip="Status: Processo Finalizado - Retorno PL (50)" />
+
+                <MenuButton id="menuFiltro" class="sapUiTinyMargin" icon="sap-icon://filter" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
+                    <menu>
+                        <Menu id="menuFiltroSelect" itemSelected="onMenuAction">
+                        <MenuItem id="menuFiltrofiltro" text="Filter" icon="sap-icon://filter" press="openFilterDialog" />                
+                        <MenuItem id="menuFiltroSelect1" text="Edit" icon="sap-icon://edit" />
+                        <MenuItem id="menuFiltroSelect2" text="Save" icon="sap-icon://save" />
+                        <MenuItem id="menuFiltroSelect3" text="Open" icon="sap-icon://open-folder" />
+                        </Menu>
+                    </menu>
+                </MenuButton>
+
+                    <ToolbarSeparator id="separador9" /> 
+
+                <MenuButton id="menuSomar" class="sapUiTinyMargin" icon="sap-icon://sum" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
+                    <menu>
+                        <Menu id="menuSomarSelect" itemSelected="onMenuAction">
+                        <MenuItem id="menuSomarSelect1" icon="sap-icon://edit" />
+                        <MenuItem id="menuSomarSelect2" icon="sap-icon://save" />
+                        <MenuItem id="menuSomarSelect3" icon="sap-icon://open-folder" />
+                        </Menu>
+                    </menu>
+                </MenuButton>
+
+                <MenuButton id="menuSomar2" class="sapUiTinyMarginEnd" icon="sap-icon://sum" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
+                    <menu>
+                        <Menu id="menuSomar2Select" itemSelected="onMenuAction">
+                        <MenuItem id="menuSomar2Select1" text="Edit" icon="sap-icon://edit" />
+                        <MenuItem id="menuSomar2Select2" text="Save" icon="sap-icon://save" />
+                        <MenuItem id="menuSomar2Select3" text="Open" icon="sap-icon://open-folder" />
+                        </Menu>
+                    </menu>
+                </MenuButton>
+
+                <ToolbarSeparator id="separador10"/>
+
+                <Button id="filtroIconeFinalizadoPLNfseas"
+                        icon="sap-icon://print"
+                        type="Ghost"
+                        tooltip="Status: Processo Finalizado - Retorno PL (50)"
+                        class="sapUiTinyMargin"/>
+
+                <MenuButton id="btnMadis" icon="sap-icon://detail-view" type="Ghost">
+			        <menu>
+				        <Menu id="btnMenudMais" itemSelected="onMenuAction">
+					    <MenuItem id="btnMaidsEdit" text="Edit" icon="sap-icon://edit" />
+					    <MenuItem id="btnMaisdSave" text="Save" icon="sap-icon://save" />
+					    <MenuItem id="btnOpefdn" text="Open" icon="sap-icon://open-folder" />
+				        </Menu>
+			        </menu>
+		        </MenuButton>
+
+                <MenuButton id="btnMaias" icon="sap-icon://sys-next-page" type="Ghost" class="sapUiTinyMargin">
+			        <menu>
+				        <Menu id="btnMenuMaias" itemSelected="onMenuAction">
+					    <MenuItem id="btnMaisEdiat" text="Edit" icon="sap-icon://edit" />
+					    <MenuItem id="btnMaisSavae" text="Save" icon="sap-icon://save" />
+					    <MenuItem id="btnOpena" text="Open" icon="sap-icon://open-folder" />
+				        </Menu>
+			        </menu>
+		        </MenuButton>
+
+                <MenuButton id="menuGrid" class="sapUiTinyMarginEnd" icon="sap-icon://provision" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
+                    <menu>
+                        <Menu id="menuGridSelect" itemSelected="onMenuAction">
+                        <MenuItem id="menuGridSelect1" text="Edit" icon="sap-icon://edit" />
+                        <MenuItem id="menuGridSelect2" text="Save" icon="sap-icon://save" />
+                        <MenuItem id="menuGridSelect3" text="Open" icon="sap-icon://open-folder" />
+                        </Menu>
+                    </menu>
+                </MenuButton>
+
+                <ToolbarSeparator id="separador11"/>
+
+                <Button id="filtroIconeFinalizadoPLNfsae"
+                        icon="sap-icon://message-information"
+                        type="Ghost"
+                        tooltip="Status: Processo Finalizado - Retorno PL (50)" 
+                        class="sapUiTinyMargin"/>
+            </HBox>
+        </Toolbar>
+
+        <Table
+            id="tableNotaFiscalServicoMonitor"
+            items="{/NotaFiscalServicoMonitor}"
+            mode="MultiSelect"
+            updateFinished=".onUpdateFinishedNotaFiscal"
+            selectionChange=".onSelectionChange"
+            growing="true"  growingScrollToLoad="true" class="tabelaComBorda">
+
+
+            <columns>
+                <Column id="colLogIconsNfse" hAlign="Center" width="3rem">
+                    <Text id="txtColLogIconsNfse" text="Log" />
+                </Column>
+                <Column id="colIdAlocacaoSAP">
+                    <Text id="txtColIdAlocacaoSAP" text="ID Aloc. SAP" />
+                </Column>
+                <Column id="colOrderIdPL">
+                    <Text id="txtColOrderIdPL" text="Order ID PL" />
+                </Column>
+                <Column id="colChaveDocumentoMae">
+                    <Text id="txtColChaveDocumentoMae" text="Chave Doc. Mãe" />
+                </Column>
+                <Column id="colChaveDocumentoFilho">
+                    <Text id="txtColChaveDocumentoFilho" text="Chave Doc. Filho" />
+                </Column>
+                <Column id="colStatusNfse">
+                    <Text id="txtColStatusNfse" text="Status Proc." />
+                </Column>
+                <Column id="colNumeroNfseServico">
+                    <Text id="txtColNumeroNfseServico" text="Nº NFS-e" />
+                </Column>
+                <Column id="colSerieNfseServico">
+                    <Text id="txtColSerieNfseServico" text="Série NFS-e" />
+                </Column>
+                <Column id="colDataEmissaoNfseServico">
+                    <Text id="txtColDataEmissaoNfseServico" text="Dt. Emissão NFS-e" />
+                </Column>
+                <Column id="colChaveAcessoNfseServico" width="20rem">
+                    <Text id="txtColChaveAcessoNfseServico" text="Chave Acesso NFS-e" />
+                </Column>
+                <Column id="colCodigoVerificacaoNfse">
+                    <Text id="txtColCodigoVerificacaoNfse" text="Cód. Verificação" />
+                </Column>
+                <Column id="colNumeroDocumentoMIRO">
+                    <Text id="txtColNumeroDocumentoMIRO" text="Nº Doc. MIRO" />
+                </Column>
+                <Column id="colvalorBrutoNfse">
+                    <Text id="txtColvalorBrutoNfse" text="Valor Bruto Nfse" />
+                </Column>
+                <Column id="colvalorLiquidoFreteNfse">
+                    <Text id="txtcolvalorLiquidoFreteNfse" text="valor Liquido FreteNfse" />
+                </Column>
+                <Column id="colvalorEfetivoFrete">
+                    <Text id="txtcolvalorEfetivoFrete" text="valorEfetivoFrete" />
+                </Column>
+
+
+            </columns>
+
+            <items>
+                <ColumnListItem id="itemNotaFiscalServicoMonitor" type="Active">
+                    <cells>
+                        <HBox id="hboxLogIconsCellNfse" justifyContent="Start" renderType="Bare">
+                            <core:Icon id="iconLogStatusNfse"
+                                src="{= ${status} === '99' ? 'sap-icon://status-error' : (${status} === '55' ? 'sap-icon://alert' : 'sap-icon://status-inactive') }"
+                                size="0.8rem"
+                                color="{= ${status} === '99' ? 'red' : (${status} === '55' ? 'orange' : 'grey') }" />
+                        </HBox>
+                        <Text id="txtCellIdAlocacaoSAP" text="{idAlocacaoSAP}" />
+                        <Text id="txtCellOrderIdPL" text="{orderIdPL}" />
+                        <Text id="txtCellChaveDocumentoMae" text="{chaveDocumentoMae}" />
+                        <Text id="txtCellChaveDocumentoFilho" text="{chaveDocumentoFilho}" />
+                        <ObjectStatus
+                            id="objStatusCellNfse"
+                            text="{status} - {parts: [{path: 'status'}], formatter: '.formatter.formatStatusNfseText'}"
+                            state="{parts: [{path: 'status'}], formatter: '.formatter.formatStatusNfseState'}" />
+                        <Text id="txtCellNumeroNfseServico" text="{numeroNfseServico}" />
+                        <Text id="txtCellSerieNfseServico" text="{serieNfseServico}" />
+                        <Text id="txtCellDataEmissaoNfseServico" text="{path: 'dataEmissaoNfseServico', type: 'sap.ui.model.type.Date', formatOptions: { style: 'short'}}" />
+                        <Text id="txtCellChaveAcessoNfseServico" text="{chaveAcessoNfseServico}" />
+                        <Text id="txtCellCodigoVerificacaoNfse" text="{codigoVerificacaoNfse}" />
+                        <Text id="txtCellNumeroDocumentoMIRO" text="{numeroDocumentoMIRO}" />
+                         <Text id="txtCellvalorBrutoNfse" text="{valorBrutoNfse}" />
+                          <Text id="txtvalorLiquidoFreteNfse" text="{valorLiquidoFreteNfse}" />
+                           <Text id="txtvalorEfetivoFrete" text="{valorEfetivoFrete}" />                   
+                    </cells>
+                </ColumnListItem>
+            </items>
+        </Table>
+
+    </VBox>
+</Page>
+
 </mvc:View>
+    

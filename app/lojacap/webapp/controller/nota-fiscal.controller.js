@@ -19,6 +19,7 @@ sap.ui.define([
         formatter   : formatter,
         _coresLinha : {},            // { id : 'linhaVerde' | 'linhaVermelha' }
         _oLogDialog : null,
+        _oUploadDialog: null,
 
         onInit() {
             console.log("📜 Controller nota-fiscal inicializado");
@@ -239,6 +240,55 @@ sap.ui.define([
             this.updateSortButtons?.("descending");
         },
 
+        onOpenUploadDialog: async function() {
+            // Segue o mesmo padrão da sua onFilterDialog
+            if (!this._oUploadDialog) {
+                console.log("onOpenUploadDialog: Carregando fragmento de upload...");
+                this._oUploadDialog = await Fragment.load({
+                    name: "lojacap.view.fragments.UploadFreteDialog",
+                    controller: this
+                });
+                this.getView().addDependent(this._oUploadDialog);
+            }
+            this._oUploadDialog.open();
+        },
+        onUploadDialogClose: function () {
+            this._oUploadDialog.close();
+        },
+        onPressUploadFrete: function () {
+            const oFileUploader = this.byId("fileUploader");
+            const sFileName = oFileUploader.getValue();
+
+            if (!sFileName) {
+                MessageToast.show("Por favor, selecione um arquivo primeiro.");
+                return;
+            }
+
+            // O método .upload() envia o arquivo para a 'uploadUrl' definida no FileUploader
+            oFileUploader.upload();
+        },
+        onUploadComplete: function(oEvent) {
+            const sResponse = oEvent.getParameter("response");
+            const iStatus = oEvent.getParameter("status");
+
+            // Limpa o FileUploader para o próximo upload
+            const oFileUploader = this.byId("fileUploader");
+            oFileUploader.clear();
+
+            if (iStatus >= 200 && iStatus < 300) {
+                MessageBox.success("Arquivo enviado com sucesso! Resposta do servidor: " + sResponse);
+                this.onUploadDialogClose(); // Fecha a dialog
+                this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh(); // Atualiza a tabela
+            } else {
+                MessageBox.error("Falha no upload. Status: " + iStatus + ". Resposta: " + sResponse);
+            }
+        },
+        onFileChange: function(oEvent) {
+            if (!oEvent.getParameter("newValue")) {
+                const oFileUploader = this.byId("fileUploader");
+                oFileUploader.clear();
+            }
+        },
 
         onLogPress() {
             const oView = this.getView();

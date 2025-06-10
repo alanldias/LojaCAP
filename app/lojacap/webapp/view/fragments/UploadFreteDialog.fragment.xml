@@ -1,0 +1,43 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:u="sap.ui.unified">
+
+    <Dialog
+        id="uploadFreteDialog"
+        title="Upload de Arquivo de Frete"
+        resizable="true"
+        draggable="true">
+
+        <content>
+            <VBox id="vbox1" class="sapUiSmallMargin">
+                <Label id="label" text="Selecione o arquivo de frete para fazer o upload." class="sapUiSmallMarginBottom"/>
+                <u:FileUploader
+                    id="fileUploader"
+                    name="myFileUpload"
+                    uploadUrl="/odata/v4/catalog/upload" 
+                    tooltip="Selecione o arquivo para upload"
+                    placeholder="Escolha um arquivo..."
+                    fileType="csv,xls,xlsx"
+                    uploadComplete="onUploadComplete"
+                    change="onFileChange"
+                    width="100%"
+                />
+            </VBox>
+        </content>
+
+        <beginButton>
+            <Button
+                id="btnConfirmUpload"
+                text="Upload"
+                type="Emphasized"
+                press=".onPressUploadFrete"/>
+        </beginButton>
+        <endButton>
+            <Button
+                id="btnCloseUpload"
+                text="Cancelar"
+                press=".onUploadDialogClose"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

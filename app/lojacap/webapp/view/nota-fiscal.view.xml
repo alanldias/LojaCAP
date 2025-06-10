@@ -39,7 +39,7 @@
                 <ToolbarSeparator id="separador3"/>
                 <Button id="btnFreteManual" icon="sap-icon://display" text="Adicionar Frete Manual" class="sapUiTinyMarginEnd" />
                 <ToolbarSeparator id="separador4"/>
-                <Button id="btnUpload" icon="sap-icon://add-document" text="Upload Arquivo de Frete" class="sapUiTinyMarginEnd" />
+                <Button id="btnUpload" icon="sap-icon://add-document" text="Upload Arquivo de Frete" class="sapUiTinyMarginEnd" press=".onOpenUploadDialog" />
                 <ToolbarSeparator id="separador5"/>
                 <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginEnd" />
                 <ToolbarSeparator id="separador6"/>
@@ -107,9 +107,9 @@
                 <MenuButton id="menuSomar" class="sapUiTinyMargin" icon="sap-icon://sum" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
                     <menu>
                         <Menu id="menuSomarSelect" itemSelected="onMenuAction">
-                        <MenuItem id="menuSomarSelect1" icon="sap-icon://edit" />
-                        <MenuItem id="menuSomarSelect2" icon="sap-icon://save" />
-                        <MenuItem id="menuSomarSelect3" icon="sap-icon://open-folder" />
+                        <MenuItem id="menuSomarSelect1" icon="sap-icon://loan" text="Valor Efetivo" />
+                        <MenuItem id="menuSomarSelect2" icon="sap-icon://money-bills" text="Valor Bruto" />
+                        <MenuItem id="menuSomarSelect3" icon="sap-icon://currency" text="Valor Liquido" />
                         </Menu>
                     </menu>
                 </MenuButton>

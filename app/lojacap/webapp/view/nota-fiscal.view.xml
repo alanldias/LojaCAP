@@ -32,7 +32,7 @@
                     <Input id="inputFiltroNfse" placeholder="Buscar NFSe..." width="12rem" class="sapUiTinyMarginEnd"/>
                     <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginEnd" press=".onProximaEtapa"/>
                     <ToolbarSeparator id = "asdas2a12314sad"/>
-                    <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginEnd" />
+                    <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginEnd" press=".onVoltarEtapa" />
                     <ToolbarSeparator id = "aas12sda12314sad"/>
                     <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar Frete" class="sapUiTinyMarginEnd" press=".onRejeitarFrete" />
                     <ToolbarSeparator id = "asda12314124sad"/>

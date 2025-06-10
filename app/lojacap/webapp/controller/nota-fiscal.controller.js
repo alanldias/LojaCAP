@@ -285,6 +285,67 @@ sap.ui.define([
                 }
                 /* status diferente de 55 e sem cor no lote → fica sem cor */
             });
+        },
+        async onVoltarEtapa() {
+            const oTable = this.byId("tableNotaFiscalServicoMonitor");
+            const oModel = this.getView().getModel();
+            const aCtxSel = oTable.getSelectedContexts();
+
+            if (!aCtxSel.length) {
+                MessageToast.show("Por favor, selecione ao menos uma NFSe para reverter.");
+                return;
+            }
+
+            const grpFilho = aCtxSel[0].getProperty("chaveDocumentoFilho");
+            const grpStatus = aCtxSel[0].getProperty("status");
+            console.log(`[REVERT] Grupo alvo -> filho:${grpFilho} | status:${grpStatus}`);
+
+            const aIds = [];
+            oTable.getItems().forEach(item => {
+                const ctx = item.getBindingContext();
+                if (!ctx) return;
+                const filho = ctx.getProperty("chaveDocumentoFilho");
+                const status = ctx.getProperty("status");
+                const id = ctx.getProperty("idAlocacaoSAP");
+                const pertenceAoGrupo = filho === grpFilho && status === grpStatus;
+                item.setSelected(pertenceAoGrupo);
+                if (pertenceAoGrupo) aIds.push(id);
+            });
+
+            console.log("◀️ IDs enviados para action de reversão:", aIds);
+
+            const oAction = oModel.bindContext("/voltarStatusNFs(...)");
+            oAction.setParameter("notasFiscaisIDs", aIds);
+
+            try {
+                await oAction.execute();
+                const payload = oAction.getBoundContext().getObject();
+                const resultados = Array.isArray(payload) ? payload : (payload?.value || []);
+
+                // Limpa o mapa de cores para os itens processados, para que voltem ao normal
+                resultados.forEach(r => {
+                    delete this._coresLinha[r.idAlocacaoSAP];
+                });
+
+                const ok = resultados.filter(r => r.success).length;
+                const errs = resultados.filter(r => !r.success);
+
+                if (errs.length) {
+                    const txt = errs.map(r => `NF ${r.idAlocacaoSAP}: ${r.message}`).join("\n");
+                    MessageBox.warning(`Processamento: ${ok} sucesso(s) e ${errs.length} erro(s) na reversão.\n\n${txt}`,
+                        { title: "Resultado da Reversão" });
+                } else {
+                    MessageToast.show(`${ok} NFSe(s) revertida(s) com sucesso!`);
+                }
+
+                oTable.getBinding("items").refresh();
+
+            } catch (e) {
+                console.error("❌ Erro na action voltarStatusNFs:", e);
+                MessageBox.error("Falha ao reverter o status das NFSe.", {
+                    details: e.message || JSON.stringify(e)
+                });
+            }
         }
     });
 });

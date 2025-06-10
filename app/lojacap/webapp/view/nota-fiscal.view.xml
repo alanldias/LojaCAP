@@ -35,7 +35,7 @@
                 <ToolbarSeparator id="separador1"/>
                 <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginEnd" />
                 <ToolbarSeparator id="separador2"/>
-                <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar Frete" class="sapUiTinyMarginEnd" />
+                <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar Frete" class="sapUiTinyMarginEnd" press=".onRejeitarFrete" />
                 <ToolbarSeparator id="separador3"/>
                 <Button id="btnFreteManual" icon="sap-icon://display" text="Adicionar Frete Manual" class="sapUiTinyMarginEnd" />
                 <ToolbarSeparator id="separador4"/>
@@ -94,6 +94,7 @@
                 <MenuButton id="menuFiltro" class="sapUiTinyMargin" icon="sap-icon://filter" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
                     <menu>
                         <Menu id="menuFiltroSelect" itemSelected="onMenuAction">
+                        <MenuItem id="menuFiltroSelectfiltro" text="Edit" icon="sap-icon://filter" />
                         <MenuItem id="menuFiltroSelect1" text="Edit" icon="sap-icon://edit" />
                         <MenuItem id="menuFiltroSelect2" text="Save" icon="sap-icon://save" />
                         <MenuItem id="menuFiltroSelect3" text="Open" icon="sap-icon://open-folder" />

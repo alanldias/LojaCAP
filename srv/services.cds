@@ -27,6 +27,9 @@ service ShopService {
 
     entity NotaFiscalServicoMonitor as projection on shop.NotaFiscalServicoMonitor;
 
+    entity NotaFiscalServicoLog     as projection on shop.NotaFiscalServicoLog;
+
+
     
    action avancarStatusNFs(
         notasFiscaisIDs : array of NotaFiscalServicoMonitor:idAlocacaoSAP // Usando o tipo da chave primária
@@ -36,6 +39,14 @@ service ShopService {
         message           : String;
         novoStatus        : String;
         numeroNfseServico : String;
+    };
+    action rejeitarFrete(
+        idAlocacaoSAP : NotaFiscalServicoMonitor:idAlocacaoSAP
+    ) returns {
+        idAlocacaoSAP : String;
+        success       : Boolean;
+        message       : String;
+        novoStatus    : String;
     };
     
     action registerCliente(nome: String, email: String, senha: String) returns String;

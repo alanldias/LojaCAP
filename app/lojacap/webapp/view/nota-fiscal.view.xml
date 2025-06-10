@@ -33,7 +33,7 @@
                 <Input id="inputFiltroNfse" placeholder="Buscar NFSe..." width="12rem" />
                 <Button id="btnProximaEtapaNfse" icon="sap-icon://arrow-right" text="Próxima etapa" class="sapUiTinyMarginEnd" press=".onProximaEtapa"/>
                 <ToolbarSeparator id="separador1"/>
-                <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginEnd" />
+                <Button id="btnVoltarEtapaNfse" icon="sap-icon://arrow-left" text ="Voltar etapa" class="sapUiTinyMarginEnd" press=".onVoltarEtapa" />
                 <ToolbarSeparator id="separador2"/>
                 <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar Frete" class="sapUiTinyMarginEnd" press=".onRejeitarFrete" />
                 <ToolbarSeparator id="separador3"/>

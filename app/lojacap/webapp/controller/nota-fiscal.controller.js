@@ -318,18 +318,77 @@ sap.ui.define([
                         <meta charset="UTF-8">
                         <title>Relatório de Detalhes do Documento - ${oDateFormat.format(new Date())}</title>
                         <style>
-                            body { font-family: Arial, sans-serif; font-size: 10px; padding: 20px; color: #333; }
-                            .header { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #ccc; padding-bottom: 10px; }
-                            .infoHeader { display: flex; justify-content: space-between; margin-top: 5px; font-size: 11px; }
-                            .header h1 { color: #004b7c; margin: 0; font-size: 18px; }
-                            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-                            th, td { border: 0.5px solid rgb(160, 160, 160); padding: 6px; text-align: left; word-break: break-word; }
-                            th { background-color: #f2f2f2; font-weight: bold; text-transform: capitalize; font-size: 9.5px; }
-                            .footer { margin-top: 20px; text-align: center; font-size: 10px; color: #666; border-top: 1px solid #ccc; padding-top: 10px; }
-        
-                            /* <<< CORREÇÃO DEFINITIVA: ADICIONAR AS CLASSES DE COR AQUI >>> */
-                            .linhaVerde { background-color: #c8e6c9 !important; } /* Verde mais suave */
-                            .linhaVermelha { background-color: #ffcdd2 !important; } /* Vermelho mais suave */
+                            body { 
+                                font-family: Arial, 
+                                sans-serif; 
+                                font-size: 10px; 
+                                padding: 20px; 
+                                color: #333; 
+                            }
+
+                            .header { 
+                                text-align: center; 
+                                margin-bottom: 20px; 
+                                border-bottom: 1px solid #ccc; 
+                                padding-bottom: 10px; 
+                            }
+
+                            .infoHeader { 
+                                display: flex; 
+                                justify-content: 
+                                space-between; 
+                                margin-top: 5px; 
+                                font-size: 11px; 
+                            }
+
+                            .header h1 { 
+                                color: #004b7c; 
+                                margin: 0; 
+                                font-size: 18px; 
+                            }
+
+                            table { 
+                                width: 100%; 
+                                border-collapse: collapse; 
+                                margin-top: 15px; 
+                            }
+
+                            th, td { 
+                                border: 0.5px solid rgb(160, 160, 160); 
+                                padding: 6px; 
+                                text-align: left; 
+                                word-break: break-word; 
+                            }
+
+                            th { 
+                                background-color: #f2f2f2; 
+                                font-weight: bold; 
+                                text-transform: 
+                                capitalize; 
+                                font-size: 9.5px; 
+                            }
+
+                            .footer { 
+                                margin-top: 20px; 
+                                text-align: center; 
+                                font-size: 10px; 
+                                color: #666; 
+                                border-top: 1px solid #ccc; 
+                                padding-top: 10px; 
+                            }
+
+                            .col-log { width: 3%}
+                            .col-chaveDocMae { width: 10% }
+                            .col-chaveDocFilho { width: 10% }
+                            .col-statusProc { width: 4% }
+                            .col-chaveAcessoNfse { width: 10% }
+                            .col-dtEmissaoNfse { width: 7% }
+                            .col-valorBruto { width: 8%}
+                            .col-valorLiquido { width: 8%}
+                            .col-valorEfetivo { width: 8%}
+    
+                            .linhaVerde { background-color: #c8e6c9 !important; } 
+                            .linhaVermelha { background-color: #ffcdd2 !important; } 
         
                             @media print {
                                 body { margin: 0; padding: 10px; font-size: 9pt; }
@@ -354,19 +413,41 @@ sap.ui.define([
                         <table>
                             <thead>
                                 <tr>
-                                    <th>Log</th><th>ID Aloc. SAP</th><th>Order ID PL</th><th>Chave Doc. Mãe</th><th>Chave Doc. Filho</th><th>Status Proc.</th>
-                                    <th>Nº NFS-e</th><th>Série NFS-e</th><th>Dt. Emissão NFS-e</th><th>Chave Acesso NFS-e</th><th>Cód. Verificação</th>
-                                    <th>Nº Doc. MIRO</th><th>Valor Bruto NFSe</th><th>Valor Líquido Frete</th><th>Valor Efetivo Frete</th>
+                                    <th class="col-log">Log</th>
+                                    <th class="col-idAlocSap">ID Aloc. SAP</th>
+                                    <th class="col-orderIdPL">Order ID PL</th>
+                                    <th class="col-chaveDocMae">Chave Doc. Mãe</th>
+                                    <th class="col-chaveDocFilho">Chave Doc. Filho</th>
+                                    <th class="col-statusProc">Status Proc.</th>
+                                    <th class="col-numeroNfse">Nº NFS-e</th>
+                                    <th class="col-serieNfse">Série NFS-e</th>
+                                    <th class="col-dtEmissaoNfse">Dt. Emissão NFS-e</th>
+                                    <th class="col-chaveAcessoNfse">Chave Acesso NFS-e</th>
+                                    <th class="col-codVerificacao">Cód. Verificação</th>
+                                    <th class="col-numeroMiro">Nº Doc. MIRO</th>
+                                    <th class="col-valorBruto">Valor Bruto NFSe</th>
+                                    <th class="col-valorLiquido">Valor Líquido Frete</th>
+                                    <th class="col-valorEfetivo">Valor Efetivo Frete</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 ${aDadosTabela.map(row => `
                                     <tr class="${row.classeCor}">
-                                        <td>${row.log}</td><td>${row.idAlocacaoSAP}</td><td>${row.orderIdPL}</td><td>${row.chaveDocumentoMae}</td>
-                                        <td>${row.chaveDocumentoFilho}</td><td>${row.status}</td><td>${row.numeroNfseServico}</td>
-                                        <td>${row.serieNfseServico}</td><td>${row.dataEmissaoNfseServico}</td><td>${row.chaveAcessoNfseServico}</td>
-                                        <td>${row.codigoVerificacaoNfse}</td><td>${row.numeroDocumentoMIRO}</td><td>${row.valorBrutoNfse}</td>
-                                        <td>${row.valorLiquidoFreteNfse}</td><td>${row.valorEfetivoFrete}</td>
+                                        <td>${row.log}</td>
+                                        <td>${row.idAlocacaoSAP}</td>
+                                        <td>${row.orderIdPL}</td>
+                                        <td>${row.chaveDocumentoMae}</td>
+                                        <td>${row.chaveDocumentoFilho}</td>
+                                        <td>${row.status}</td>
+                                        <td>${row.numeroNfseServico}</td>
+                                        <td>${row.serieNfseServico}</td>
+                                        <td>${row.dataEmissaoNfseServico}</td>
+                                        <td>${row.chaveAcessoNfseServico}</td>
+                                        <td>${row.codigoVerificacaoNfse}</td>
+                                        <td>${row.numeroDocumentoMIRO}</td>
+                                        <td>${row.valorBrutoNfse}</td>
+                                        <td>${row.valorLiquidoFreteNfse}</td>
+                                        <td>${row.valorEfetivoFrete}</td>
                                     </tr>
                                 `).join('')}
                             </tbody>

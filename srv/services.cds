@@ -40,6 +40,14 @@ service ShopService {
         novoStatus        : String;
         numeroNfseServico : String;
     };
+    action rejeitarFrete(
+        idAlocacaoSAP : NotaFiscalServicoMonitor:idAlocacaoSAP
+    ) returns {
+        idAlocacaoSAP : String;
+        success       : Boolean;
+        message       : String;
+        novoStatus    : String;
+    };
     
     action registerCliente(nome: String, email: String, senha: String) returns String;
     action loginCliente(email: String, senha: String) returns String;

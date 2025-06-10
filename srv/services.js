@@ -470,6 +470,13 @@ this.on('avancarStatusNFs', async (req) => {
   return resultados;
 });
 
+this.on('rejeitarFrete', async req => {
+  const { idAlocacaoSAP } = req.data || {};
+  if (!idAlocacaoSAP) return req.error(400,'ID inválido');
+
+  const tx = cds.transaction(req);
+  return transRejeitarFrete(tx,idAlocacaoSAP);
+});
 
 
 function gerarNumeroNF() {
@@ -696,6 +703,31 @@ async function BAPI_PO_CREATE1(nota) {
   };
 }
 
+async function transRejeitarFrete (tx, id) {
+  try {
+    const rows = await tx.update(NotaFiscalServicoMonitor)
+                         .set({ status: '55' })
+                         .where({ idAlocacaoSAP: id });
+    if (!rows) throw new Error('NF não encontrada ou já rejeitada');
+
+    return {
+      idAlocacaoSAP : id,
+      success       : true,
+      message       : 'Frete rejeitado – status 55',
+      novoStatus    : '55'
+    };
+
+  } catch (e) {
+    await gravarLog(tx, id, e.message, 'E', 'REJ_FRETE', '055', 'rejeitarFrete');
+    return {
+      idAlocacaoSAP : id,
+      success       : false,
+      message       : e.message,
+      novoStatus    : 'erro'
+    };
+  }
+}
+
 async function BAPI_TRANSACTION_ROLLBACK(motivo) {
   console.warn('↩️  Rollback:', motivo);
   return { ok: true, msg: motivo };
@@ -723,14 +755,14 @@ async function BAPI_INCOMINGINVOICE_CREATE1(nota) {
 * MOCK da BAPI_J_1B_NF_CREATEFROMDATA para criar a Nota Fiscal de Serviço.
 * @returns {{ok: boolean, msg?: string}}
 */
-async function BAPI_J_1B_NF_CREATEFROMDATA(nota, miroDocNumber) {
+  async function BAPI_J_1B_NF_CREATEFROMDATA(nota, miroDocNumber) {
   console.log(`[BAPI_SIMULATION] Criando NF de Serviço para MIRO ${miroDocNumber}...`);
   // if (miroDocNumber.endsWith('7')) { // Exemplo de condição de erro
   //    return { ok: false, msg: "Erro simulado: dados fiscais inválidos." };
   // }
   return { ok: true }; // Apenas confirma o sucesso
-}
-  async function gravarLog(
+  }
+async function gravarLog(
     tx,                        // transação CAP
     id,                        // idAlocacaoSAP da NF
     msg,

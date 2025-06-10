@@ -128,8 +128,9 @@
                 <Button id="filtroIconeFinalizadoPLNfseas"
                         icon="sap-icon://print"
                         type="Ghost"
-                        tooltip="Status: Processo Finalizado - Retorno PL (50)"
-                        class="sapUiTinyMargin"/>
+                        tooltip="Imprimir"
+                        class="sapUiTinyMargin"
+                        press=".onPressPrint"/>
 
                 <MenuButton id="btnMadis" icon="sap-icon://detail-view" type="Ghost">
 			        <menu>

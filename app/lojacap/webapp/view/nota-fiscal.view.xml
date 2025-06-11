@@ -85,7 +85,8 @@
                         icon="sap-icon://search" 
                         type="Ghost"
                         tooltip="Status: Erro (99)"
-                        class="sapUiTinyMargin" />
+                        class="sapUiTinyMargin"
+                        press="onFilterNfComErro" />
 
                 <Button id="filtroIconeFinalizadoPLNfse"
                         icon="sap-icon://sys-add"
@@ -233,7 +234,8 @@
             </columns>
 
             <items>
-                <ColumnListItem id="itemNotaFiscalServicoMonitor" type="Active">
+                <ColumnListItem id="itemNotaFiscalServicoMonitor" type="Active" 
+                highlight="{= ${status} === '50' ? 'Success' : (${status} === '55' || ${status} === '99' ? 'Error' : 'None') }">
                     <cells>
                         <HBox id="hboxLogIconsCellNfse" justifyContent="Start" renderType="Bare">
                             <core:Icon id="iconLogStatusNfse"

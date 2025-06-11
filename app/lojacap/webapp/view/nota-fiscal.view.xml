@@ -106,12 +106,34 @@
 
                     <ToolbarSeparator id="separador9" /> 
 
-                <MenuButton id="menuSomar" class="sapUiTinyMargin" icon="sap-icon://sum" buttonMode="Split" defaultAction="onDefaultAction" beforeMenuOpen="onBeforeMenuOpen">
+                 <MenuButton id="menuSomar" 
+                            icon="sap-icon://sum" 
+                            tooltip="Calcular Totais"
+                            class="sapUiTinyMargin">
                     <menu>
-                        <Menu id="menuSomarSelect" itemSelected="onMenuAction">
-                        <MenuItem id="menuSomarSelect1" icon="sap-icon://edit" />
-                        <MenuItem id="menuSomarSelect2" icon="sap-icon://save" />
-                        <MenuItem id="menuSomarSelect3" icon="sap-icon://open-folder" />
+                        <Menu id="ffe" itemSelected=".onCalcularTotal">
+                            <MenuItem id="ef" text="Valor Total Bruto" icon="sap-icon://money-bills">
+                                <customData>
+                                    <core:CustomData key="coluna" value="valorBrutoNfse" />
+                                </customData>
+                            </MenuItem>
+                            <MenuItem id="hbhb" text="Valor Total Líquido" icon="sap-icon://receipt">
+                                <customData>
+                                    <core:CustomData key="coluna" value="valorLiquidoFreteNfse" />
+                                </customData>
+                            </MenuItem>
+                            <MenuItem id="eg" text="Valor Total Frete" icon="sap-icon://shipping-status">
+                                <customData>
+                                    <core:CustomData key="coluna" value="valorEfetivoFrete" />
+                                </customData>
+                            </MenuItem>
+                            
+                            <MenuItem id="fhgh" text="Calcular Todos os Totais" icon="sap-icon://multiselect-all">
+                                <customData>
+                                    <core:CustomData key="coluna" value="todos" />
+                                </customData>
+                            </MenuItem>
+                            
                         </Menu>
                     </menu>
                 </MenuButton>
@@ -263,8 +285,26 @@
                     </cells>
                 </ColumnListItem>
             </items>
+            
         </Table>
-
+      <Toolbar id="footerToolbar">
+        <ToolbarSpacer id="frrf"/>
+        
+        <HBox id="fgv" visible="{totalModel>/bruto/visible}" class="sapUiMediumMarginEnd">
+            <Label id="grg" text="Total Bruto:" class="sapUiSmallMarginEnd"/>
+            <Text id="tgrg" text="{totalModel>/bruto/value}" class="sapMObjectNumber"/>
+        </HBox>
+        
+        <HBox id="er" visible="{totalModel>/liquido/visible}" class="sapUiMediumMarginEnd">
+            <Label id="gtg" text="Total Líquido:" class="sapUiSmallMarginEnd"/>
+            <Text id="mnju" text="{totalModel>/liquido/value}" class="sapMObjectNumber"/>
+        </HBox>
+        
+        <HBox id="hny" visible="{totalModel>/frete/visible}" class="sapUiMediumMarginEnd">
+            <Label id="ght" text="Total Frete:" class="sapUiSmallMarginEnd"/>
+            <Text id="jjy" text="{totalModel>/frete/value}" class="sapMObjectNumber"/>
+        </HBox>
+    </Toolbar>
     </VBox>
 </Page>
 

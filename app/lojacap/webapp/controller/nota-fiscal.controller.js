@@ -8,7 +8,7 @@ sap.ui.define([
     "sap/ui/core/Fragment",
     "lojacap/controller/formatter"
   ], (
-    Controller, MessageBox, MessageToast,
+    Controller, JSONModel, MessageBox, MessageToast,
     Filter, FilterOperator, Sorter, Fragment, formatter
   ) => {
     "use strict";
@@ -37,6 +37,12 @@ sap.ui.define([
        * ======================================================= */
       onInit() {
         console.log("📜 nota-fiscal controller ready");
+        const oTotalModel = new JSONModel({
+            bruto: { value: "", visible: false },
+            liquido: { value: "", visible: false },
+            frete: { value: "", visible: false }
+        });
+        this.getView().setModel(oTotalModel, "totalModel");
       },
   
       /* ======================================================= *
@@ -333,7 +339,76 @@ sap.ui.define([
           Promise.resolve(oBind.refresh())           // OData V4 → nova query c/ $orderby
             .finally(() => oTable.setBusy(false));
         }
-      }
+        
+      },
+      onCalcularTotal: function(oEvent) {
+        const oMenuItem = oEvent.getParameter("item");
+        const sActionKey = oMenuItem.data("coluna");
+    
+        const oTable = this.byId("tableNotaFiscalServicoMonitor");
+        const aContexts = oTable.getBinding("items").getContexts();
+        const oTotalModel = this.getView().getModel("totalModel");
+    
+        // Esconde todos os totais antes de qualquer cálculo para limpar o estado
+        oTotalModel.setProperty("/bruto/visible", false);
+        oTotalModel.setProperty("/liquido/visible", false);
+        oTotalModel.setProperty("/frete/visible", false);
+    
+        if (sActionKey === "todos") {
+            // --- CALCULA E MOSTRA TODOS (Esta parte já estava correta) ---
+            const sTotalBruto = this._calculateColumnTotal(aContexts, "valorBrutoNfse");
+            const sTotalLiquido = this._calculateColumnTotal(aContexts, "valorLiquidoFreteNfse");
+            const sTotalFrete = this._calculateColumnTotal(aContexts, "valorEfetivoFrete");
+    
+            oTotalModel.setProperty("/bruto/value", sTotalBruto);
+            oTotalModel.setProperty("/liquido/value", sTotalLiquido);
+            oTotalModel.setProperty("/frete/value", sTotalFrete);
+            
+            oTotalModel.setProperty("/bruto/visible", true);
+            oTotalModel.setProperty("/liquido/visible", true);
+            oTotalModel.setProperty("/frete/visible", true);
+    
+            MessageToast.show("Todos os totais foram calculados.");
+    
+        } else {
+            // --- LÓGICA CORRIGIDA PARA CÁLCULO INDIVIDUAL ---
+            const sTotalFormatado = this._calculateColumnTotal(aContexts, sActionKey);
+            
+            // Usamos if/else para garantir que o caminho do modelo está correto
+            if (sActionKey === 'valorBrutoNfse') {
+                oTotalModel.setProperty("/bruto/value", sTotalFormatado);
+                oTotalModel.setProperty("/bruto/visible", true);
+            } else if (sActionKey === 'valorLiquidoFreteNfse') {
+                oTotalModel.setProperty("/liquido/value", sTotalFormatado);
+                oTotalModel.setProperty("/liquido/visible", true);
+            } else if (sActionKey === 'valorEfetivoFrete') {
+                oTotalModel.setProperty("/frete/value", sTotalFormatado);
+                oTotalModel.setProperty("/frete/visible", true);
+            }
+    
+            MessageToast.show(`Total da coluna '${oMenuItem.getText()}' calculado: ${sTotalFormatado}`);
+        }
+    },
+    
+    // A função auxiliar _calculateColumnTotal permanece a mesma
+    _calculateColumnTotal: function(aContexts, sColunaKey) {
+        let fTotal = 0;
+    
+        aContexts.forEach(oContext => {
+            const oRowData = oContext.getObject();
+            const sValor = oRowData[sColunaKey];
+    
+            if (sValor && !isNaN(sValor)) {
+                const fValor = parseFloat(String(sValor).replace(/\./g, '').replace(',', '.'));
+                fTotal += fValor;
+            }
+        });
+    
+        return fTotal.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+    }
     });
   });
   

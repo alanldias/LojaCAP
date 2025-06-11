@@ -168,77 +168,120 @@ sap.ui.define([
         //Botão Próxima Etapa – expande seleção p/ todo o grupo     
        
         async onProximaEtapa() {
-            const oTable = this.byId("tableNotaFiscalServicoMonitor");
-            const oModel = this.getView().getModel();
-            const aCtxSel = oTable.getSelectedContexts();
-        
-            if (!aCtxSel.length) {
-                MessageToast.show("Por favor, selecione ao menos uma NFSe.");
-                return;
-            }
-        
-            /* === grupo de referência = primeiro item selecionado =========== */
-            const grpFilho  = aCtxSel[0].getProperty("chaveDocumentoFilho");
-            const grpStatus = aCtxSel[0].getProperty("status");
-        
-            console.log(`[NEXT] Grupo alvo -> filho:${grpFilho} | status:${grpStatus}`);
-        
-            const aIds = [];  // IDs que seguirão para action
-        
-            /* === 1. percorre TODAS as linhas ================================= */
-            oTable.getItems().forEach(item => {
-                const ctx = item.getBindingContext();
-                if (!ctx) return;
-        
-                const filho  = ctx.getProperty("chaveDocumentoFilho");
-                const status = ctx.getProperty("status");
-                const id     = ctx.getProperty("idAlocacaoSAP");
-        
-                const pertenceAoGrupo = filho === grpFilho && status === grpStatus;
-        
-                /* Seleciona/deseleciona visualmente */
-                item.setSelected(pertenceAoGrupo);
-        
-                /* monta lista de IDs */
-                if (pertenceAoGrupo) aIds.push(id);
-            });
-        
-            console.log("▶️ IDs enviados para action:", aIds);
-        
-            /* === 2. dispara action ========================================== */
-            const oAction = oModel.bindContext("/avancarStatusNFs(...)");
-            oAction.setParameter("notasFiscaisIDs", aIds);
-        
-            try {
-                await oAction.execute();
-                const payload    = oAction.getBoundContext().getObject();
-                const resultados = Array.isArray(payload) ? payload : (payload?.value || []);
-        
-                // resultados.forEach(r => {
-                //     /* pinta conforme resultado */
-                //     this._coresLinha[r.idAlocacaoSAP] = r.success ? "linhaVerde" : "linhaVermelha";
-                // });
-        
-                const ok   = resultados.filter(r => r.success).length;
-                const errs = resultados.filter(r => !r.success);
-                if (errs.length) {
-                    const txt = errs.map(r => `NF ${r.idAlocacaoSAP}: ${r.message}`).join("\n");
-                    MessageBox.warning(`Processamento: ${ok} sucesso(s) e ${errs.length} erro(s).\n\n${txt}`,
-                                       { title: "Resultado do Processamento" });
-                } else {
-                    MessageToast.show(`${ok} NFSe(s) processada(s) com sucesso!`);
-                }
-        
-                /* refresh → onUpdateFinished pintará cores */
-                oTable.getBinding("items").refresh();
-        
-            } catch (e) {
-                console.error("❌ Erro na action:", e);
-                MessageBox.error("Falha ao processar as NFSe.", {
-                    details: e.message || JSON.stringify(e)
-                });
-            }
-        },
+                  const oTable = this.byId("tableNotaFiscalServicoMonitor");           
+                  const oModel = this.getView().getModel();          
+                  const aCtxSel = oTable.getSelectedContexts();         
+                  if (!aCtxSel.length) {
+                    MessageToast.show("Por favor, selecione ao menos uma NFSe.");
+                   return;       
+                  }
+            
+                  /* === grupo de referência = primeiro item selecionado =========== */
+            
+                  const grpFilho = aCtxSel[0].getProperty("chaveDocumentoFilho");
+            
+                  const grpStatus = aCtxSel[0].getProperty("status");
+            
+               
+            
+                  console.log(`[NEXT] Grupo alvo -> filho:${grpFilho} | status:${grpStatus}`);
+            
+               
+            
+                  const aIds = []; // IDs que seguirão para action
+            
+               
+            
+                  /* === 1. percorre TODAS as linhas ================================= */
+            
+                  oTable.getItems().forEach(item => {
+            
+                    const ctx = item.getBindingContext();
+            
+                    if (!ctx) return;
+            
+               
+            
+                    const filho = ctx.getProperty("chaveDocumentoFilho");
+            
+                    const status = ctx.getProperty("status");
+            
+                    const id   = ctx.getProperty("idAlocacaoSAP");
+            
+               
+            
+                    const pertenceAoGrupo = filho === grpFilho && status === grpStatus;
+            
+               
+            
+                    /* Seleciona/deseleciona visualmente */
+            
+                    item.setSelected(pertenceAoGrupo);
+            
+               
+            
+                    /* monta lista de IDs */
+            
+                    if (pertenceAoGrupo) aIds.push(id);
+            
+                  });
+            
+               
+            
+                  console.log("▶️ IDs enviados para action:", aIds);
+            
+               
+            
+                  /* === 2. dispara action ========================================== */
+            
+                  const oAction = oModel.bindContext("/avancarStatusNFs(...)");
+            
+                  oAction.setParameter("notasFiscaisIDs", aIds);
+            
+               
+            
+                  try {
+            
+                    await oAction.execute();
+            
+                    const payload  = oAction.getBoundContext().getObject();
+            
+                    const resultados = Array.isArray(payload) ? payload : (payload?.value || []);
+            
+               
+            
+                    // resultados.forEach(r => {
+            
+                    //   /* pinta conforme resultado */
+            
+                    //   this._coresLinha[r.idAlocacaoSAP] = r.success ? "linhaVerde" : "linhaVermelha";
+            
+                    // });
+            
+               
+            
+                    const ok  = resultados.filter(r => r.success).length;
+            
+                    const errs = resultados.filter(r => !r.success);
+            
+                    if (errs.length) {
+            
+                      const txt = errs.map(r => `NF ${r.idAlocacaoSAP}: ${r.message}`).join("\n");
+            
+                      MessageBox.warning(`Processamento: ${ok} sucesso(s) e ${errs.length} erro(s).\n\n${txt}`,           
+                               { title: "Resultado do Processamento" });          
+                    } else {           
+                      MessageToast.show(`${ok} NFSe(s) processada(s) com sucesso!`);
+            
+                    }  
+                    oTable.getBinding("items").refresh();
+                 } catch (e) {            
+                    console.error("❌ Erro na action:", e);           
+                    MessageBox.error("Falha ao processar as NFSe.", {           
+                      details: e.message || JSON.stringify(e)          
+                    });            
+                  }
+                },
         async onVoltarEtapa() {
             const oTable = this.byId("tableNotaFiscalServicoMonitor");
             const oModel = this.getView().getModel();

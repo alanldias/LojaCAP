@@ -599,7 +599,7 @@ async function trans15para30(tx, notas) {
     return resultados;
   }
 
-  /* 3. Nenhum erro → grava todas e devolve sucesso ---------------- */
+  /* 3. Nenhum erro → grava todas e devolve sucesso - */
   for (const nota of notas) {
     const id      = nota.idAlocacaoSAP;
     const valores = valoresPorNota.get(id);
@@ -627,7 +627,6 @@ async function trans15para30(tx, notas) {
 */
 async function trans30para35(tx, notas) {
   const resultados = [];
-
   // Esta etapa é complexa e geralmente processada uma a uma (ou por documento filho)
   for (const nota of notas) {
       const { idAlocacaoSAP: id } = nota;

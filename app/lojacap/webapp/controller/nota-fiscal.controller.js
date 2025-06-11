@@ -5,11 +5,12 @@ sap.ui.define([
     "sap/ui/model/Filter",
     "sap/ui/model/FilterOperator",
     "sap/ui/model/Sorter",
+    "sap/ui/model/json/JSONModel",
     "sap/ui/core/Fragment",
     "lojacap/controller/formatter"
   ], (
-    Controller, JSONModel, MessageBox, MessageToast,
-    Filter, FilterOperator, Sorter, Fragment, formatter
+    Controller, MessageBox, MessageToast,
+    Filter, FilterOperator, Sorter, JSONModel, Fragment, formatter
   ) => {
     "use strict";
   
@@ -174,7 +175,7 @@ sap.ui.define([
           }).then(oDlg => {
             this.getView().addDependent(oDlg);
             oDlg.setModel(this.getView().getModel());
-      
+
             /* sempre que o diálogo abrir ⇒ refresh nos logs */
             oDlg.attachAfterOpen(() => this._refreshLogs());
       
@@ -258,8 +259,7 @@ sap.ui.define([
         const grpFilho  = aCtxSel[0].getProperty("chaveDocumentoFilho");
         const grpStatus = aCtxSel[0].getProperty("status");
         const aIds      = [];
-  
-        oTable.getItems().forEach(item => {
+         oTable.getItems().forEach(item => {
           const c = item.getBindingContext();
           const match = c && c.getProperty("chaveDocumentoFilho") === grpFilho &&
                         c.getProperty("status") === grpStatus;
@@ -339,42 +339,40 @@ sap.ui.define([
           Promise.resolve(oBind.refresh())           // OData V4 → nova query c/ $orderby
             .finally(() => oTable.setBusy(false));
         }
-        
       },
-      onCalcularTotal: function(oEvent) {
+    onCalcularTotal: function(oEvent) {
         const oMenuItem = oEvent.getParameter("item");
         const sActionKey = oMenuItem.data("coluna");
-    
-        const oTable = this.byId("tableNotaFiscalServicoMonitor");
-        const aContexts = oTable.getBinding("items").getContexts();
+
+        const oTable = this.byId(TBL_NOTAS);
+        // MUDANÇA CRÍTICA: Pegamos os itens renderizados, não os contextos do binding.
+        const aItems = oTable.getItems(); 
         const oTotalModel = this.getView().getModel("totalModel");
-    
-        // Esconde todos os totais antes de qualquer cálculo para limpar o estado
+
+        // Limpa a visibilidade de todos os totais antes de calcular
         oTotalModel.setProperty("/bruto/visible", false);
         oTotalModel.setProperty("/liquido/visible", false);
         oTotalModel.setProperty("/frete/visible", false);
-    
+
         if (sActionKey === "todos") {
-            // --- CALCULA E MOSTRA TODOS (Esta parte já estava correta) ---
-            const sTotalBruto = this._calculateColumnTotal(aContexts, "valorBrutoNfse");
-            const sTotalLiquido = this._calculateColumnTotal(aContexts, "valorLiquidoFreteNfse");
-            const sTotalFrete = this._calculateColumnTotal(aContexts, "valorEfetivoFrete");
-    
+            // Passamos a lista de itens para a função auxiliar
+            const sTotalBruto = this._calculateColumnTotal(aItems, "valorBrutoNfse");
+            const sTotalLiquido = this._calculateColumnTotal(aItems, "valorLiquidoFreteNfse");
+            const sTotalFrete = this._calculateColumnTotal(aItems, "valorEfetivoFrete");
+
             oTotalModel.setProperty("/bruto/value", sTotalBruto);
             oTotalModel.setProperty("/liquido/value", sTotalLiquido);
             oTotalModel.setProperty("/frete/value", sTotalFrete);
-            
+
             oTotalModel.setProperty("/bruto/visible", true);
             oTotalModel.setProperty("/liquido/visible", true);
             oTotalModel.setProperty("/frete/visible", true);
-    
+
             MessageToast.show("Todos os totais foram calculados.");
-    
+
         } else {
-            // --- LÓGICA CORRIGIDA PARA CÁLCULO INDIVIDUAL ---
-            const sTotalFormatado = this._calculateColumnTotal(aContexts, sActionKey);
+            const sTotalFormatado = this._calculateColumnTotal(aItems, sActionKey);
             
-            // Usamos if/else para garantir que o caminho do modelo está correto
             if (sActionKey === 'valorBrutoNfse') {
                 oTotalModel.setProperty("/bruto/value", sTotalFormatado);
                 oTotalModel.setProperty("/bruto/visible", true);
@@ -385,25 +383,34 @@ sap.ui.define([
                 oTotalModel.setProperty("/frete/value", sTotalFormatado);
                 oTotalModel.setProperty("/frete/visible", true);
             }
-    
+
             MessageToast.show(`Total da coluna '${oMenuItem.getText()}' calculado: ${sTotalFormatado}`);
         }
     },
-    
-    // A função auxiliar _calculateColumnTotal permanece a mesma
-    _calculateColumnTotal: function(aContexts, sColunaKey) {
+
+    /* ======================================================= *
+     *  HELPERS privados                                       *
+     * ======================================================= */
+
+    // ***** COLE A FUNÇÃO _calculateColumnTotal AQUI *****
+    _calculateColumnTotal: function(aItems, sColunaKey) {
         let fTotal = 0;
-    
-        aContexts.forEach(oContext => {
+        // Agora iteramos sobre os itens da tabela (ex: ColumnListItem)
+        aItems.forEach(oItem => {
+            // E pegamos o contexto de binding de cada item
+            const oContext = oItem.getBindingContext();
+            if (!oContext) {
+                return;
+            }
+
             const oRowData = oContext.getObject();
             const sValor = oRowData[sColunaKey];
-    
-            if (sValor && !isNaN(sValor)) {
-                const fValor = parseFloat(String(sValor).replace(/\./g, '').replace(',', '.'));
+
+            if (sValor && (typeof sValor === 'number' || !isNaN(sValor))) {
+                const fValor = typeof sValor === 'number' ? sValor : parseFloat(String(sValor).replace(/\./g, '').replace(',', '.'));
                 fTotal += fValor;
             }
         });
-    
         return fTotal.toLocaleString('pt-BR', {
             style: 'currency',
             currency: 'BRL'

@@ -202,7 +202,7 @@
             mode="MultiSelect"
             updateFinished=".onUpdateFinishedNotaFiscal"
             selectionChange=".onSelectionChange"
-            growing="true"  growingScrollToLoad="true" class="tabelaComBorda">
+            growing="true"  class="tabelaComBorda">
 
 
             <columns>

@@ -3,424 +3,413 @@ sap.ui.define([
     "sap/ui/model/json/JSONModel",
     "sap/m/MessageBox",
     "sap/m/MessageToast",
-    "sap/ui/model/Sorter",
-    "lojacap/controller/formatter",
-    "sap/ui/core/Fragment",
     "sap/ui/model/Filter",
-    "sap/ui/model/FilterOperator"
-], function (Controller, JSONModel, MessageBox, MessageToast, Sorter, formatter, Fragment, Filter,FilterOperator) {
+    "sap/ui/model/FilterOperator",
+    "sap/ui/model/Sorter",
+    "sap/ui/core/Fragment",
+    "lojacap/controller/formatter"
+  ], (
+    Controller, JSONModel, MessageBox, MessageToast,
+    Filter, FilterOperator, Sorter, Fragment, formatter
+  ) => {
     "use strict";
-
-    return Controller.extend("lojacap.controller.nota-fiscal", {
-
-        formatter   : formatter,
-        _coresLinha : {},            // { id : 'linhaVerde' | 'linhaVermelha' }
-        _oLogDialog : null,
-
-        onInit() {
-            console.log("📜 Controller nota-fiscal inicializado");
-            // Cria um modelo para armazenar os valores totais calculados
-            const oTotalModel = new JSONModel({
-                bruto: { value: "", visible: false },
-                liquido: { value: "", visible: false },
-                frete: { value: "", visible: false }
-            });
-            this.getView().setModel(oTotalModel, "totalModel");
-        },
-
-      
-        /* Seleção agora é “livre”; apenas logs                                */
-       
-        onSelectionChange(oEvent) {
-            const oItem = oEvent.getParameter("listItem");
-            const bSel  = oEvent.getParameter("selected");
-            if (oItem) {
-                const ctx   = oItem.getBindingContext();
-                console.log(`[SEL] ${bSel ? 'Selecionado' : 'Desmarcado'} – ID: ${ctx.getProperty("idAlocacaoSAP")}`);
-            }
-        },
-        onMenuAction: function (oEvent) {
-            const sId = oEvent.getParameter("item").getId();
-            console.log("onMenuAction: Item do menu clicado:", sId);
-            if (sId.endsWith("menuFiltroSelectfiltro")) {
-                this.openFilterDialog();
-            }
-        },
-
-        openFilterDialog: async function () {
-            console.log("openFilterDialog: Abrindo o diálogo de filtro.");
-            if (!this._oFilterDialog) {
-                console.log("openFilterDialog: Carregando fragmento...");
-
-                /* sem 'id' → controles vão para o Core (sap.ui.getCore().byId) */
-                this._oFilterDialog = await Fragment.load({
-                    name       : "lojacap.view.fragments.NFMonitorFilterDialog",
-                    controller : this
-                });
-                this.getView().addDependent(this._oFilterDialog);
-            }
-            this._oFilterDialog.open();
-        },
-
-        onFilterCancel: function () {
-            console.log("onFilterCancel: Fechando diálogo.");
-            this._oFilterDialog.close();
-        },
-
-        /* ------------------- APLICA FILTROS ------------------- */
-        onFilterApply: function () {
-            console.log("--- onFilterApply: Iniciando a aplicação de filtros ---");
-
-            const getVal = id => {
-                const oCtrl = sap.ui.getCore().byId(id);
-                if (!oCtrl) {
-                    console.warn(`getVal: controle '${id}' não encontrado.`);
-                    return null;
-                }
-                return oCtrl.getDateValue ? oCtrl.getDateValue() : oCtrl.getValue();
-            };
-
-            /* helper para montar range */
-            const aFilters = [];
-            const addRange = (idFrom, idTo, path) => {
-                const v1 = getVal(idFrom);
-                const v2 = getVal(idTo);
-                if (!v1 && !v2) return;
-
-                if (v1 && v2) {
-                    console.log(`addRange: BETWEEN ${path}`, v1, v2);
-                    aFilters.push(new Filter({ path, operator: FilterOperator.BT, value1: v1, value2: v2 }));
-                } else if (v1) {
-                    console.log(`addRange: GE ${path}`, v1);
-                    aFilters.push(new Filter({ path, operator: FilterOperator.GE, value1: v1 }));
-                } else {
-                    console.log(`addRange: LE ${path}`, v2);
-                    aFilters.push(new Filter({ path, operator: FilterOperator.LE, value1: v2 }));
-                }
-            };
-
-            console.log("onFilterApply: Montando filtros...");
-            addRange("inpIdSapFrom",    "inpIdSapTo",    "idAlocacaoSAP");
-            addRange("inpOrderFrom",    "inpOrderTo",    "orderIdPL");
-            addRange("inpStatusFrom",   "inpStatusTo",   "status");
-            addRange("dpDateFrom",      "dpDateTo",      "dataEmissaoNfseServico");
-            addRange("inpVlrBrutoFrom", "inpVlrBrutoTo", "valorBrutoNfse");
-
-            console.log("onFilterApply: Filtros finais:", JSON.stringify(aFilters));
-
-            const oTable   = this.byId("tableNotaFiscalServicoMonitor");
-            const oBinding = oTable.getBinding("items");
-            oBinding.filter(aFilters);
-            console.log("onFilterApply: Filtros aplicados!");
-
-            this._oFilterDialog.close();
-        },
-        //botão de reijetar frete
-        async onRejeitarFrete() {
-            const oTable = this.byId("tableNotaFiscalServicoMonitor");
-            const oModel = this.getView().getModel();
-            const aCtx   = oTable.getSelectedContexts();
-        
-            if (aCtx.length !== 1) {
-                MessageToast.show("Selecione exatamente 1 NFSe para rejeitar.");
-                return;
-            }
-        
-            const id = aCtx[0].getProperty("idAlocacaoSAP");
-            console.log("✖️ Rejeitando frete – ID:", id);
-        
-            const oAction = oModel.bindContext("/rejeitarFrete(...)");
-            oAction.setParameter("idAlocacaoSAP", id);
-        
-            try {
-                await oAction.execute();
-                const res = oAction.getBoundContext().getObject();
-                console.log("Resposta:", res);
-        
-                /* atualiza mapa de cores para essa linha */
-                this._coresLinha[id] = res.success ? "linhaVermelha" : "linhaVerde"; // como aqui deu certo mas o 55 sempre vai ser vermelho então deixa assim ao contrario
-
-                if (res.success) {
-                    MessageToast.show("Frete rejeitado com sucesso (status 55).");
-                } else {
-                    MessageBox.error(`Falha ao rejeitar: ${res.message}`);
-                }
-        
-                /* refresh table → updateFinished pintará */
-                oTable.getBinding("items").refresh();
-        
-            } catch (e) {
-                console.error("❌ Erro na action rejeitarFrete:", e);
-                MessageBox.error("Falha ao rejeitar o frete.", {
-                    details : e.message || JSON.stringify(e)
-                });
-            }
-        },
-        //Botão Próxima Etapa – expande seleção p/ todo o grupo     
-       
-        async onProximaEtapa() {
-            const oTable = this.byId("tableNotaFiscalServicoMonitor");
-            const oModel = this.getView().getModel();
-            const aCtxSel = oTable.getSelectedContexts();
-        
-            if (!aCtxSel.length) {
-                MessageToast.show("Por favor, selecione ao menos uma NFSe.");
-                return;
-            }
-        
-            /* === grupo de referência = primeiro item selecionado =========== */
-            const grpFilho  = aCtxSel[0].getProperty("chaveDocumentoFilho");
-            const grpStatus = aCtxSel[0].getProperty("status");
-        
-            console.log(`[NEXT] Grupo alvo -> filho:${grpFilho} | status:${grpStatus}`);
-        
-            const aIds = [];  // IDs que seguirão para action
-        
-            /* === 1. percorre TODAS as linhas ================================= */
-            oTable.getItems().forEach(item => {
-                const ctx = item.getBindingContext();
-                if (!ctx) return;
-        
-                const filho  = ctx.getProperty("chaveDocumentoFilho");
-                const status = ctx.getProperty("status");
-                const id     = ctx.getProperty("idAlocacaoSAP");
-        
-                const pertenceAoGrupo = filho === grpFilho && status === grpStatus;
-        
-                /* Seleciona/deseleciona visualmente */
-                item.setSelected(pertenceAoGrupo);
-        
-                /* monta lista de IDs */
-                if (pertenceAoGrupo) aIds.push(id);
-            });
-        
-            console.log("▶️ IDs enviados para action:", aIds);
-        
-            /* === 2. dispara action ========================================== */
-            const oAction = oModel.bindContext("/avancarStatusNFs(...)");
-            oAction.setParameter("notasFiscaisIDs", aIds);
-        
-            try {
-                await oAction.execute();
-                const payload    = oAction.getBoundContext().getObject();
-                const resultados = Array.isArray(payload) ? payload : (payload?.value || []);
-        
-                resultados.forEach(r => {
-                    /* pinta conforme resultado */
-                    this._coresLinha[r.idAlocacaoSAP] = r.success ? "linhaVerde" : "linhaVermelha";
-                });
-        
-                const ok   = resultados.filter(r => r.success).length;
-                const errs = resultados.filter(r => !r.success);
-                if (errs.length) {
-                    const txt = errs.map(r => `NF ${r.idAlocacaoSAP}: ${r.message}`).join("\n");
-                    MessageBox.warning(`Processamento: ${ok} sucesso(s) e ${errs.length} erro(s).\n\n${txt}`,
-                                       { title: "Resultado do Processamento" });
-                } else {
-                    MessageToast.show(`${ok} NFSe(s) processada(s) com sucesso!`);
-                }
-        
-                /* refresh → onUpdateFinished pintará cores */
-                oTable.getBinding("items").refresh();
-        
-            } catch (e) {
-                console.error("❌ Erro na action:", e);
-                MessageBox.error("Falha ao processar as NFSe.", {
-                    details: e.message || JSON.stringify(e)
-                });
-            }
-        },
-
-        onPressAscending() {
-            const oBinding = this.byId("tableNotaFiscalServicoMonitor").getBinding("items");
-            oBinding.sort(new Sorter("status", false));
-            this.updateSortButtons?.("ascending");
-        },
-
-        onPressDescending() {
-            const oBinding = this.byId("tableNotaFiscalServicoMonitor").getBinding("items");
-            oBinding.sort(new Sorter("status", true));
-            this.updateSortButtons?.("descending");
-        },
-
-
-        onLogPress() {
-            const oView = this.getView();
-            if (!this._oLogDialog) {
-                Fragment.load({
-                    name: "lojacap.view.fragments.NotaFiscalServicoLogDialog",
-                    controller: this
-                }).then(oDialog => {
-                    oView.addDependent(oDialog);
-                    oDialog.setModel(oView.getModel());
-                    this._oLogDialog = oDialog;
-                    oDialog.open();
-                });
-            } else {
-                this._oLogDialog.open();
-            }
-        },
-        onLogClose() {
-            this._oLogDialog?.close();
-        },
-
   
-        onUpdateFinishedNotaFiscal(oEvent) {
-            const aItems = oEvent.getSource().getItems();
+    /* =========================================================== *
+     *  Constantes (IDs de campos / paths que se repetem)           *
+     * =========================================================== */
+    const TBL_NOTAS = "tableNotaFiscalServicoMonitor";
+    const PATH_LOGS = "/NotaFiscalServicoLog";
+    const FILTER_ERRO = new Filter("tipoMensagemErro", FilterOperator.EQ, "E");
+  
+    /* =========================================================== *
+     *  Controller                                                 *
+     * =========================================================== */
+    return Controller.extend("lojacap.controller.nota-fiscal", {
+  
+      formatter,                                   // exposição direta
+      /* estado “privado” ---------------------------------------------------- */
+      _coresLinha   : Object.create(null),         // { id : 'linhaVerde' | 'linhaVermelha' }
+      _oFilterDialog: null,
+      _oLogDialog   : null,
+      _filtroIdsErro: null,                        // toggle do botão “NF c/ erro”
+  
+      /* ======================================================= *
+       *  Lifecycle                                              *
+       * ======================================================= */
+      onInit() {
+        console.log("📜 nota-fiscal controller ready");
+        const oTotalModel = new JSONModel({
+            bruto: { value: "", visible: false },
+            liquido: { value: "", visible: false },
+            frete: { value: "", visible: false }
+        });
+        this.getView().setModel(oTotalModel, "totalModel");
+      },
+  
+      /* ======================================================= *
+       *  SELEÇÃO (apenas 1 linha por vez)                       *
+       * ======================================================= */
+      onSelectionChange(oEvt) {
+        const oItem  = oEvt.getParameter("listItem");
+        const bSel   = oEvt.getParameter("selected");
+        if (!oItem) return;
+  
+        const oTable = this.byId(TBL_NOTAS);
+        if (bSel) {                   // seleção única
+          oTable.removeSelections(true);
+          oItem.setSelected(true);
+        }
+        const ctx = oItem.getBindingContext();
+        console.log(`[SEL] ${bSel ? "✔" : "✖"} ${ctx.getProperty("idAlocacaoSAP")}`);
+      },
+  
+      /* ======================================================= *
+       *  MENU / FILTRO                                          *
+       * ======================================================= */
+      onMenuAction(oEvt) {
+        if (oEvt.getParameter("item").getId().endsWith("menuFiltroSelectfiltro")) {
+          this.openFilterDialog();
+        }
+      },
+  
+      /* ---------- diálogo de filtro ---------- */
+      async openFilterDialog() {
+        if (!this._oFilterDialog) {
+          this._oFilterDialog = await Fragment.load({
+            name      : "lojacap.view.fragments.NFMonitorFilterDialog",
+            controller: this
+          });
+          this.getView().addDependent(this._oFilterDialog);
+        }
+        this._oFilterDialog.open();
+      },
+      onFilterCancel() { this._oFilterDialog.close(); },
+  
+      /* ---------- aplicar filtros ---------- */
+      onFilterApply() {
+        const oTable   = this.byId(TBL_NOTAS);
+        const oBinding = oTable.getBinding("items");
+  
+        /* helper leitura de campo (Input / DatePicker) */
+        const readVal = id => {
+          const c = sap.ui.getCore().byId(id);
+          return c?.getDateValue?.() ?? c?.getValue?.() ?? null;
+        };
+  
+        /* helper range → filter */
+        const filters = [];
+        const addRange = (fromId, toId, path) => {
+          const v1 = readVal(fromId), v2 = readVal(toId);
+          if (!v1 && !v2) return;
+          const op = v1 && v2 ? FilterOperator.BT
+                : v1 ? FilterOperator.GE : FilterOperator.LE;
+          filters.push(new Filter(path, op, v1 || v2, v2));
+        };
+  
+        addRange("inpIdSapFrom", "inpIdSapTo", "idAlocacaoSAP");
+        addRange("inpOrderFrom", "inpOrderTo", "orderIdPL");
+        addRange("inpStatusFrom","inpStatusTo","status");
+        addRange("dpDateFrom",   "dpDateTo",   "dataEmissaoNfseServico");
+        addRange("inpVlrBrutoFrom","inpVlrBrutoTo","valorBrutoNfse");
+  
+        oBinding.filter(filters);
+        console.log("🔎 filtros aplicados:", filters);
+        this._oFilterDialog.close();
+      },
+  
+      /* ======================================================= *
+       *  AÇÕES de negócios                                      *
+       * ======================================================= */
+      /* ---------- rejeitar frete ---------- */
+      async onRejeitarFrete() {
+        const { id, oAction } = this._prepareSingleIdAction("/rejeitarFrete(...)");
+        if (!id) return;
+  
+        try {
+          const res = await oAction.execute().then(() => oAction.getBoundContext().getObject());
+          res.success
+            ? MessageToast.show("Frete rejeitado (status 55).")
+            : MessageBox.error(`Falha: ${res.message}`);
+          this._refreshNotas();
+        } catch (e) { this._handleActionError("rejeitarFrete", e); }
+      },
+  
+      /* ---------- próxima etapa (lote) ---------- */
+      async onProximaEtapa() {
+        const { aIds, grpFilho, grpStatus } = this._collectIdsDoGrupo();
+        if (!aIds.length) return;
+  
+        const oAction = this.getView().getModel()
+                          .bindContext("/avancarStatusNFs(...)")
+                          .setParameter("notasFiscaisIDs", aIds);
+  
+        await this._executeLote(oAction, "NFSe processada(s)");
+      },
+  
+      /* ---------- voltar etapa (lote) ---------- */
+      async onVoltarEtapa() {
+        const { aIds }   = this._collectIdsDoGrupo();
+        if (!aIds.length) return;
+  
+        const oAction = this.getView().getModel()
+                          .bindContext("/voltarStatusNFs(...)")
+                          .setParameter("notasFiscaisIDs", aIds);
+  
+        await this._executeLote(oAction, "NFSe revertida(s)");
+      },
+  
+      /* ======================================================= *
+       *  SORT                                                   *
+       * ======================================================= */
+      onPressAscending()  { this._sortByStatus(false); },
+      onPressDescending() { this._sortByStatus(true ); },
+  
+      /* ======================================================= *
+       *  LOG – diálogo e filtro “NF com erro”                   *
+       * ======================================================= */
+      onLogPress() {
+        if (!this._oLogDialog) {
+          Fragment.load({
+            name      : "lojacap.view.fragments.NotaFiscalServicoLogDialog",
+            controller: this
+          }).then(oDlg => {
+            this.getView().addDependent(oDlg);
+            oDlg.setModel(this.getView().getModel());
+      
+            /* sempre que o diálogo abrir ⇒ refresh nos logs */
+            oDlg.attachAfterOpen(() => this._refreshLogs());
+      
+            this._oLogDialog = oDlg;
+            oDlg.open();
+          });
+        } else {
+          this._refreshLogs();    // força leitura antes de reabrir
+          this._oLogDialog.open();
+        }
+      },
+      onLogClose() { this._oLogDialog?.close(); },
+  
+      /* ---------- botão “NF c/ erro” ---------- */
+      async onFilterNfComErro() {
+        const oTable = this.byId(TBL_NOTAS);
+        const oBind  = oTable.getBinding("items");
+  
+        /* toggle → remove filtro */
+        if (this._filtroIdsErro) {
+          oBind.filter([]);
+          this._filtroIdsErro = null;
+          return;
+        }
+  
+        sap.ui.core.BusyIndicator.show(0);
+        try {
+          const aIds = await this._getIdsComErro();
+          if (!aIds.length) {
+            MessageToast.show("Nenhuma NF com erro.");
+            return;
+          }
+          const orFilter = new Filter({
+            filters: aIds.map(id => new Filter("idAlocacaoSAP", FilterOperator.EQ, id)),
+            and    : false
+          });
+          oBind.filter(orFilter);
+          this._filtroIdsErro = orFilter;
+        } catch (e) { this._handleActionError("filtrar logs", e); }
+        finally { sap.ui.core.BusyIndicator.hide(); }
+      },
+  
+      /* ======================================================= *
+       *  RENDERING (cores)                                      *
+       * ======================================================= */
+      onUpdateFinishedNotaFiscal(oEvt) {
+        oEvt.getSource().getItems().forEach(item => {
+          const ctx    = item.getBindingContext();
+          const id     = ctx?.getProperty("idAlocacaoSAP");
+          const status = ctx?.getProperty("status");
+          item.toggleStyleClass("linhaVerde", this._coresLinha[id] === "linhaVerde" || status === "50");
+          item.toggleStyleClass("linhaVermelha", this._coresLinha[id] === "linhaVermelha" || status === "55");
+        });
+      },
+  
+      /* ======================================================= *
+       *  HELPERS privados                                       *
+       * ======================================================= */
+      /** único ID selecionado → bind action */
+      _prepareSingleIdAction(path) {
+        const oTable = this.byId(TBL_NOTAS);
+        const aCtx   = oTable.getSelectedContexts();
+        if (aCtx.length !== 1) {
+          MessageToast.show("Selecione exatamente 1 NFSe.");
+          return {};
+        }
+        const id      = aCtx[0].getProperty("idAlocacaoSAP");
+        const oAction = this.getView().getModel().bindContext(path)
+                           .setParameter(path.includes("rejeitar") ? "idAlocacaoSAP" : "notasFiscaisIDs", path.includes("rejeitar") ? id : [id]);
+        return { id, oAction };
+      },
+  
+      /** coleta IDs do mesmo grupo (filho + status) — usado em avançar / voltar */
+      _collectIdsDoGrupo() {
+        const oTable    = this.byId(TBL_NOTAS);
+        const aCtxSel   = oTable.getSelectedContexts();
+        if (!aCtxSel.length) {
+          MessageToast.show("Selecione ao menos uma NFSe.");
+          return {};
+        }
+        const grpFilho  = aCtxSel[0].getProperty("chaveDocumentoFilho");
+        const grpStatus = aCtxSel[0].getProperty("status");
+        const aIds      = [];
+  
+        oTable.getItems().forEach(item => {
+          const c = item.getBindingContext();
+          const match = c && c.getProperty("chaveDocumentoFilho") === grpFilho &&
+                        c.getProperty("status") === grpStatus;
+          item.setSelected(match);
+          if (match) aIds.push(c.getProperty("idAlocacaoSAP"));
+        });
+        return { aIds, grpFilho, grpStatus };
+      },
+  
+      /** executa action de lote e mostra toast/erros */
+      async _executeLote(oAction, toastSuccess) {
+        try {
+          await oAction.execute();
+          const res   = oAction.getBoundContext().getObject();
+          const lista = Array.isArray(res) ? res : (res?.value || []);
+          const ok    = lista.filter(r => r.success).length;
+          const errs  = lista.filter(r => !r.success);
+          if (errs.length) {
+            MessageBox.warning(
+              `Processamento: ${ok} sucesso(s) e ${errs.length} erro(s).\n\n` +
+              errs.map(r => `NF ${r.idAlocacaoSAP}: ${r.message}`).join("\n"),
+              { title: "Resultado" }
+            );
+          } else { MessageToast.show(`${ok} ${toastSuccess}`); }
+          this._refreshNotas();
+        } catch (e) { this._handleActionError("action", e); }
+      },
+  
+      _refreshNotas() { this.byId(TBL_NOTAS).getBinding("items").refresh(); },
+  
+      _sortByStatus(desc) {
+        this.byId(TBL_NOTAS).getBinding("items").sort(new Sorter("status", desc));
+      },
+  
+      /** busca IDs cujo log mais recente é 'E' */
+      async _getIdsComErro() {
+        const oModel = this.getView().getModel();
+      
+        /* bindList já com filtro tipoMensagemErro = 'E' e ordem decrescente */
+        const bLog = oModel.bindList(
+          PATH_LOGS,
+          null,
+          [ new Sorter("createdAt", true) ],   // true = descending
+          [ FILTER_ERRO ]
+        );
+      
+        /* traz TODOS os contextos de uma vez */
+        const aCtx = await bLog.requestContexts(0, Infinity);
+        if (!aCtx.length) { return []; }
+      
+        /* mantém o primeiro (mais recente) de cada NF */
+        const latest = Object.create(null);          // id -> true
+        aCtx.forEach(ctx => {
+          const o = ctx.getObject();
+          if (!latest[o.idAlocacaoSAP]) {
+            latest[o.idAlocacaoSAP] = true;          // 1º já é o mais novo
+          }
+        });
+        return Object.keys(latest);                  // lista de IDs
+      },
+  
+      _handleActionError(tag, err) {
+        console.error(`❌ ${tag}:`, err);
+        MessageBox.error(err.message || JSON.stringify(err));
+      },
+
+      _refreshLogs() {
+        const oTable = sap.ui.getCore().byId("logTable");
+        if (!oTable) return;
+      
+        const oBind = oTable.getBinding("items");
+        if (oBind) {
+          /* ↙  aplica o sort antes de refrescar  */
+          oBind.sort(this._logSorter ||= new sap.ui.model.Sorter("createdAt", /*descending=*/true));
+      
+          oTable.setBusy(true);
+          Promise.resolve(oBind.refresh())           // OData V4 → nova query c/ $orderby
+            .finally(() => oTable.setBusy(false));
+        }
         
-            aItems.forEach(item => {
-                const ctx = item.getBindingContext();
-                if (!ctx) return;
-        
-                const id      = ctx.getProperty("idAlocacaoSAP");
-                const status  = ctx.getProperty("status");    // status da linha
-        
-                /* 1. Remove cores antigas para evitar acúmulo */
-                item.removeStyleClass("linhaVerde");
-                item.removeStyleClass("linhaVermelha");
-        
-                /* 2. Cor proveniente do último lote (_coresLinha) */
-                const classeLote = this._coresLinha[id];
-        
-                if (classeLote === "linhaVerde") {
-                    item.addStyleClass("linhaVerde");
-                } else if (classeLote === "linhaVermelha") {
-                    item.addStyleClass("linhaVermelha");
-                } else if (status === "55") {
-                    /* 3. Nenhuma cor do lote, mas status 55 → vermelho */
-                    item.addStyleClass("linhaVermelha");
-                }
-                /* status diferente de 55 e sem cor no lote → fica sem cor */
-            });
-        },
-        async onVoltarEtapa() {
-            const oTable = this.byId("tableNotaFiscalServicoMonitor");
-            const oModel = this.getView().getModel();
-            const aCtxSel = oTable.getSelectedContexts();
-
-            if (!aCtxSel.length) {
-                MessageToast.show("Por favor, selecione ao menos uma NFSe para reverter.");
-                return;
-            }
-
-            const grpFilho = aCtxSel[0].getProperty("chaveDocumentoFilho");
-            const grpStatus = aCtxSel[0].getProperty("status");
-            console.log(`[REVERT] Grupo alvo -> filho:${grpFilho} | status:${grpStatus}`);
-
-            const aIds = [];
-            oTable.getItems().forEach(item => {
-                const ctx = item.getBindingContext();
-                if (!ctx) return;
-                const filho = ctx.getProperty("chaveDocumentoFilho");
-                const status = ctx.getProperty("status");
-                const id = ctx.getProperty("idAlocacaoSAP");
-                const pertenceAoGrupo = filho === grpFilho && status === grpStatus;
-                item.setSelected(pertenceAoGrupo);
-                if (pertenceAoGrupo) aIds.push(id);
-            });
-
-            console.log("◀️ IDs enviados para action de reversão:", aIds);
-
-            const oAction = oModel.bindContext("/voltarStatusNFs(...)");
-            oAction.setParameter("notasFiscaisIDs", aIds);
-
-            try {
-                await oAction.execute();
-                const payload = oAction.getBoundContext().getObject();
-                const resultados = Array.isArray(payload) ? payload : (payload?.value || []);
-
-                // Limpa o mapa de cores para os itens processados, para que voltem ao normal
-                resultados.forEach(r => {
-                    delete this._coresLinha[r.idAlocacaoSAP];
-                });
-
-                const ok = resultados.filter(r => r.success).length;
-                const errs = resultados.filter(r => !r.success);
-
-                if (errs.length) {
-                    const txt = errs.map(r => `NF ${r.idAlocacaoSAP}: ${r.message}`).join("\n");
-                    MessageBox.warning(`Processamento: ${ok} sucesso(s) e ${errs.length} erro(s) na reversão.\n\n${txt}`,
-                        { title: "Resultado da Reversão" });
-                } else {
-                    MessageToast.show(`${ok} NFSe(s) revertida(s) com sucesso!`);
-                }
-
-                oTable.getBinding("items").refresh();
-
-            } catch (e) {
-                console.error("❌ Erro na action voltarStatusNFs:", e);
-                MessageBox.error("Falha ao reverter o status das NFSe.", {
-                    details: e.message || JSON.stringify(e)
-                });
-            }
-        },
-        onCalcularTotal: function(oEvent) {
-            const oMenuItem = oEvent.getParameter("item");
-            const sActionKey = oMenuItem.data("coluna");
-        
-            const oTable = this.byId("tableNotaFiscalServicoMonitor");
-            const aContexts = oTable.getBinding("items").getContexts();
-            const oTotalModel = this.getView().getModel("totalModel");
-        
-            // Esconde todos os totais antes de qualquer cálculo para limpar o estado
-            oTotalModel.setProperty("/bruto/visible", false);
-            oTotalModel.setProperty("/liquido/visible", false);
-            oTotalModel.setProperty("/frete/visible", false);
-        
-            if (sActionKey === "todos") {
-                // --- CALCULA E MOSTRA TODOS (Esta parte já estava correta) ---
-                const sTotalBruto = this._calculateColumnTotal(aContexts, "valorBrutoNfse");
-                const sTotalLiquido = this._calculateColumnTotal(aContexts, "valorLiquidoFreteNfse");
-                const sTotalFrete = this._calculateColumnTotal(aContexts, "valorEfetivoFrete");
-        
-                oTotalModel.setProperty("/bruto/value", sTotalBruto);
-                oTotalModel.setProperty("/liquido/value", sTotalLiquido);
-                oTotalModel.setProperty("/frete/value", sTotalFrete);
-                
+      },
+      onCalcularTotal: function(oEvent) {
+        const oMenuItem = oEvent.getParameter("item");
+        const sActionKey = oMenuItem.data("coluna");
+    
+        const oTable = this.byId("tableNotaFiscalServicoMonitor");
+        const aContexts = oTable.getBinding("items").getContexts();
+        const oTotalModel = this.getView().getModel("totalModel");
+    
+        // Esconde todos os totais antes de qualquer cálculo para limpar o estado
+        oTotalModel.setProperty("/bruto/visible", false);
+        oTotalModel.setProperty("/liquido/visible", false);
+        oTotalModel.setProperty("/frete/visible", false);
+    
+        if (sActionKey === "todos") {
+            // --- CALCULA E MOSTRA TODOS (Esta parte já estava correta) ---
+            const sTotalBruto = this._calculateColumnTotal(aContexts, "valorBrutoNfse");
+            const sTotalLiquido = this._calculateColumnTotal(aContexts, "valorLiquidoFreteNfse");
+            const sTotalFrete = this._calculateColumnTotal(aContexts, "valorEfetivoFrete");
+    
+            oTotalModel.setProperty("/bruto/value", sTotalBruto);
+            oTotalModel.setProperty("/liquido/value", sTotalLiquido);
+            oTotalModel.setProperty("/frete/value", sTotalFrete);
+            
+            oTotalModel.setProperty("/bruto/visible", true);
+            oTotalModel.setProperty("/liquido/visible", true);
+            oTotalModel.setProperty("/frete/visible", true);
+    
+            MessageToast.show("Todos os totais foram calculados.");
+    
+        } else {
+            // --- LÓGICA CORRIGIDA PARA CÁLCULO INDIVIDUAL ---
+            const sTotalFormatado = this._calculateColumnTotal(aContexts, sActionKey);
+            
+            // Usamos if/else para garantir que o caminho do modelo está correto
+            if (sActionKey === 'valorBrutoNfse') {
+                oTotalModel.setProperty("/bruto/value", sTotalFormatado);
                 oTotalModel.setProperty("/bruto/visible", true);
+            } else if (sActionKey === 'valorLiquidoFreteNfse') {
+                oTotalModel.setProperty("/liquido/value", sTotalFormatado);
                 oTotalModel.setProperty("/liquido/visible", true);
+            } else if (sActionKey === 'valorEfetivoFrete') {
+                oTotalModel.setProperty("/frete/value", sTotalFormatado);
                 oTotalModel.setProperty("/frete/visible", true);
-        
-                MessageToast.show("Todos os totais foram calculados.");
-        
-            } else {
-                // --- LÓGICA CORRIGIDA PARA CÁLCULO INDIVIDUAL ---
-                const sTotalFormatado = this._calculateColumnTotal(aContexts, sActionKey);
-                
-                // Usamos if/else para garantir que o caminho do modelo está correto
-                if (sActionKey === 'valorBrutoNfse') {
-                    oTotalModel.setProperty("/bruto/value", sTotalFormatado);
-                    oTotalModel.setProperty("/bruto/visible", true);
-                } else if (sActionKey === 'valorLiquidoFreteNfse') {
-                    oTotalModel.setProperty("/liquido/value", sTotalFormatado);
-                    oTotalModel.setProperty("/liquido/visible", true);
-                } else if (sActionKey === 'valorEfetivoFrete') {
-                    oTotalModel.setProperty("/frete/value", sTotalFormatado);
-                    oTotalModel.setProperty("/frete/visible", true);
-                }
-        
-                MessageToast.show(`Total da coluna '${oMenuItem.getText()}' calculado: ${sTotalFormatado}`);
             }
-        },
-        
-        // A função auxiliar _calculateColumnTotal permanece a mesma
-        _calculateColumnTotal: function(aContexts, sColunaKey) {
-            let fTotal = 0;
-        
-            aContexts.forEach(oContext => {
-                const oRowData = oContext.getObject();
-                const sValor = oRowData[sColunaKey];
-        
-                if (sValor && !isNaN(sValor)) {
-                    const fValor = parseFloat(String(sValor).replace(/\./g, '').replace(',', '.'));
-                    fTotal += fValor;
-                }
-            });
-        
-            return fTotal.toLocaleString('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
-            });
-        },
+    
+            MessageToast.show(`Total da coluna '${oMenuItem.getText()}' calculado: ${sTotalFormatado}`);
+        }
+    },
+    
+    // A função auxiliar _calculateColumnTotal permanece a mesma
+    _calculateColumnTotal: function(aContexts, sColunaKey) {
+        let fTotal = 0;
+    
+        aContexts.forEach(oContext => {
+            const oRowData = oContext.getObject();
+            const sValor = oRowData[sColunaKey];
+    
+            if (sValor && !isNaN(sValor)) {
+                const fValor = parseFloat(String(sValor).replace(/\./g, '').replace(',', '.'));
+                fTotal += fValor;
+            }
+        });
+    
+        return fTotal.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+    }
     });
-});
+  });
+  

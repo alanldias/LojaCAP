@@ -437,38 +437,58 @@ srv.after('READ', 'Pedidos', each => {
     }
 });
 
-this.on('avancarStatusNFs', async (req) => {
-
-  const { notasFiscaisIDs } = req.data || {};
-  if (!notasFiscaisIDs?.length) return req.error(400, 'Selecione ao menos uma NFSe.');
+this.on('avancarStatusNFs', async req => {
+  const { notasFiscaisIDs = [] } = req.data;
+  if (!notasFiscaisIDs.length) return req.error(400, 'ID vazio');
 
   const tx = cds.transaction(req);
-  const notas = await tx.read(NotaFiscalServicoMonitor)
-                        .where({ idAlocacaoSAP: { in: notasFiscaisIDs } });
 
-  if (notas.length !== notasFiscaisIDs.length)
-    return req.error(400, 'Alguma NFSe selecionada não foi encontrada.');
+  // 1. NF de referência  (corrigido para usar objeto-chave)
+  const notaRef = await tx.read(NotaFiscalServicoMonitor, {
+    idAlocacaoSAP: notasFiscaisIDs[0]
+  });
 
-  const filhos  = new Set(notas.map(n => n.chaveDocumentoFilho));
-  const status  = new Set(notas.map(n => n.status));
+  if (!notaRef) return req.error(404, 'NF não encontrada');
 
-  if (filhos.size  > 1) return req.error(400, 'Selecione registros com o mesmo documento filho.');
-  if (status.size  > 1) return req.error(400, 'Selecione registros com o mesmo status.');
+  const { chaveDocumentoFilho: grpFilho, status: grpStatus } = notaRef;
 
-  const statusAtual = [...status][0];
+  // 2. Seleciona TODAS as NFs do mesmo grupo                  
+  //     Para status 15 ou 30 precisamos ler também
+  //      os campos de valores; caso contrário, só o ID basta.
+ 
+  const sel = SELECT.from(NotaFiscalServicoMonitor)
+                    .where({ chaveDocumentoFilho: grpFilho, status: grpStatus });
+
+  if (['15', '30'].includes(grpStatus)) {
+    sel.columns(
+      'idAlocacaoSAP',
+      'valorBrutoNfse',
+      'valorEfetivoFrete',
+      'valorLiquidoFreteNfse'
+    );
+  } else {
+    sel.columns('idAlocacaoSAP');
+  }
+
+  const rows      = await tx.run(sel);
+  const aIdsGrupo = rows.map(r => r.idAlocacaoSAP);
+
+ 
+  // 3. Chama a transição correta
+
   let resultados;
-
-  switch (statusAtual) {
-    case '01': resultados = await trans01para05(tx, notasFiscaisIDs); break;
-    case '05': resultados = await trans05para15(tx, notasFiscaisIDs); break;
-    case '15': resultados = await trans15para30(tx, notas);           break;
-    case '30': resultados = await trans30para35(tx, notas);           break;
-    case '35': resultados = await trans35para50(tx,notasFiscaisIDs);  break;
-    default :  return req.error(400, `Transição não definida para status ${statusAtual}.`);
+  switch (grpStatus) {
+    case '01': resultados = await trans01para05(tx, aIdsGrupo); break;
+    case '05': resultados = await trans05para15(tx, aIdsGrupo); break;
+    case '15': resultados = await trans15para30(tx, rows);      break; //  rows completos
+    case '30': resultados = await trans30para35(tx, rows);      break; // 
+    case '35': resultados = await trans35para50(tx, aIdsGrupo); break;
+    default:   return req.error(400, `Transição não definida para status ${grpStatus}.`);
   }
 
   return resultados;
 });
+
 
 this.on('rejeitarFrete', async req => {
   const { idAlocacaoSAP } = req.data || {};
@@ -572,14 +592,14 @@ async function trans15para30(tx, notas) {
         idAlocacaoSAP : id,
         success       : false,
         message       : erros.get(id) ||
-                        `Processo abortado — erros nas NFs: ${idsComErro}.`,
+                        `Processo abortado — erros nas NFs em outras NFS`,
         novoStatus    : '15'
       });
     });
     return resultados;
   }
 
-  /* 3. Nenhum erro → grava todas e devolve sucesso ---------------- */
+  /* 3. Nenhum erro → grava todas e devolve sucesso - */
   for (const nota of notas) {
     const id      = nota.idAlocacaoSAP;
     const valores = valoresPorNota.get(id);
@@ -607,7 +627,6 @@ async function trans15para30(tx, notas) {
 */
 async function trans30para35(tx, notas) {
   const resultados = [];
-
   // Esta etapa é complexa e geralmente processada uma a uma (ou por documento filho)
   for (const nota of notas) {
       const { idAlocacaoSAP: id } = nota;

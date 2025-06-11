@@ -11,14 +11,11 @@
         draggable="true"
         contentWidth="80%">
 
- 
         <Table
             id="logTable"
             items="{/NotaFiscalServicoLog}"
             growing="true"
             growingScrollToLoad="true">
-
-         
             <columns>
                 <Column id="colCreatedAt">
                     <Text id="txtHeaderData" text="Data"/>

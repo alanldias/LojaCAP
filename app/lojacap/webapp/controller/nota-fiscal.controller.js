@@ -20,7 +20,8 @@ sap.ui.define([
     const TBL_NOTAS = "tableNotaFiscalServicoMonitor";
     const PATH_LOGS = "/NotaFiscalServicoLog";
     const FILTER_ERRO = new Filter("tipoMensagemErro", FilterOperator.EQ, "E");
-  
+   
+      
     /* =========================================================== *
      *  Controller                                                 *
      * =========================================================== */
@@ -31,7 +32,9 @@ sap.ui.define([
       _coresLinha   : Object.create(null),         // { id : 'linhaVerde' | 'linhaVermelha' }
       _oFilterDialog: null,
       _oLogDialog   : null,
-      _filtroIdsErro: null,                        // toggle do botão “NF c/ erro”
+      _filtroIdsErro: null,
+      _selGrpFilho  : null,
+      _selGrpStatus : null,                        // toggle do botão “NF c/ erro”
   
       /* ======================================================= *
        *  Lifecycle                                              *
@@ -50,19 +53,20 @@ sap.ui.define([
        *  SELEÇÃO (apenas 1 linha por vez)                       *
        * ======================================================= */
       onSelectionChange(oEvt) {
-        const oItem  = oEvt.getParameter("listItem");
-        const bSel   = oEvt.getParameter("selected");
-        if (!oItem) return;
-  
+        const oItem = oEvt.getParameter("listItem");
+        const bSel  = oEvt.getParameter("selected");
+        if (!oItem || !bSel) return;            // ignorar desmarcar
+      
         const oTable = this.byId(TBL_NOTAS);
-        if (bSel) {                   // seleção única
-          oTable.removeSelections(true);
-          oItem.setSelected(true);
-        }
-        const ctx = oItem.getBindingContext();
-        console.log(`[SEL] ${bSel ? "✔" : "✖"} ${ctx.getProperty("idAlocacaoSAP")}`);
+      
+        /* limpa tudo, marca a linha clicada */
+        oTable.removeSelections(true);
+        oItem.setSelected(true);
+      
+        /* reaproveita o helper → seleciona visualmente todo o grupo */
+        this._collectIdsDoGrupo();              // ← nada de variáveis extras
       },
-  
+      
       /* ======================================================= *
        *  MENU / FILTRO                                          *
        * ======================================================= */
@@ -122,27 +126,31 @@ sap.ui.define([
        * ======================================================= */
       /* ---------- rejeitar frete ---------- */
       async onRejeitarFrete() {
-        const { id, oAction } = this._prepareSingleIdAction("/rejeitarFrete(...)");
-        if (!id) return;
-  
-        try {
-          const res = await oAction.execute().then(() => oAction.getBoundContext().getObject());
-          res.success
-            ? MessageToast.show("Frete rejeitado (status 55).")
-            : MessageBox.error(`Falha: ${res.message}`);
-          this._refreshNotas();
-        } catch (e) { this._handleActionError("rejeitarFrete", e); }
+        /* 1. obtém o grupo a partir da linha selecionada */
+        const { grpFilho } = this._collectIdsDoGrupo();
+
+        const oAction = this.getView().getModel().bindContext("/rejeitarFrete(...)");
+        oAction.setParameter("grpFilho", grpFilho);;
+
+        /* 3. delega exibição de toast/erros ao helper genérico      */
+        await this._executeLote(oAction, "NFSe rejeitada(s)");
+
+        /* 4. se o filtro “NF c/ erro” estiver ativo, refaz a busca  */
+        if (this._filtroIdsErro) {
+          await this.onFilterNfComErro();   // remove
+          await this.onFilterNfComErro();   // aplica novamente
+        }
       },
   
-      /* ---------- próxima etapa (lote) ---------- */
       async onProximaEtapa() {
-        const { aIds, grpFilho, grpStatus } = this._collectIdsDoGrupo();
-        if (!aIds.length) return;
-  
-        const oAction = this.getView().getModel()
-                          .bindContext("/avancarStatusNFs(...)")
-                          .setParameter("notasFiscaisIDs", aIds);
-  
+        /* ainda usamos o helper só para descobrir o grupo selecionado */
+        const { grpFilho } = this._collectIdsDoGrupo();
+        if (!grpFilho) return;               // nada selecionado
+      
+        /* dispara a action enviando somente grpFilho */
+        const oAction = this.getView().getModel().bindContext("/avancarStatusNFs(...)");
+        oAction.setParameter("grpFilho", grpFilho);   // único parâmetro agora
+      
         await this._executeLote(oAction, "NFSe processada(s)");
       },
   
@@ -222,13 +230,25 @@ sap.ui.define([
        *  RENDERING (cores)                                      *
        * ======================================================= */
       onUpdateFinishedNotaFiscal(oEvt) {
-        oEvt.getSource().getItems().forEach(item => {
+        const aItems = oEvt.getSource().getItems();
+      
+        /* 🎨 cores já existentes ------------------------------ */
+        aItems.forEach(item => {
           const ctx    = item.getBindingContext();
           const id     = ctx?.getProperty("idAlocacaoSAP");
           const status = ctx?.getProperty("status");
-          item.toggleStyleClass("linhaVerde", this._coresLinha[id] === "linhaVerde" || status === "50");
-          item.toggleStyleClass("linhaVermelha", this._coresLinha[id] === "linhaVermelha" || status === "55");
+      
+          item.toggleStyleClass("linhaVerde",
+            this._coresLinha[id] === "linhaVerde" || status === "50");
+          item.toggleStyleClass("linhaVermelha",
+            this._coresLinha[id] === "linhaVermelha" || status === "55");
         });
+      
+        /* ✅ se ainda há algo selecionado → amplia para as linhas novas */
+        const oTable = this.byId(TBL_NOTAS);
+        if (oTable.getSelectedContexts().length) {
+          this._collectIdsDoGrupo();            // reaplica seleção ao novo lote
+        }
       },
   
       /* ======================================================= *

@@ -438,64 +438,90 @@ srv.after('READ', 'Pedidos', each => {
 });
 
 this.on('avancarStatusNFs', async req => {
-  const { notasFiscaisIDs = [] } = req.data;
-  if (!notasFiscaisIDs.length) return req.error(400, 'ID vazio');
+  const { grpFilho } = req.data || {};
+  if (!grpFilho) return req.error(400, 'grpFilho é obrigatório');
 
   const tx = cds.transaction(req);
 
-  // 1. NF de referência  (corrigido para usar objeto-chave)
-  const notaRef = await tx.read(NotaFiscalServicoMonitor, {
-    idAlocacaoSAP: notasFiscaisIDs[0]
-  });
+  /* 1. SELECT – traz IDs + status da 1ª linha;                   *
+   *    lê valores extras só se precisar (status 15 ou 30).       */
+  const rows = await tx.run(
+    SELECT.from(NotaFiscalServicoMonitor)
+          .columns(
+            'idAlocacaoSAP',           // sempre
+            'status',                  // sempre (para decidir a transição)
+            'valorBrutoNfse',          // extras – virão, mas serão usados só
+            'valorEfetivoFrete',       // quando status for 15 ou 30
+            'valorLiquidoFreteNfse'
+          )
+          .where({ chaveDocumentoFilho: grpFilho })
+  );
+  if (!rows.length)
+    return req.error(404, 'Nenhuma NF encontrada para esse grupo');
 
-  if (!notaRef) return req.error(404, 'NF não encontrada');
+  const grpStatus = rows[0].status;        // status comum do grupo
+  const ids       = rows.map(r => r.idAlocacaoSAP);
 
-  const { chaveDocumentoFilho: grpFilho, status: grpStatus } = notaRef;
-
-  // 2. Seleciona TODAS as NFs do mesmo grupo                  
-  //     Para status 15 ou 30 precisamos ler também
-  //      os campos de valores; caso contrário, só o ID basta.
- 
-  const sel = SELECT.from(NotaFiscalServicoMonitor)
-                    .where({ chaveDocumentoFilho: grpFilho, status: grpStatus });
-
-  if (['15', '30'].includes(grpStatus)) {
-    sel.columns(
-      'idAlocacaoSAP',
-      'valorBrutoNfse',
-      'valorEfetivoFrete',
-      'valorLiquidoFreteNfse'
-    );
-  } else {
-    sel.columns('idAlocacaoSAP');
-  }
-
-  const rows      = await tx.run(sel);
-  const aIdsGrupo = rows.map(r => r.idAlocacaoSAP);
-
- 
-  // 3. Chama a transição correta
-
-  let resultados;
+  /* 2. Despacha para a transição correta */
   switch (grpStatus) {
-    case '01': resultados = await trans01para05(tx, aIdsGrupo); break;
-    case '05': resultados = await trans05para15(tx, aIdsGrupo); break;
-    case '15': resultados = await trans15para30(tx, rows);      break; //  rows completos
-    case '30': resultados = await trans30para35(tx, rows);      break; // 
-    case '35': resultados = await trans35para50(tx, aIdsGrupo); break;
-    default:   return req.error(400, `Transição não definida para status ${grpStatus}.`);
+    case '01':  return trans01para05(tx, ids);
+    case '05':  return trans05para15(tx, ids);
+    case '15':  return trans15para30(tx, rows);
+    case '30':  return trans30para35(tx, rows);
+    case '35':  return trans35para50(tx, ids);
+    default :   return req.error(400, `Status ${grpStatus} não suportado`);
   }
-
-  return resultados;
 });
 
 
+
 this.on('rejeitarFrete', async req => {
-  const { idAlocacaoSAP } = req.data || {};
-  if (!idAlocacaoSAP) return req.error(400,'ID inválido');
+  const { grpFilho } = req.data || {};
+  if (!grpFilho) return req.error(400, 'grpFilho é obrigatório');
 
   const tx = cds.transaction(req);
-  return transRejeitarFrete(tx,idAlocacaoSAP);
+
+  /* 1️⃣  SELECT – pegar TODOS os IDs do grupo --------------------- */
+  const linhas = await tx.run(
+    SELECT.from(NotaFiscalServicoMonitor)
+          .columns('idAlocacaoSAP')
+          .where({ chaveDocumentoFilho: grpFilho })
+  );
+  if (!linhas.length) return req.error(404, 'Nenhuma NF no grupo');
+
+  const ids = linhas.map(l => l.idAlocacaoSAP);
+
+  /* 2️⃣  UPDATE em bloco – põe status 55 em todo o grupo ---------- */
+  try {
+    await tx.update(NotaFiscalServicoMonitor)
+            .set({ status: '55' })
+            .where({ chaveDocumentoFilho: grpFilho });
+
+    /* grava LOG de sucesso (tipo = S) */
+    // se preicsar tirar isso de aparecer na tabela de log só mudar isso 
+    await tx.run(
+      INSERT.into(NotaFiscalServicoLog).entries(
+        ids.map(id => ({
+          idAlocacaoSAP      : id,
+          mensagemErro       : 'Frete rejeitado – status 55',
+          tipoMensagemErro   : 'S',
+          classeMensagemErro : 'REJ_FRETE',
+          numeroMensagemErro : '055',
+          origem             : 'rejeitarFrete'
+        }))
+      )
+    );
+
+    return sucesso(ids, '55');                         // helper padrão
+
+  } catch (e) {
+    /* qualquer erro → 1 log por NF com helper gravarLog */
+    for (const id of ids) {
+      await gravarLog(tx, id, e.message,
+                      'E', 'REJ_FRETE', '055', 'rejeitarFrete');
+    }
+    return falha(ids, 'erro', 'Falha ao rejeitar: ' + e.message);
+  }
 });
 
 
@@ -528,41 +554,34 @@ function falha(ids, statusAtual, motivo) {
  //  Transições encapsuladas
 
 
-/** 01 → 05  (gera número NF e atualiza em massa) */
+/** 01 → 05 (gera n.º NF) */
 async function trans01para05(tx, ids) {
   const numeroNF = gerarNumeroNF();
-
   try {
     await tx.update(NotaFiscalServicoMonitor)
             .set({ status: '05', numeroNfseServico: numeroNF })
             .where({ idAlocacaoSAP: { in: ids } });
 
-    /* sucesso para todos */
     return sucesso(ids, '05', { numeroNfseServico: numeroNF });
 
   } catch (e) {
-    /* algo falhou no update → log e devolve falha p/ todo lote */
-    for (const id of ids) {
+    for (const id of ids)
       await gravarLog(tx, id, e.message, 'E', 'TRANS_01_05', '002');
-    }
-    return falha(ids, '01', 'Erro na transição 01→05: ' + e.message);
+    return falha(ids, '01', 'Erro 01→05: ' + e.message);
   }
 }
 
-/** 05 → 15  (apenas status) */
+/** 05 → 15 (apenas status) */
 async function trans05para15(tx, ids) {
   try {
     await tx.update(NotaFiscalServicoMonitor)
             .set({ status: '15' })
             .where({ idAlocacaoSAP: { in: ids } });
-
     return sucesso(ids, '15');
-
   } catch (e) {
-    for (const id of ids) {
+    for (const id of ids)
       await gravarLog(tx, id, e.message, 'E', 'TRANS_05_15', '003');
-    }
-    return falha(ids, '05', 'Erro na transição 05→15: ' + e.message);
+    return falha(ids, '05', 'Erro 05→15: ' + e.message);
   }
 }
 
@@ -689,12 +708,11 @@ async function trans30para35(tx, notas) {
 }
 
 
-/** 35 → 50  (apenas status) mas ainda teria que fazer alguma validação com as tabelas */
+/** 35 → 50 */
 async function trans35para50(tx, ids) {
   await tx.update(NotaFiscalServicoMonitor)
           .set({ status: '50' })
           .where({ idAlocacaoSAP: { in: ids } });
-
   return sucesso(ids, '50');
 }
 
@@ -722,39 +740,14 @@ async function BAPI_PO_CREATE1(nota) {
   };
 }
 
-async function transRejeitarFrete (tx, id) {
-  try {
-    const rows = await tx.update(NotaFiscalServicoMonitor)
-                         .set({ status: '55' })
-                         .where({ idAlocacaoSAP: id });
-    if (!rows) throw new Error('NF não encontrada ou já rejeitada');
-
-    return {
-      idAlocacaoSAP : id,
-      success       : true,
-      message       : 'Frete rejeitado – status 55',
-      novoStatus    : '55'
-    };
-
-  } catch (e) {
-    await gravarLog(tx, id, e.message, 'E', 'REJ_FRETE', '055', 'rejeitarFrete');
-    return {
-      idAlocacaoSAP : id,
-      success       : false,
-      message       : e.message,
-      novoStatus    : 'erro'
-    };
-  }
-}
-
 async function BAPI_TRANSACTION_ROLLBACK(motivo) {
   console.warn('↩️  Rollback:', motivo);
   return { ok: true, msg: motivo };
 }
-/**
- * MOCK da BAPI_INCOMINGINVOICE_CREATE1 para criar a MIRO (fatura).
- * @returns {{ok: boolean, msg?: string, valores?: {numeroDocumentoMIRO: string}}}
- */
+// /**
+//  * MOCK da BAPI_INCOMINGINVOICE_CREATE1 para criar a MIRO (fatura).
+//  * @returns {{ok: boolean, msg?: string, valores?: {numeroDocumentoMIRO: string}}}
+//  */
 async function BAPI_INCOMINGINVOICE_CREATE1(nota) {
   console.log(`[BAPI_SIMULATION] Criando MIRO para NF ${nota.idAlocacaoSAP}...`);
   // Aqui você pode adicionar lógicas de falha para teste, se quiser

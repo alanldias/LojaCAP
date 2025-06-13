@@ -343,9 +343,20 @@ sap.ui.define([
         const oTotalModel = this.getView().getModel("totalModel");
 
         // Limpa a visibilidade de todos os totais antes de calcular
+        
         oTotalModel.setProperty("/bruto/visible", false);
         oTotalModel.setProperty("/liquido/visible", false);
         oTotalModel.setProperty("/frete/visible", false);
+
+        if (sActionKey === "limpartodos") {
+          oTotalModel.setProperty("/bruto", { value: "", visible: false });
+          oTotalModel.setProperty("/liquido", { value: "", visible: false });
+          oTotalModel.setProperty("/frete", { value: "", visible: false });
+          oTotalModel.setProperty("/mostrarTotais", false); // Oculta o footer inteiro
+      
+          MessageToast.show("Totais limpos.");
+          return; 
+      }
 
         if (sActionKey === "todos") {
             // Passamos a lista de itens para a função auxiliar
@@ -360,6 +371,7 @@ sap.ui.define([
             oTotalModel.setProperty("/bruto/visible", true);
             oTotalModel.setProperty("/liquido/visible", true);
             oTotalModel.setProperty("/frete/visible", true);
+            oTotalModel.setProperty("/mostrarTotais", true);
 
             MessageToast.show("Todos os totais foram calculados.");
 
@@ -369,12 +381,15 @@ sap.ui.define([
             if (sActionKey === 'valorBrutoNfse') {
                 oTotalModel.setProperty("/bruto/value", sTotalFormatado);
                 oTotalModel.setProperty("/bruto/visible", true);
+                oTotalModel.setProperty("/mostrarTotais", true);
             } else if (sActionKey === 'valorLiquidoFreteNfse') {
                 oTotalModel.setProperty("/liquido/value", sTotalFormatado);
                 oTotalModel.setProperty("/liquido/visible", true);
+                oTotalModel.setProperty("/mostrarTotais", true);
             } else if (sActionKey === 'valorEfetivoFrete') {
                 oTotalModel.setProperty("/frete/value", sTotalFormatado);
                 oTotalModel.setProperty("/frete/visible", true);
+                oTotalModel.setProperty("/mostrarTotais", true);
             }
 
             MessageToast.show(`Total da coluna '${oMenuItem.getText()}' calculado: ${sTotalFormatado}`);

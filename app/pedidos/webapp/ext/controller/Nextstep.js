@@ -43,7 +43,7 @@ sap.ui.define([
                     // Com a remoção do draft, oContext sempre se referirá à entidade ativa.
                     console.log("🕵️ FE Extension (nextstep - SEM DRAFT): Processando contexto do pedido:", oContext.getPath(), "Dados:", JSON.parse(JSON.stringify(oContext.getObject())));
 
-                    const sActionNameInMetadata = "ShopService.avancarStatus"; // Nome da ação
+                    const sActionNameInMetadata = "ShopService.lojacap.avancarStatus"; // Nome da ação
                     console.log(`📞 FE Extension (nextstep - SEM DRAFT): Preparando para invocar '${sActionNameInMetadata}' no contexto: ${oContext.getPath()}`);
 
                     const oOperationBinding = oContext.getModel().bindContext(`${sActionNameInMetadata}(...)`, oContext);

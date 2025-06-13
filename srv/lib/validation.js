@@ -12,22 +12,41 @@ function validarNotaFiscal(data, indice = 0) {
 
     console.log(`[VALIDATION] Validando registro (ID: ${data.idAlocacaoSAP || 'N/A'})`);
 
-    // === REGRAS DA CRIAÇÃO MANUAL ===
     if (!data.idAlocacaoSAP || !data.orderIdPL || !data.chaveDocumentoMae || !data.chaveDocumentoFilho) {
         errors.push(`${linha} Os campos de ID e Chaves Principais são obrigatórios.`);
     }
-    if (data.valorBrutoNfse < 0) {
-        errors.push(`${linha} O Valor Bruto da NFS-e não pode ser negativo.`);
+    
+    if (data.idAlocacaoSAP && data.idAlocacaoSAP.length > 13) {
+        errors.push(`${linha} O campo 'ID Alocação SAP' excedeu o limite de 13 caracteres.`);
     }
 
-    // === REGRAS DO UPLOAD CSV ===
-    if (data.idAlocacaoSAP && data.idAlocacaoSAP.length > 13) {
-        errors.push(`${linha} O campo 'idAlocacaoSAP' excedeu o limite de 13 caracteres.`);
+    if (data.orderIdPL && data.orderIdPL.length > 20) {
+        errors.push(`${linha} O campo 'Order ID PL' excedeu o limite de 20 caracteres.`);
     }
+
+    if (data.chaveDocumentoMae && data.chaveDocumentoMae.length > 44) {
+        errors.push(`${linha} O campo 'Chave Documento Mãe' excedeu o limite de 44 caracteres.`);
+    }
+
+    if (data.chaveDocumentoFilho && data.chaveDocumentoFilho.length > 44) {
+        errors.push(`${linha} O campo 'Chave Documento Filho' excedeu o limite de 44 caracteres.`);
+    }
+
+    if(!data.numeroNfseServico || !data.serieNfseServico) {
+        errors.push(`${linha} O número da Nota Fiscal e o número de Série são obrigatórios!`)
+    }
+
+    if(!data.dataEmissaoNfseServico){
+        errors.push(`${linha} A data de emissão do serviço é obrigatória!`)
+    }
+
     if (data.dataEmissaoNfseServico) {
         if (isNaN(new Date(data.dataEmissaoNfseServico).getTime())) { 
             errors.push(`${linha} A data '${data.dataEmissaoNfseServico}' é inválida.`);
         }
+    }
+    if (data.valorBrutoNfse < 0) {
+        errors.push(`${linha} O Valor Bruto da NFS-e não pode ser negativo.`);
     }
 
     // Você pode adicionar quantas outras regras precisar aqui...

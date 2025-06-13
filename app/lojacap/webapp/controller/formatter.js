@@ -1,9 +1,12 @@
-// webapp/controller/formatter.js
-sap.ui.define([], function () {
+sap.ui.define([
+    "sap/ui/core/format/DateFormat"
+], function (DateFormat) {
     "use strict";
+
     return {
+
+        // Suas outras funções de formatter (formatStatusNfseText, etc.) ficam aqui...
         formatStatusNfseText: function (sStatus) {
-            // Adapte conforme sua necessidade
             switch (sStatus) {
                 case "01": return "Não Atribuída";
                 case "05": return "Atribuída";
@@ -16,16 +19,40 @@ sap.ui.define([], function () {
                 default: return sStatus;
             }
         },
+
         formatStatusNfseState: function (sStatus) {
-            // Adapte conforme sua necessidade
             switch (sStatus) {
-                case "01": return sap.ui.core.ValueState.Information; // ou Warning
-                case "05": return sap.ui.core.ValueState.Success;
-                case "50": return sap.ui.core.ValueState.Success;
-                case "55": return sap.ui.core.ValueState.Warning;
-                case "99": return sap.ui.core.ValueState.Error;
-                default: return sap.ui.core.ValueState.None;
+                case "01": return "Information";
+                case "05": return "Success";
+                case "50": return "Success";
+                case "55": return "Warning";
+                case "99": return "Error";
+                default: return "None";
             }
+        },
+
+        //não é o ideal mas só para o console log parar de reclamar 
+        formatDate: function(sDateString) {
+            // 1. Primeira verificação: se não veio nada, retorna vazio.
+            if (!sDateString) {
+                return "";
+            }
+
+            // 2. Tenta criar um objeto de Data.
+            const oDate = new Date(sDateString);
+
+            // 3. <<< CORREÇÃO PRINCIPAL >>>
+            //    Verifica se a data criada é válida. `oDate.getTime()` retorna NaN 
+            //    (Not-a-Number) para datas inválidas, e NaN nunca é igual a si mesmo.
+            //    É um truque certeiro para validar datas em JavaScript!
+            if (isNaN(oDate.getTime())) {
+                console.warn(`[Formatter] Valor de data inválido recebido: ${sDateString}`);
+                return ""; // Retorna vazio se a data for inválida, evitando o erro.
+            }
+
+            // 4. Se a data é válida, formata e retorna.
+            const oDateFormat = DateFormat.getDateInstance({ style: "short" });
+            return oDateFormat.format(oDate);
         }
     };
 });

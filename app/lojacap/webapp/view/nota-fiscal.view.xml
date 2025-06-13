@@ -4,7 +4,28 @@
   xmlns="sap.m"
   xmlns:core="sap.ui.core">
 
-<Page id="pgMonitor" showHeader="false">
+    <Page id="pgMonitor" showHeader="false" footer="{footerToolbar}">
+    <footer>
+            <Toolbar id="footerToolbar" visible="{totalModel>/mostrarTotais}">
+                <ToolbarSpacer id="frrf"/>
+                
+                <HBox id="fgv" visible="{totalModel>/bruto/visible}" class="sapUiMediumMarginEnd">
+                    <Label id="grg" text="Total Bruto:" class="sapUiSmallMarginEnd"/>
+                    <Text id="tgrg" text="{totalModel>/bruto/value}" class="sapMObjectNumber"/>
+                </HBox>
+                
+                <HBox id="er" visible="{totalModel>/liquido/visible}" class="sapUiMediumMarginEnd">
+                    <Label id="gtg" text="Total Líquido:" class="sapUiSmallMarginEnd"/>
+                    <Text id="mnju" text="{totalModel>/liquido/value}" class="sapMObjectNumber"/>
+                </HBox>
+                
+                <HBox id="hny" visible="{totalModel>/frete/visible}" class="sapUiMediumMarginEnd">
+                    <Label id="ght" text="Total Frete:" class="sapUiSmallMarginEnd"/>
+                    <Text id="jjy" text="{totalModel>/frete/value}" class="sapMObjectNumber"/>
+                </HBox>
+            </Toolbar>
+        </footer>
+
     <VBox id="vboxNotaFiscalMonitor">
 
         <Toolbar id="toolbarCabecalhoTopoNf" class="cabecalhoTopo">
@@ -42,7 +63,7 @@
                 <ToolbarSeparator id="separador4"/>
                 <Button id="btnUpload" icon="sap-icon://add-document" text="Upload Arquivo de Frete" class="sapUiTinyMarginEnd" />
                 <ToolbarSeparator id="separador5"/>
-                <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginEnd" />
+                <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginEnd" press="onAtualizar" />
                 <ToolbarSeparator id="separador6"/>
                 <Button id="btnVerLogsNfse" icon="sap-icon://newspaper" text="Ver logs" class="sapUiTinyMarginEnd" press="onLogPress" />
                 <ToolbarSeparator id="separador7"/>
@@ -133,7 +154,11 @@
                                     <core:CustomData key="coluna" value="todos" />
                                 </customData>
                             </MenuItem>
-                            
+                            <MenuItem id="fhgha2" text="limpar" icon="sap-icon://clear-all">
+                                <customData>
+                                    <core:CustomData key="coluna" value="limpartodos" />
+                                </customData>
+                            </MenuItem>
                         </Menu>
                     </menu>
                 </MenuButton>
@@ -275,7 +300,7 @@
                             state="{parts: [{path: 'status'}], formatter: '.formatter.formatStatusNfseState'}" />
                         <Text id="txtCellNumeroNfseServico" text="{numeroNfseServico}" />
                         <Text id="txtCellSerieNfseServico" text="{serieNfseServico}" />
-                        <Text id="txtCellDataEmissaoNfseServico" text="{path: 'dataEmissaoNfseServico', type: 'sap.ui.model.type.Date', formatOptions: { style: 'short'}}" />
+                        <Text id="txtCellDataEmissaoNfseServico" text="{path: 'dataEmissaoNfseServico', formatter: '.formatter.formatDate'}" />
                         <Text id="txtCellChaveAcessoNfseServico" text="{chaveAcessoNfseServico}" />
                         <Text id="txtCellCodigoVerificacaoNfse" text="{codigoVerificacaoNfse}" />
                         <Text id="txtCellNumeroDocumentoMIRO" text="{numeroDocumentoMIRO}" />
@@ -287,24 +312,6 @@
             </items>
             
         </Table>
-      <Toolbar id="footerToolbar">
-        <ToolbarSpacer id="frrf"/>
-        
-        <HBox id="fgv" visible="{totalModel>/bruto/visible}" class="sapUiMediumMarginEnd">
-            <Label id="grg" text="Total Bruto:" class="sapUiSmallMarginEnd"/>
-            <Text id="tgrg" text="{totalModel>/bruto/value}" class="sapMObjectNumber"/>
-        </HBox>
-        
-        <HBox id="er" visible="{totalModel>/liquido/visible}" class="sapUiMediumMarginEnd">
-            <Label id="gtg" text="Total Líquido:" class="sapUiSmallMarginEnd"/>
-            <Text id="mnju" text="{totalModel>/liquido/value}" class="sapMObjectNumber"/>
-        </HBox>
-        
-        <HBox id="hny" visible="{totalModel>/frete/visible}" class="sapUiMediumMarginEnd">
-            <Label id="ght" text="Total Frete:" class="sapUiSmallMarginEnd"/>
-            <Text id="jjy" text="{totalModel>/frete/value}" class="sapMObjectNumber"/>
-        </HBox>
-    </Toolbar>
     </VBox>
 </Page>
 

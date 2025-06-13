@@ -41,7 +41,9 @@ sap.ui.define([
        * ======================================================= */
       onInit() {
         console.log("📜 nota-fiscal controller ready");
+        
         const oTotalModel = new JSONModel({
+            mostrarTotais: false,
             bruto: { value: "", visible: false },
             liquido: { value: "", visible: false },
             frete: { value: "", visible: false }
@@ -119,6 +121,27 @@ sap.ui.define([
         oBinding.filter(filters);
         console.log("🔎 filtros aplicados:", filters);
         this._oFilterDialog.close();
+      },
+
+      // ====================================================
+      // ATUALIZAR TABELA E LIMPAR FILTROS
+      // ====================================================
+      onAtualizar() {
+        const oTable = this.byId(TBL_NOTAS);
+        const oBind  = oTable.getBinding("items");
+      
+        /* 1. remove qualquer filtro ativo */
+        oBind.filter([]);
+        this._filtroIdsErro = null;          // zera flag do botão “NF c/ erro”
+      
+        /* 2. limpa seleções e estado de grupo */
+        oTable.removeSelections();
+        this._selGrpFilho  = null;
+        this._selGrpStatus = null;
+      
+        oBind.refresh();                     // ← sem “true” aqui
+      
+        sap.m.MessageToast.show("Dados atualizados.");
       },
   
       /* ======================================================= *
@@ -374,6 +397,15 @@ sap.ui.define([
         oTotalModel.setProperty("/liquido/visible", false);
         oTotalModel.setProperty("/frete/visible", false);
 
+          if (sActionKey === "limpartodos") {
+            oTotalModel.setProperty("/bruto", { value: "", visible: false });
+            oTotalModel.setProperty("/liquido", { value: "", visible: false });
+            oTotalModel.setProperty("/frete", { value: "", visible: false });
+            oTotalModel.setProperty("/mostrarTotais", false); // Oculta o footer inteiro
+        
+            MessageToast.show("Totais limpos.");
+            return; 
+        }
         if (sActionKey === "todos") {
             // Passamos a lista de itens para a função auxiliar
             const sTotalBruto = this._calculateColumnTotal(aItems, "valorBrutoNfse");
@@ -396,12 +428,17 @@ sap.ui.define([
             if (sActionKey === 'valorBrutoNfse') {
                 oTotalModel.setProperty("/bruto/value", sTotalFormatado);
                 oTotalModel.setProperty("/bruto/visible", true);
+                oTotalModel.setProperty("/mostrarTotais", true);
             } else if (sActionKey === 'valorLiquidoFreteNfse') {
                 oTotalModel.setProperty("/liquido/value", sTotalFormatado);
                 oTotalModel.setProperty("/liquido/visible", true);
+                oTotalModel.setProperty("/mostrarTotais", true);
+
             } else if (sActionKey === 'valorEfetivoFrete') {
                 oTotalModel.setProperty("/frete/value", sTotalFormatado);
                 oTotalModel.setProperty("/frete/visible", true);
+                oTotalModel.setProperty("/mostrarTotais", true);
+
             }
 
             MessageToast.show(`Total da coluna '${oMenuItem.getText()}' calculado: ${sTotalFormatado}`);

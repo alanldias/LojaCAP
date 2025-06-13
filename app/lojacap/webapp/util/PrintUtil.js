@@ -11,7 +11,7 @@ sap.ui.define([
          * @param {sap.m.Table} oTable A instância da tabela que será impressa.
          * @param {object} mCoresLinha Um mapa de IDs para classes de cor (ex: { 'someId': 'linhaVerde' }).
          */
-        printTable: function (oTable, mCoresLinha) {
+        printTable: function (oTable) {
             if (!oTable) {
                 MessageToast.show("Tabela não encontrada para impressão.");
                 return;
@@ -19,7 +19,7 @@ sap.ui.define([
 
             const oBinding = oTable.getBinding("items");
             if (!oBinding) {
-                MessageToast.show("Nenhum binding de itens encontrado na tabela.");
+                MessageToast.show("Nenhum binding de itens encontrado na tabela.");  
                 return;
             }
 
@@ -35,8 +35,12 @@ sap.ui.define([
 
                 const aDadosTabela = aContexts.map(oContext => {
                     const oRowData = oContext.getObject();
-                    const id = oRowData.idAlocacaoSAP;
-                    const classeCor = mCoresLinha[id] || "";
+                    let classeCor = "";
+                    if (oRowData.status === "50") {
+                        classeCor = "linhaVerde";
+                    } else if (oRowData.status === "55") {
+                        classeCor = "linhaVermelha";
+                    }
                     return {
                         classeCor: classeCor,
                         log: oRowData.logErroFlag ? oRowData.mensagemErro : "",

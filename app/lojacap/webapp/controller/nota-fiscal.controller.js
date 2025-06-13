@@ -386,7 +386,7 @@ sap.ui.define([
         const oTable = oController.byId("tableNotaFiscalServicoMonitor");
         sap.ui.require(["lojacap/util/PrintUtil"], function (PrintUtil) {
             MessageToast.show("Módulo de impressão carregado sob demanda!");
-            PrintUtil.printTable(oTable, oController._coresLinha);
+            PrintUtil.printTable(oTable);
         });
     },
   

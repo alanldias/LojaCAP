@@ -795,11 +795,7 @@ async function gravarLog(
     })
 );
 }
-// Ação principal que orquestra a reversão de status
-// Ação principal no service.js
-// Ação principal que orquestra a reversão de status
 this.on('voltarStatusNFs', async (req) => {
-  // 1. Recebe os critérios do frontend (grpStatus chega como texto, ex: '05')
   const { grpFilho, grpStatus } = req.data;
 
   if (!grpFilho || grpStatus === undefined) {
@@ -807,8 +803,6 @@ this.on('voltarStatusNFs', async (req) => {
   }
   
   const tx = cds.transaction(req);
-
-  // 2. A busca no DB usa o grpStatus (texto) para encontrar a correspondência exata
   const notasParaReverter = await tx.read(NotaFiscalServicoMonitor).where({
       chaveDocumentoFilho: grpFilho,
       status: grpStatus 
@@ -830,7 +824,7 @@ this.on('voltarStatusNFs', async (req) => {
 });
 
 // =======================================================
-// == FUNÇÕES HELPER SEPARADAS E OTIMIZADAS              ==
+// ==                  FUNÇÕES HELPER                   ==
 // =======================================================
 
 /** Reverte 50 → 35 */

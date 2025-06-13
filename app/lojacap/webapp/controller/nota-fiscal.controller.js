@@ -43,7 +43,9 @@ sap.ui.define([
        * ======================================================= */
       onInit() {
         console.log("📜 nota-fiscal controller ready");
+        
         const oTotalModel = new JSONModel({
+            mostrarTotais: false,
             bruto: { value: "", visible: false },
             liquido: { value: "", visible: false },
             frete: { value: "", visible: false }
@@ -121,6 +123,27 @@ sap.ui.define([
         oBinding.filter(filters);
         console.log("🔎 filtros aplicados:", filters);
         this._oFilterDialog.close();
+      },
+
+      // ====================================================
+      // ATUALIZAR TABELA E LIMPAR FILTROS
+      // ====================================================
+      onAtualizar() {
+        const oTable = this.byId(TBL_NOTAS);
+        const oBind  = oTable.getBinding("items");
+      
+        /* 1. remove qualquer filtro ativo */
+        oBind.filter([]);
+        this._filtroIdsErro = null;          // zera flag do botão “NF c/ erro”
+      
+        /* 2. limpa seleções e estado de grupo */
+        oTable.removeSelections();
+        this._selGrpFilho  = null;
+        this._selGrpStatus = null;
+      
+        oBind.refresh();                     // ← sem “true” aqui
+      
+        sap.m.MessageToast.show("Dados atualizados.");
       },
   
       /* ======================================================= *
@@ -555,7 +578,6 @@ sap.ui.define([
             .finally(() => oTable.setBusy(false));
         }
       },
-    
 
     /* ======================================================= *
      *  HELPERS privados                                       *

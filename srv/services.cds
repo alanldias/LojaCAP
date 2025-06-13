@@ -30,9 +30,10 @@ service ShopService {
     entity NotaFiscalServicoLog     as projection on shop.NotaFiscalServicoLog;
 
     action uploadArquivoFrete(data: LargeBinary) returns Boolean;
-    
+   
     action avancarStatusNFs(
-        notasFiscaisIDs : array of NotaFiscalServicoMonitor:idAlocacaoSAP // Usando o tipo da chave primária
+        grpFilho      : String     
+
     ) returns array of {
         idAlocacaoSAP     : String;
         success           : Boolean;
@@ -41,8 +42,8 @@ service ShopService {
         numeroNfseServico : String;
     };
     action rejeitarFrete(
-        idAlocacaoSAP : NotaFiscalServicoMonitor:idAlocacaoSAP
-    ) returns {
+        grpFilho      : String
+    ) returns array of {
         idAlocacaoSAP : String;
         success       : Boolean;
         message       : String;

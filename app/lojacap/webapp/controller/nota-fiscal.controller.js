@@ -1,596 +1,629 @@
 sap.ui.define([
     "sap/ui/core/mvc/Controller",
-    "sap/ui/model/json/JSONModel",
     "sap/m/MessageBox",
     "sap/m/MessageToast",
-    "sap/ui/model/Sorter",
-    "lojacap/controller/formatter",
-    "sap/ui/core/Fragment",
     "sap/ui/model/Filter",
-    "sap/ui/model/FilterOperator"
-], function (Controller, JSONModel, MessageBox, MessageToast, Sorter, formatter, Fragment, Filter, FilterOperator) {
-
+    "sap/ui/model/FilterOperator",
+    "sap/ui/model/Sorter",
+    "sap/ui/model/json/JSONModel",
+    "sap/ui/core/Fragment",
+    "lojacap/controller/formatter"
+  ], (
+    Controller, MessageBox, MessageToast,
+    Filter, FilterOperator, Sorter, JSONModel, Fragment, formatter
+  ) => {
     "use strict";
-
-    return Controller.extend("lojacap.controller.nota-fiscal", {
-
-        formatter   : formatter,
-        _coresLinha : {},            // { id : 'linhaVerde' | 'linhaVermelha' }
-        _oLogDialog : null,
-        _oUploadDialog: null,
-        _oCriarFreteDialog: null,
-
-        onInit() {
-            console.log("📜 Controller nota-fiscal inicializado");
-        },
-
-      
-        /* Seleção agora é “livre”; apenas logs                                */
-       
-        onSelectionChange: function (oEvent) {
-            const oItem = oEvent.getParameter("listItem");   // linha clicada
-            const bSel  = oEvent.getParameter("selected");   // true = selecionou
-        
-            if (!oItem) { return; }
-        
-            const oTable = this.byId("tableNotaFiscalServicoMonitor");
-        
-            if (bSel) {
-                // 1) limpa todas as seleções (sem disparar um 2º evento)
-                oTable.removeSelections(true);
-        
-                // 2) marca SÓ a linha clicada
-                oItem.setSelected(true);
-        
-            } else {
-                // Se o usuário acabou de desmarcar a linha, não faz nada:
-                // nenhuma seleção ficará ativa (todas desmarcadas).
-            }
-        
-            const ctx = oItem.getBindingContext();
-            console.log(`[SEL] ${bSel ? 'Selecionado' : 'Desmarcado'} – ID: ${ctx.getProperty("idAlocacaoSAP")}`);
-        },
-
-        onMenuAction: function (oEvent) {
-            const sId = oEvent.getParameter("item").getId();
-            console.log("onMenuAction: Item do menu clicado:", sId);
-            if (sId.endsWith("menuFiltroSelectfiltro")) {
-                this.openFilterDialog();
-            }
-        },
-
-        openFilterDialog: async function () {
-            console.log("openFilterDialog: Abrindo o diálogo de filtro.");
-            if (!this._oFilterDialog) {
-                console.log("openFilterDialog: Carregando fragmento...");
-
-                /* sem 'id' → controles vão para o Core (sap.ui.getCore().byId) */
-                this._oFilterDialog = await Fragment.load({
-                    name       : "lojacap.view.fragments.NFMonitorFilterDialog",
-                    controller : this
-                });
-                this.getView().addDependent(this._oFilterDialog);
-            }
-            this._oFilterDialog.open();
-        },
-
-        onFilterCancel: function () {
-            console.log("onFilterCancel: Fechando diálogo.");
-            this._oFilterDialog.close();
-        },
-
-        /* ------------------- APLICA FILTROS ------------------- */
-        onFilterApply: function () {
-            console.log("--- onFilterApply: Iniciando a aplicação de filtros ---");
-
-            const getVal = id => {
-                const oCtrl = sap.ui.getCore().byId(id);
-                if (!oCtrl) {
-                    console.warn(`getVal: controle '${id}' não encontrado.`);
-                    return null;
-                }
-                return oCtrl.getDateValue ? oCtrl.getDateValue() : oCtrl.getValue();
-            };
-
-            /* helper para montar range */
-            const aFilters = [];
-            const addRange = (idFrom, idTo, path) => {
-                const v1 = getVal(idFrom);
-                const v2 = getVal(idTo);
-                if (!v1 && !v2) return;
-
-                if (v1 && v2) {
-                    console.log(`addRange: BETWEEN ${path}`, v1, v2);
-                    aFilters.push(new Filter({ path, operator: FilterOperator.BT, value1: v1, value2: v2 }));
-                } else if (v1) {
-                    console.log(`addRange: GE ${path}`, v1);
-                    aFilters.push(new Filter({ path, operator: FilterOperator.GE, value1: v1 }));
-                } else {
-                    console.log(`addRange: LE ${path}`, v2);
-                    aFilters.push(new Filter({ path, operator: FilterOperator.LE, value1: v2 }));
-                }
-            };
-
-            console.log("onFilterApply: Montando filtros...");
-            addRange("inpIdSapFrom",    "inpIdSapTo",    "idAlocacaoSAP");
-            addRange("inpOrderFrom",    "inpOrderTo",    "orderIdPL");
-            addRange("inpStatusFrom",   "inpStatusTo",   "status");
-            addRange("dpDateFrom",      "dpDateTo",      "dataEmissaoNfseServico");
-            addRange("inpVlrBrutoFrom", "inpVlrBrutoTo", "valorBrutoNfse");
-
-            console.log("onFilterApply: Filtros finais:", JSON.stringify(aFilters));
-
-            const oTable   = this.byId("tableNotaFiscalServicoMonitor");
-            const oBinding = oTable.getBinding("items");
-            oBinding.filter(aFilters);
-            console.log("onFilterApply: Filtros aplicados!");
-
-            this._oFilterDialog.close();
-        },
-        //botão de reijetar frete
-        async onRejeitarFrete() {
-            const oTable = this.byId("tableNotaFiscalServicoMonitor");
-            const oModel = this.getView().getModel();
-            const aCtx   = oTable.getSelectedContexts();
-        
-            if (aCtx.length !== 1) {
-                MessageToast.show("Selecione exatamente 1 NFSe para rejeitar.");
-                return;
-            }
-        
-            const id = aCtx[0].getProperty("idAlocacaoSAP");
-            console.log("✖️ Rejeitando frete – ID:", id);
-        
-            const oAction = oModel.bindContext("/rejeitarFrete(...)");
-            oAction.setParameter("idAlocacaoSAP", id);
-        
-            try {
-                await oAction.execute();
-                const res = oAction.getBoundContext().getObject();
-                console.log("Resposta:", res);
-        
-                // /* atualiza mapa de cores para essa linha */
-                // this._coresLinha[id] = res.success ? "linhaVermelha" : "linhaVerde"; // como aqui deu certo mas o 55 sempre vai ser vermelho então deixa assim ao contrario
-
-                if (res.success) {
-                    MessageToast.show("Frete rejeitado com sucesso (status 55).");
-                } else {
-                    MessageBox.error(`Falha ao rejeitar: ${res.message}`);
-                }
-        
-                /* refresh table → updateFinished pintará */
-                oTable.getBinding("items").refresh();
-        
-            } catch (e) {
-                console.error("❌ Erro na action rejeitarFrete:", e);
-                MessageBox.error("Falha ao rejeitar o frete.", {
-                    details : e.message || JSON.stringify(e)
-                });
-            }
-        },
-        //Botão Próxima Etapa – expande seleção p/ todo o grupo     
-       
-        async onProximaEtapa() {
-                  const oTable = this.byId("tableNotaFiscalServicoMonitor");           
-                  const oModel = this.getView().getModel();          
-                  const aCtxSel = oTable.getSelectedContexts();         
-                  if (!aCtxSel.length) {
-                    MessageToast.show("Por favor, selecione ao menos uma NFSe.");
-                   return;       
-                  }
-            
-                  /* === grupo de referência = primeiro item selecionado =========== */
-            
-                  const grpFilho = aCtxSel[0].getProperty("chaveDocumentoFilho");
-            
-                  const grpStatus = aCtxSel[0].getProperty("status");
-            
-               
-            
-                  console.log(`[NEXT] Grupo alvo -> filho:${grpFilho} | status:${grpStatus}`);
-            
-               
-            
-                  const aIds = []; // IDs que seguirão para action
-            
-               
-            
-                  /* === 1. percorre TODAS as linhas ================================= */
-            
-                  oTable.getItems().forEach(item => {
-            
-                    const ctx = item.getBindingContext();
-            
-                    if (!ctx) return;
-            
-               
-            
-                    const filho = ctx.getProperty("chaveDocumentoFilho");
-            
-                    const status = ctx.getProperty("status");
-            
-                    const id   = ctx.getProperty("idAlocacaoSAP");
-            
-               
-            
-                    const pertenceAoGrupo = filho === grpFilho && status === grpStatus;
-            
-               
-            
-                    /* Seleciona/deseleciona visualmente */
-            
-                    item.setSelected(pertenceAoGrupo);
-            
-               
-            
-                    /* monta lista de IDs */
-            
-                    if (pertenceAoGrupo) aIds.push(id);
-            
-                  });
-            
-               
-            
-                  console.log("▶️ IDs enviados para action:", aIds);
-            
-               
-            
-                  /* === 2. dispara action ========================================== */
-            
-                  const oAction = oModel.bindContext("/avancarStatusNFs(...)");
-            
-                  oAction.setParameter("notasFiscaisIDs", aIds);
-            
-               
-            
-                  try {
-            
-                    await oAction.execute();
-            
-                    const payload  = oAction.getBoundContext().getObject();
-            
-                    const resultados = Array.isArray(payload) ? payload : (payload?.value || []);
-            
-               
-            
-                    // resultados.forEach(r => {
-            
-                    //   /* pinta conforme resultado */
-            
-                    //   this._coresLinha[r.idAlocacaoSAP] = r.success ? "linhaVerde" : "linhaVermelha";
-            
-                    // });
-            
-               
-            
-                    const ok  = resultados.filter(r => r.success).length;
-            
-                    const errs = resultados.filter(r => !r.success);
-            
-                    if (errs.length) {
-            
-                      const txt = errs.map(r => `NF ${r.idAlocacaoSAP}: ${r.message}`).join("\n");
-            
-                      MessageBox.warning(`Processamento: ${ok} sucesso(s) e ${errs.length} erro(s).\n\n${txt}`,           
-                               { title: "Resultado do Processamento" });          
-                    } else {           
-                      MessageToast.show(`${ok} NFSe(s) processada(s) com sucesso!`);
-            
-                    }  
-                    oTable.getBinding("items").refresh();
-                 } catch (e) {            
-                    console.error("❌ Erro na action:", e);           
-                    MessageBox.error("Falha ao processar as NFSe.", {           
-                      details: e.message || JSON.stringify(e)          
-                    });            
-                  }
-                },
-        async onVoltarEtapa() {
-            const oTable = this.byId("tableNotaFiscalServicoMonitor");
-            const oModel = this.getView().getModel();
-            const aCtxSel = oTable.getSelectedContexts();
-
-            if (!aCtxSel.length) {
-                MessageToast.show("Por favor, selecione ao menos uma NFSe para reverter.");
-                return;
-            }
-
-            const grpFilho = aCtxSel[0].getProperty("chaveDocumentoFilho");
-            const grpStatus = aCtxSel[0].getProperty("status");
-            console.log(`[REVERT] Grupo alvo -> filho:${grpFilho} | status:${grpStatus}`);
-
-            const aIds = [];
-            oTable.getItems().forEach(item => {
-                const ctx = item.getBindingContext();
-                if (!ctx) return;
-                const filho = ctx.getProperty("chaveDocumentoFilho");
-                const status = ctx.getProperty("status");
-                const id = ctx.getProperty("idAlocacaoSAP");
-                const pertenceAoGrupo = filho === grpFilho && status === grpStatus;
-                item.setSelected(pertenceAoGrupo);
-                if (pertenceAoGrupo) aIds.push(id);
-            });
-
-            console.log("◀️ IDs enviados para action de reversão:", aIds);
-
-            const oAction = oModel.bindContext("/voltarStatusNFs(...)");
-            oAction.setParameter("notasFiscaisIDs", aIds);
-
-            try {
-                await oAction.execute();
-                const payload = oAction.getBoundContext().getObject();
-                const resultados = Array.isArray(payload) ? payload : (payload?.value || []);
-
-                // Limpa o mapa de cores para os itens processados, para que voltem ao normal
-                resultados.forEach(r => {
-                    delete this._coresLinha[r.idAlocacaoSAP];
-                });
-
-                const ok = resultados.filter(r => r.success).length;
-                const errs = resultados.filter(r => !r.success);
-
-                if (errs.length) {
-                    const txt = errs.map(r => `NF ${r.idAlocacaoSAP}: ${r.message}`).join("\n");
-                    MessageBox.warning(`Processamento: ${ok} sucesso(s) e ${errs.length} erro(s) na reversão.\n\n${txt}`,
-                        { title: "Resultado da Reversão" });
-                } else {
-                    MessageToast.show(`${ok} NFSe(s) revertida(s) com sucesso!`);
-                }
-
-                oTable.getBinding("items").refresh();
-
-            } catch (e) {
-                console.error("❌ Erro na action voltarStatusNFs:", e);
-                MessageBox.error("Falha ao reverter o status das NFSe.", {
-                    details: e.message || JSON.stringify(e)
-                });
-            }
-        },
-
-        onPressPrint: function ()  {
-            
-            const oController = this; 
-            const oTable = oController.byId("tableNotaFiscalServicoMonitor");
-    
-            
-            sap.ui.require(["lojacap/util/PrintUtil"], function (PrintUtil) {
-                
-                MessageToast.show("Módulo de impressão carregado sob demanda!");
-                PrintUtil.printTable(oTable, oController._coresLinha);
-            });
-        },
-
-        onPressAscending() {
-            const oBinding = this.byId("tableNotaFiscalServicoMonitor").getBinding("items");
-            oBinding.sort(new Sorter("status", false));
-            this.updateSortButtons?.("ascending");
-        },
-
-        onPressDescending() {
-            const oBinding = this.byId("tableNotaFiscalServicoMonitor").getBinding("items");
-            oBinding.sort(new Sorter("status", true));
-            this.updateSortButtons?.("descending");
-        },
-
-        onOpenUploadDialog: function () {
-            if (!this._oUploadDialog) {
-                Fragment.load({
-                    id: this.getView().getId(), // Adiciona o ID da view como prefixo
-                    name: "lojacap.view.fragments.UploadFreteDialog", // Use o caminho correto do seu fragmento
-                    controller: this
-                }).then(oDialog => {
-                    this._oUploadDialog = oDialog;
-                    this.getView().addDependent(this._oUploadDialog);
-                    this._oUploadDialog.open();
-                });
-            } else {
-                this._oUploadDialog.open();
-            }
-        },
-        
-        // Fecha o Dialog
-        onUploadDialogClose: function () {
-            this._resetFileUploader();
-            if (this._oUploadDialog) {
-                this._oUploadDialog.close();
-            }
-        },
-        
-        // Evento disparado ao selecionar um arquivo
-        onFileChange: function (oEvent) {
-            // Guarda a referência do arquivo e habilita o botão de upload
-            this._file = oEvent.getParameter("files") && oEvent.getParameter("files")[0];
-            this.byId("btnConfirmUpload").setEnabled(!!this._file);
-        },
-        
-        // Disparado ao clicar no botão "Processar" do Dialog
-        onPressUploadFrete: function () {
-            if (!this._file) {
-                MessageBox.error("Por favor, selecione um arquivo CSV.");
-                return;
-            }
-        
-            // Usa a API FileReader para ler o conteúdo do arquivo no navegador
-            const oReader = new FileReader();
-        
-            // Callback para quando a leitura do arquivo for concluída
-            oReader.onload = (oEvent) => {
-                var sFileContent = oEvent.target.result;
-                console.log("[FRONTEND-LOG] Arquivo lido. O conteúdo em Base64 começa com:", sFileContent.substring(0, 80));
-                this._callUploadAction(sFileContent);
-            };
-        
-            oReader.onerror = (oError) => {
-                MessageBox.error("Erro ao ler o arquivo selecionado.");
-                console.error("FileReader Error:", oError);
-            };
-        
-            // Inicia a leitura do arquivo
-            oReader.readAsDataURL(this._file);
-        },
-        
-        // Função que efetivamente chama a action no backend
-        _callUploadAction: function(sFileContent) {
-            const oModel = this.getView().getModel();
-            const oActionBinding = oModel.bindContext("/uploadArquivoFrete(...)");
-        
-            oActionBinding.setParameter("data", sFileContent);
-            this.getView().setBusy(true);
-        
-            console.log("[FRONTEND-LOG] Preparando para executar a action 'uploadArquivoFrete' no backend.");
-        
-            oActionBinding.execute()
-                .then(() => {
-                    console.log("[FRONTEND-LOG] Ação 'uploadArquivoFrete' executada com sucesso no backend.");
-                    const bSuccess = oActionBinding.getBoundContext().getObject();
-                    if (bSuccess) {
-                        MessageBox.success("Arquivo processado e registros importados com sucesso!");
-                        this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
-                        this.onUploadDialogClose();
-                    }
-                })
-                .catch((oError) => {
-                    console.error("[FRONTEND-LOG] Erro retornado pelo backend ao executar a ação:", oError);
-                    
-                    // Lógica CORRIGIDA para exibir a mensagem de erro detalhada
-                    MessageBox.error(oError.message); 
-                })
-                .finally(() => {
-                    this.getView().setBusy(false);
-                });
-        },
-        
-        // Reseta o FileUploader para um novo upload
-        _resetFileUploader: function() {
-            const oFileUploader = this.byId("fileUploader");
-            if (oFileUploader) {
-                oFileUploader.clear();
-                this.byId("btnConfirmUpload").setEnabled(false);
-                this._file = null;
-            }
-        },
-
-        onAbrirDialogoCriacao: function () {
-            const oView = this.getView();
-            // Modelo JSON com uma estrutura vazia para o formulário
-            const oNovoRegistroModel = new JSONModel({
-                status: "01", // Status inicial padrão
-                issRetido: "2",
-                estornado: false,
-                logErroFlag: false
-                // Outros campos iniciarão como undefined ou vazios
-            });
-        
-            if (!this._oCriarFreteDialog) {
-                Fragment.load({
-                    id: oView.getId(),
-                    name: "lojacap.view.fragments.CriarFreteDialog",
-                    controller: this
-                }).then(oDialog => {
-                    this._oCriarFreteDialog = oDialog;
-                    oView.addDependent(this._oCriarFreteDialog);
-                    oDialog.setModel(oNovoRegistroModel, "novoRegistro");
-                    oDialog.open();
-                });
-            } else {
-                // Limpa o modelo com a estrutura padrão e abre o dialog
-                this._oCriarFreteDialog.getModel("novoRegistro").setData(oNovoRegistroModel.getData());
-                this._oCriarFreteDialog.open();
-            }
-        },
-        
-        onCancelarDialogoCriacao: function() {
-            this._oCriarFreteDialog.close();
-        },
-        
-        onSalvarNovoRegistro: function() {
-            const oDialog = this.byId("criarFreteDialog");
-            const oNovoRegistroModel = oDialog.getModel("novoRegistro");
-            const oNovoRegistroData = oNovoRegistroModel.getData();
-        
-            // 1. Validação no Frontend (UX Imediata)
-            if (!oNovoRegistroData.idAlocacaoSAP || !oNovoRegistroData.orderIdPL) {
-                MessageBox.error("Por favor, preencha os campos de identificação obrigatórios.");
-                return;
-            }
-        
-            const oModel = this.getView().getModel();
-            // O binding para a coleção correta
-            const oListBinding = oModel.bindList("/NotaFiscalServicoMonitor");
-        
-            oDialog.setBusy(true);
-        
-            // 2. Chamada para o CREATE padrão do OData
-            oListBinding.create(oNovoRegistroData)
-                .created()
-                .then(() => {
-                    MessageToast.show("Novo registro de frete criado com sucesso!");
-                    this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
-                })
-                .catch((oError) => {
-                    MessageBox.error("Erro ao criar registro: " + oError.message);
-                })
-                .finally(() => {
-                    oDialog.setBusy(false);
-                    oDialog.close();
-                });
-        },
-
-        onLogPress() {
-            const oView = this.getView();
-            if (!this._oLogDialog) {
-                Fragment.load({
-                    name: "lojacap.view.fragments.NotaFiscalServicoLogDialog",
-                    controller: this
-                }).then(oDialog => {
-                    oView.addDependent(oDialog);
-                    oDialog.setModel(oView.getModel());
-                    this._oLogDialog = oDialog;
-                    oDialog.open();
-                });
-            } else {
-                this._oLogDialog.open();
-            }
-        },
-        onLogClose() {
-            this._oLogDialog?.close();
-        },
-
-        
-
-        // -------------- FIM FUNCIONALIDADES BOTÕES -------------- // 
   
-        onUpdateFinishedNotaFiscal(oEvent) {
-            const aItems = oEvent.getSource().getItems();
-        
-            aItems.forEach(item => {
-                const ctx = item.getBindingContext();
-                if (!ctx) return;
-        
-                const id      = ctx.getProperty("idAlocacaoSAP");
-                const status  = ctx.getProperty("status");    // status da linha
-        
-                /* 1. Remove cores antigas para evitar acúmulo */
-                item.removeStyleClass("linhaVerde");
-                item.removeStyleClass("linhaVermelha");
-        
-                /* 2. Cor proveniente do último lote (_coresLinha) */
-                const classeLote = this._coresLinha[id];
-        
-                if (classeLote === "linhaVerde") {
-                    item.addStyleClass("linhaVerde");
-                } else if (classeLote === "linhaVermelha") {
-                    item.addStyleClass("linhaVermelha");
-                } else if (status === "55") {
-                    /* 3. Nenhuma cor do lote, mas status 55 → vermelho */
-                    item.addStyleClass("linhaVermelha");
-                } else if (status === "50") {
-                    /* 3. Nenhuma cor do lote, mas status 55 → vermelho */
-                    item.addStyleClass("linhaVerde");
-                } 
-                /* status diferente de 55 e sem cor no lote → fica sem cor */
-            });
+    /* =========================================================== *
+     *  Constantes (IDs de campos / paths que se repetem)           *
+     * =========================================================== */
+    const TBL_NOTAS = "tableNotaFiscalServicoMonitor";
+    const PATH_LOGS = "/NotaFiscalServicoLog";
+    const FILTER_ERRO = new Filter("tipoMensagemErro", FilterOperator.EQ, "E");
+   
+      
+    /* =========================================================== *
+     *  Controller                                                 *
+     * =========================================================== */
+    return Controller.extend("lojacap.controller.nota-fiscal", {
+  
+      formatter,                                   // exposição direta
+      /* estado “privado” ---------------------------------------------------- */
+      _coresLinha   : Object.create(null),         // { id : 'linhaVerde' | 'linhaVermelha' }
+      _oFilterDialog: null,
+      _oLogDialog   : null,
+      _filtroIdsErro: null,
+      _oUploadDialog: null,
+      _oCriarFreteDialog: null,
+      _selGrpFilho  : null,
+      _selGrpStatus : null,                        // toggle do botão “NF c/ erro”
+  
+      /* ======================================================= *
+       *  Lifecycle                                              *
+       * ======================================================= */
+      onInit() {
+        console.log("📜 nota-fiscal controller ready");
+        const oTotalModel = new JSONModel({
+            bruto: { value: "", visible: false },
+            liquido: { value: "", visible: false },
+            frete: { value: "", visible: false }
+        });
+        this.getView().setModel(oTotalModel, "totalModel");
+      },
+  
+      /* ======================================================= *
+       *  SELEÇÃO (apenas 1 linha por vez)                       *
+       * ======================================================= */
+      onSelectionChange(oEvt) {
+        const oItem = oEvt.getParameter("listItem");
+        const bSel  = oEvt.getParameter("selected");
+        if (!oItem || !bSel) return;            // ignorar desmarcar
+      
+        const oTable = this.byId(TBL_NOTAS);
+      
+        /* limpa tudo, marca a linha clicada */
+        oTable.removeSelections(true);
+        oItem.setSelected(true);
+      
+        /* reaproveita o helper → seleciona visualmente todo o grupo */
+        this._collectIdsDoGrupo();              // ← nada de variáveis extras
+      },
+      
+      /* ======================================================= *
+       *  MENU / FILTRO                                          *
+       * ======================================================= */
+      onMenuAction(oEvt) {
+        if (oEvt.getParameter("item").getId().endsWith("menuFiltroSelectfiltro")) {
+          this.openFilterDialog();
         }
-       
-    });
+      },
+  
+      /* ---------- diálogo de filtro ---------- */
+      async openFilterDialog() {
+        if (!this._oFilterDialog) {
+          this._oFilterDialog = await Fragment.load({
+            name      : "lojacap.view.fragments.NFMonitorFilterDialog",
+            controller: this
+          });
+          this.getView().addDependent(this._oFilterDialog);
+        }
+        this._oFilterDialog.open();
+      },
+      onFilterCancel() { this._oFilterDialog.close(); },
+  
+      /* ---------- aplicar filtros ---------- */
+      onFilterApply() {
+        const oTable   = this.byId(TBL_NOTAS);
+        const oBinding = oTable.getBinding("items");
+  
+        /* helper leitura de campo (Input / DatePicker) */
+        const readVal = id => {
+          const c = sap.ui.getCore().byId(id);
+          return c?.getDateValue?.() ?? c?.getValue?.() ?? null;
+        };
+  
+        /* helper range → filter */
+        const filters = [];
+        const addRange = (fromId, toId, path) => {
+          const v1 = readVal(fromId), v2 = readVal(toId);
+          if (!v1 && !v2) return;
+          const op = v1 && v2 ? FilterOperator.BT
+                : v1 ? FilterOperator.GE : FilterOperator.LE;
+          filters.push(new Filter(path, op, v1 || v2, v2));
+        };
+  
+        addRange("inpIdSapFrom", "inpIdSapTo", "idAlocacaoSAP");
+        addRange("inpOrderFrom", "inpOrderTo", "orderIdPL");
+        addRange("inpStatusFrom","inpStatusTo","status");
+        addRange("dpDateFrom",   "dpDateTo",   "dataEmissaoNfseServico");
+        addRange("inpVlrBrutoFrom","inpVlrBrutoTo","valorBrutoNfse");
+  
+        oBinding.filter(filters);
+        console.log("🔎 filtros aplicados:", filters);
+        this._oFilterDialog.close();
+      },
+  
+      /* ======================================================= *
+       *  AÇÕES de negócios                                      *
+       * ======================================================= */
+      /* ---------- rejeitar frete ---------- */
+      async onRejeitarFrete() {
+        /* 1. obtém o grupo a partir da linha selecionada */
+        const { grpFilho } = this._collectIdsDoGrupo();
+
+        const oAction = this.getView().getModel().bindContext("/rejeitarFrete(...)");
+        oAction.setParameter("grpFilho", grpFilho);;
+
+        /* 3. delega exibição de toast/erros ao helper genérico      */
+        await this._executeLote(oAction, "NFSe rejeitada(s)");
+
+        /* 4. se o filtro “NF c/ erro” estiver ativo, refaz a busca  */
+        if (this._filtroIdsErro) {
+          await this.onFilterNfComErro();   // remove
+          await this.onFilterNfComErro();   // aplica novamente
+        }
+      },
+  
+      async onProximaEtapa() {
+        /* ainda usamos o helper só para descobrir o grupo selecionado */
+        const { grpFilho } = this._collectIdsDoGrupo();
+        if (!grpFilho) return;               // nada selecionado
+      
+        /* dispara a action enviando somente grpFilho */
+        const oAction = this.getView().getModel().bindContext("/avancarStatusNFs(...)");
+        oAction.setParameter("grpFilho", grpFilho);   // único parâmetro agora
+      
+        await this._executeLote(oAction, "NFSe processada(s)");
+      },
+  
+      /* ---------- voltar etapa (lote) ---------- */
+      async onVoltarEtapa() {
+        const { aIds }   = this._collectIdsDoGrupo();
+        if (!aIds.length) return;
+  
+        const oAction = this.getView().getModel()
+                          .bindContext("/voltarStatusNFs(...)")
+                          .setParameter("notasFiscaisIDs", aIds);
+  
+        await this._executeLote(oAction, "NFSe revertida(s)");
+      },
+
+    /* ====================================================== *
+    *  CSV - Upload de Arquivo                                *
+    * ======================================================= */
+
+    onOpenUploadDialog: function () {
+        if (!this._oUploadDialog) {
+            Fragment.load({
+                id: this.getView().getId(), // Adiciona o ID da view como prefixo
+                name: "lojacap.view.fragments.UploadFreteDialog", // Use o caminho correto do seu fragmento
+                controller: this
+            }).then(oDialog => {
+                this._oUploadDialog = oDialog;
+                this.getView().addDependent(this._oUploadDialog);
+                this._oUploadDialog.open();
+            });
+        } else {
+            this._oUploadDialog.open();
+        }
+    },
+    
+    // Fecha o Dialog
+    onUploadDialogClose: function () {
+        this._resetFileUploader();
+        if (this._oUploadDialog) {
+            this._oUploadDialog.close();
+        }
+    },
+    
+    // Evento disparado ao selecionar um arquivo
+    onFileChange: function (oEvent) {
+        // Guarda a referência do arquivo e habilita o botão de upload
+        this._file = oEvent.getParameter("files") && oEvent.getParameter("files")[0];
+        this.byId("btnConfirmUpload").setEnabled(!!this._file);
+    },
+    
+    // Disparado ao clicar no botão "Processar" do Dialog
+    onPressUploadFrete: function () {
+        if (!this._file) {
+            MessageBox.error("Por favor, selecione um arquivo CSV.");
+            return;
+        }
+    
+        // Usa a API FileReader para ler o conteúdo do arquivo no navegador
+        const oReader = new FileReader();
+    
+        // Callback para quando a leitura do arquivo for concluída
+        oReader.onload = (oEvent) => {
+            var sFileContent = oEvent.target.result;
+            console.log("[FRONTEND-LOG] Arquivo lido. O conteúdo em Base64 começa com:", sFileContent.substring(0, 80));
+            this._callUploadAction(sFileContent);
+        };
+    
+        oReader.onerror = (oError) => {
+            MessageBox.error("Erro ao ler o arquivo selecionado.");
+            console.error("FileReader Error:", oError);
+        };
+    
+        // Inicia a leitura do arquivo
+        oReader.readAsDataURL(this._file);
+    },
+
+    /* ====================================================== *
+    *  Inserção Frete Manual                                  *
+    * ======================================================= */
+
+    onAbrirDialogoCriacao: function () {
+        const oView = this.getView();
+        // Modelo JSON com uma estrutura vazia para o formulário
+        const oNovoRegistroModel = new JSONModel({
+            status: "01", // Status inicial padrão
+            issRetido: "2",
+            estornado: false,
+            logErroFlag: false
+            // Outros campos iniciarão como undefined ou vazios
+        });
+    
+        if (!this._oCriarFreteDialog) {
+            Fragment.load({
+                id: oView.getId(),
+                name: "lojacap.view.fragments.CriarFreteDialog",
+                controller: this
+            }).then(oDialog => {
+                this._oCriarFreteDialog = oDialog;
+                oView.addDependent(this._oCriarFreteDialog);
+                oDialog.setModel(oNovoRegistroModel, "novoRegistro");
+                oDialog.open();
+            });
+        } else {
+            // Limpa o modelo com a estrutura padrão e abre o dialog
+            this._oCriarFreteDialog.getModel("novoRegistro").setData(oNovoRegistroModel.getData());
+            this._oCriarFreteDialog.open();
+        }
+    },
+    onCancelarDialogoCriacao: function() {
+        this._oCriarFreteDialog.close();
+    },
+    onSalvarNovoRegistro: function() {
+        const oDialog = this.byId("criarFreteDialog");
+        const oNovoRegistroModel = oDialog.getModel("novoRegistro");
+        const oNovoRegistroData = oNovoRegistroModel.getData();
+    
+        // 1. Validação no Frontend (UX Imediata)
+        if (!oNovoRegistroData.idAlocacaoSAP || !oNovoRegistroData.orderIdPL) {
+            MessageBox.error("Por favor, preencha os campos de identificação obrigatórios.");
+            return;
+        }
+        const oModel = this.getView().getModel();
+        // O binding para a coleção correta
+        const oListBinding = oModel.bindList("/NotaFiscalServicoMonitor");
+    
+        oDialog.setBusy(true);
+    
+        // 2. Chamada para o CREATE padrão do OData
+        oListBinding.create(oNovoRegistroData)
+            .created()
+            .then(() => {
+                MessageToast.show("Novo registro de frete criado com sucesso!");
+                this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
+            })
+            .catch((oError) => {
+                MessageBox.error("Erro ao criar registro: " + oError.message);
+            })
+            .finally(() => {
+                oDialog.setBusy(false);
+                oDialog.close();
+            });
+        },
+  
+      /* ======================================================= *
+       *  SORT                                                   *
+       * ======================================================= */
+      onPressAscending()  { this._sortByStatus(false); },
+      onPressDescending() { this._sortByStatus(true ); },
+
+      /* ======================================================= *
+       *  Botão de Soma                                          *
+       * ======================================================= */
+
+      onCalcularTotal: function(oEvent) {
+        const oMenuItem = oEvent.getParameter("item");
+        const sActionKey = oMenuItem.data("coluna");
+
+        const oTable = this.byId(TBL_NOTAS);
+        // MUDANÇA CRÍTICA: Pegamos os itens renderizados, não os contextos do binding.
+        const aItems = oTable.getItems(); 
+        const oTotalModel = this.getView().getModel("totalModel");
+
+        // Limpa a visibilidade de todos os totais antes de calcular
+        oTotalModel.setProperty("/bruto/visible", false);
+        oTotalModel.setProperty("/liquido/visible", false);
+        oTotalModel.setProperty("/frete/visible", false);
+
+        if (sActionKey === "todos") {
+            // Passamos a lista de itens para a função auxiliar
+            const sTotalBruto = this._calculateColumnTotal(aItems, "valorBrutoNfse");
+            const sTotalLiquido = this._calculateColumnTotal(aItems, "valorLiquidoFreteNfse");
+            const sTotalFrete = this._calculateColumnTotal(aItems, "valorEfetivoFrete");
+
+            oTotalModel.setProperty("/bruto/value", sTotalBruto);
+            oTotalModel.setProperty("/liquido/value", sTotalLiquido);
+            oTotalModel.setProperty("/frete/value", sTotalFrete);
+
+            oTotalModel.setProperty("/bruto/visible", true);
+            oTotalModel.setProperty("/liquido/visible", true);
+            oTotalModel.setProperty("/frete/visible", true);
+
+            MessageToast.show("Todos os totais foram calculados.");
+
+        } else {
+            const sTotalFormatado = this._calculateColumnTotal(aItems, sActionKey);
+            
+            if (sActionKey === 'valorBrutoNfse') {
+                oTotalModel.setProperty("/bruto/value", sTotalFormatado);
+                oTotalModel.setProperty("/bruto/visible", true);
+            } else if (sActionKey === 'valorLiquidoFreteNfse') {
+                oTotalModel.setProperty("/liquido/value", sTotalFormatado);
+                oTotalModel.setProperty("/liquido/visible", true);
+            } else if (sActionKey === 'valorEfetivoFrete') {
+                oTotalModel.setProperty("/frete/value", sTotalFormatado);
+                oTotalModel.setProperty("/frete/visible", true);
+            }
+
+            MessageToast.show(`Total da coluna '${oMenuItem.getText()}' calculado: ${sTotalFormatado}`);
+        }
+    },
+
+      /* ======================================================= *
+       *  Imprimir                                               *
+       * ======================================================= */
+
+      onPressPrint: function ()  {
+        const oController = this; 
+        const oTable = oController.byId("tableNotaFiscalServicoMonitor");
+        sap.ui.require(["lojacap/util/PrintUtil"], function (PrintUtil) {
+            MessageToast.show("Módulo de impressão carregado sob demanda!");
+            PrintUtil.printTable(oTable, oController._coresLinha);
+        });
+    },
+  
+      /* ======================================================= *
+       *  LOG – diálogo e filtro “NF com erro”                   *
+       * ======================================================= */
+      onLogPress() {
+        if (!this._oLogDialog) {
+          Fragment.load({
+            name      : "lojacap.view.fragments.NotaFiscalServicoLogDialog",
+            controller: this
+          }).then(oDlg => {
+            this.getView().addDependent(oDlg);
+            oDlg.setModel(this.getView().getModel());
+
+            /* sempre que o diálogo abrir ⇒ refresh nos logs */
+            oDlg.attachAfterOpen(() => this._refreshLogs());
+      
+            this._oLogDialog = oDlg;
+            oDlg.open();
+          });
+        } else {
+          this._refreshLogs();    // força leitura antes de reabrir
+          this._oLogDialog.open();
+        }
+      },
+      onLogClose() { this._oLogDialog?.close(); },
+  
+      /* ---------- botão “NF c/ erro” ---------- */
+      async onFilterNfComErro() {
+        const oTable = this.byId(TBL_NOTAS);
+        const oBind  = oTable.getBinding("items");
+  
+        /* toggle → remove filtro */
+        if (this._filtroIdsErro) {
+          oBind.filter([]);
+          this._filtroIdsErro = null;
+          return;
+        }
+  
+        sap.ui.core.BusyIndicator.show(0);
+        try {
+          const aIds = await this._getIdsComErro();
+          if (!aIds.length) {
+            MessageToast.show("Nenhuma NF com erro.");
+            return;
+          }
+          const orFilter = new Filter({
+            filters: aIds.map(id => new Filter("idAlocacaoSAP", FilterOperator.EQ, id)),
+            and    : false
+          });
+          oBind.filter(orFilter);
+          this._filtroIdsErro = orFilter;
+        } catch (e) { this._handleActionError("filtrar logs", e); }
+        finally { sap.ui.core.BusyIndicator.hide(); }
+      },
+  
+      /* ======================================================= *
+       *  RENDERING (cores)                                      *
+       * ======================================================= */
+      onUpdateFinishedNotaFiscal(oEvt) {
+        const aItems = oEvt.getSource().getItems();
+      
+        /* 🎨 cores já existentes ------------------------------ */
+        aItems.forEach(item => {
+          const ctx    = item.getBindingContext();
+          const id     = ctx?.getProperty("idAlocacaoSAP");
+          const status = ctx?.getProperty("status");
+      
+          item.toggleStyleClass("linhaVerde",
+            this._coresLinha[id] === "linhaVerde" || status === "50");
+          item.toggleStyleClass("linhaVermelha",
+            this._coresLinha[id] === "linhaVermelha" || status === "55");
+        });
+      
+        /* ✅ se ainda há algo selecionado → amplia para as linhas novas */
+        const oTable = this.byId(TBL_NOTAS);
+        if (oTable.getSelectedContexts().length) {
+          this._collectIdsDoGrupo();            // reaplica seleção ao novo lote
+        }
+      },
+  
+      /* ======================================================= *
+       *  HELPERS privados                                       *
+       * ======================================================= */
+      /** único ID selecionado → bind action */
+      _prepareSingleIdAction(path) {
+        const oTable = this.byId(TBL_NOTAS);
+        const aCtx   = oTable.getSelectedContexts();
+        if (aCtx.length !== 1) {
+          MessageToast.show("Selecione exatamente 1 NFSe.");
+          return {};
+        }
+        const id      = aCtx[0].getProperty("idAlocacaoSAP");
+        const oAction = this.getView().getModel().bindContext(path)
+                           .setParameter(path.includes("rejeitar") ? "idAlocacaoSAP" : "notasFiscaisIDs", path.includes("rejeitar") ? id : [id]);
+        return { id, oAction };
+      },
+  
+      /** coleta IDs do mesmo grupo (filho + status) — usado em avançar / voltar */
+      _collectIdsDoGrupo() {
+        const oTable    = this.byId(TBL_NOTAS);
+        const aCtxSel   = oTable.getSelectedContexts();
+        if (!aCtxSel.length) {
+          MessageToast.show("Selecione ao menos uma NFSe.");
+          return {};
+        }
+        const grpFilho  = aCtxSel[0].getProperty("chaveDocumentoFilho");
+        const grpStatus = aCtxSel[0].getProperty("status");
+        const aIds      = [];
+         oTable.getItems().forEach(item => {
+          const c = item.getBindingContext();
+          const match = c && c.getProperty("chaveDocumentoFilho") === grpFilho &&
+                        c.getProperty("status") === grpStatus;
+          item.setSelected(match);
+          if (match) aIds.push(c.getProperty("idAlocacaoSAP"));
+        });
+        return { aIds, grpFilho, grpStatus };
+      },
+  
+      /** executa action de lote e mostra toast/erros */
+      async _executeLote(oAction, toastSuccess) {
+        try {
+          await oAction.execute();
+          const res   = oAction.getBoundContext().getObject();
+          const lista = Array.isArray(res) ? res : (res?.value || []);
+          const ok    = lista.filter(r => r.success).length;
+          const errs  = lista.filter(r => !r.success);
+          if (errs.length) {
+            MessageBox.warning(
+              `Processamento: ${ok} sucesso(s) e ${errs.length} erro(s).\n\n` +
+              errs.map(r => `NF ${r.idAlocacaoSAP}: ${r.message}`).join("\n"),
+              { title: "Resultado" }
+            );
+          } else { MessageToast.show(`${ok} ${toastSuccess}`); }
+          this._refreshNotas();
+        } catch (e) { this._handleActionError("action", e); }
+      },
+  
+      _refreshNotas() { this.byId(TBL_NOTAS).getBinding("items").refresh(); },
+  
+      _sortByStatus(desc) {
+        this.byId(TBL_NOTAS).getBinding("items").sort(new Sorter("status", desc));
+      },
+  
+      /** busca IDs cujo log mais recente é 'E' */
+      async _getIdsComErro() {
+        const oModel = this.getView().getModel();
+      
+        /* bindList já com filtro tipoMensagemErro = 'E' e ordem decrescente */
+        const bLog = oModel.bindList(
+          PATH_LOGS,
+          null,
+          [ new Sorter("createdAt", true) ],   // true = descending
+          [ FILTER_ERRO ]
+        );
+      
+        /* traz TODOS os contextos de uma vez */
+        const aCtx = await bLog.requestContexts(0, Infinity);
+        if (!aCtx.length) { return []; }
+      
+        /* mantém o primeiro (mais recente) de cada NF */
+        const latest = Object.create(null);          // id -> true
+        aCtx.forEach(ctx => {
+          const o = ctx.getObject();
+          if (!latest[o.idAlocacaoSAP]) {
+            latest[o.idAlocacaoSAP] = true;          // 1º já é o mais novo
+          }
+        });
+        return Object.keys(latest);                  // lista de IDs
+      },
+  
+      _handleActionError(tag, err) {
+        console.error(`❌ ${tag}:`, err);
+        MessageBox.error(err.message || JSON.stringify(err));
+      },
+
+      _refreshLogs() {
+        const oTable = sap.ui.getCore().byId("logTable");
+        if (!oTable) return;
+      
+        const oBind = oTable.getBinding("items");
+        if (oBind) {
+          /* ↙  aplica o sort antes de refrescar  */
+          oBind.sort(this._logSorter ||= new sap.ui.model.Sorter("createdAt", /*descending=*/true));
+      
+          oTable.setBusy(true);
+          Promise.resolve(oBind.refresh())           // OData V4 → nova query c/ $orderby
+            .finally(() => oTable.setBusy(false));
+        }
+      },
+    
+
+    /* ======================================================= *
+     *  HELPERS privados                                       *
+     * ======================================================= */
+
+    // ***** COLE A FUNÇÃO _calculateColumnTotal AQUI *****
+    _calculateColumnTotal: function(aItems, sColunaKey) {
+        let fTotal = 0;
+        // Agora iteramos sobre os itens da tabela (ex: ColumnListItem)
+        aItems.forEach(oItem => {
+            // E pegamos o contexto de binding de cada item
+            const oContext = oItem.getBindingContext();
+            if (!oContext) {
+                return;
+            }
+
+            const oRowData = oContext.getObject();
+            const sValor = oRowData[sColunaKey];
+
+            if (sValor && (typeof sValor === 'number' || !isNaN(sValor))) {
+                const fValor = typeof sValor === 'number' ? sValor : parseFloat(String(sValor).replace(/\./g, '').replace(',', '.'));
+                fTotal += fValor;
+            }
+        });
+        return fTotal.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+    },
+    
+    // Dispara para fazer o upload do arquivo de frete.
+    _callUploadAction: function(sFileContent) {
+        const oModel = this.getView().getModel();
+        const oActionBinding = oModel.bindContext("/uploadArquivoFrete(...)");
+    
+        oActionBinding.setParameter("data", sFileContent);
+        this.getView().setBusy(true);
+    
+        console.log("[FRONTEND-LOG] Preparando para executar a action 'uploadArquivoFrete' no backend.");
+    
+        oActionBinding.execute()
+            .then(() => {
+                console.log("[FRONTEND-LOG] Ação 'uploadArquivoFrete' executada com sucesso no backend.");
+                const bSuccess = oActionBinding.getBoundContext().getObject();
+                if (bSuccess) {
+                    MessageBox.success("Arquivo processado e registros importados com sucesso!");
+                    this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
+                    this.onUploadDialogClose();
+                }
+            })
+            .catch((oError) => {
+                console.error("[FRONTEND-LOG] Erro retornado pelo backend ao executar a ação:", oError);
+                MessageBox.error(oError.message); 
+            })
+            .finally(() => {
+                this.getView().setBusy(false);
+            });
+    },
+    
+    // Reseta o FileUploader para um novo upload
+    _resetFileUploader: function() {
+        const oFileUploader = this.byId("fileUploader");
+        if (oFileUploader) {
+            oFileUploader.clear();
+            this.byId("btnConfirmUpload").setEnabled(false);
+            this._file = null;
+        }
+    }
+    });  
 });
+  

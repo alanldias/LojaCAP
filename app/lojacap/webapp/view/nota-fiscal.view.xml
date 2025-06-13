@@ -59,9 +59,9 @@
                 <ToolbarSeparator id="separador2"/>
                 <Button id="btnRejeitarNfse" icon="sap-icon://employee-rejections" text="Rejeitar Frete" class="sapUiTinyMarginEnd" press=".onRejeitarFrete" />
                 <ToolbarSeparator id="separador3"/>
-                <Button id="btnFreteManual" icon="sap-icon://display" text="Adicionar Frete Manual" class="sapUiTinyMarginEnd" />
+                <Button id="btnFreteManual" icon="sap-icon://display" text="Adicionar Frete Manual" class="sapUiTinyMarginEnd" press=".onAbrirDialogoCriacao" />
                 <ToolbarSeparator id="separador4"/>
-                <Button id="btnUpload" icon="sap-icon://add-document" text="Upload Arquivo de Frete" class="sapUiTinyMarginEnd" />
+                <Button id="btnUpload" icon="sap-icon://add-document" text="Upload Arquivo de Frete" class="sapUiTinyMarginEnd" press=".onOpenUploadDialog" />
                 <ToolbarSeparator id="separador5"/>
                 <Button id="btnAtualizarNfse" text="Atualizar" icon="sap-icon://refresh" class="sapUiTinyMarginEnd" press="onAtualizar" />
                 <ToolbarSeparator id="separador6"/>
@@ -132,6 +132,7 @@
                             tooltip="Calcular Totais"
                             class="sapUiTinyMargin">
                     <menu>
+
                         <Menu id="ffe" itemSelected=".onCalcularTotal">
                             <MenuItem id="ef" text="Valor Total Bruto" icon="sap-icon://money-bills">
                                 <customData>
@@ -154,11 +155,13 @@
                                     <core:CustomData key="coluna" value="todos" />
                                 </customData>
                             </MenuItem>
+
                             <MenuItem id="fhgha2" text="limpar" icon="sap-icon://clear-all">
                                 <customData>
                                     <core:CustomData key="coluna" value="limpartodos" />
                                 </customData>
                             </MenuItem>
+
                         </Menu>
                     </menu>
                 </MenuButton>
@@ -178,8 +181,9 @@
                 <Button id="filtroIconeFinalizadoPLNfseas"
                         icon="sap-icon://print"
                         type="Ghost"
-                        tooltip="Status: Processo Finalizado - Retorno PL (50)"
-                        class="sapUiTinyMargin"/>
+                        tooltip="Imprimir"
+                        class="sapUiTinyMargin"
+                        press=".onPressPrint"/>
 
                 <MenuButton id="btnMadis" icon="sap-icon://detail-view" type="Ghost">
 			        <menu>

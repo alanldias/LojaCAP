@@ -33,6 +33,8 @@ sap.ui.define([
       _oFilterDialog: null,
       _oLogDialog   : null,
       _filtroIdsErro: null,
+      _oUploadDialog: null,
+      _oCriarFreteDialog: null,
       _selGrpFilho  : null,
       _selGrpStatus : null,                        // toggle do botão “NF c/ erro”
   
@@ -192,12 +194,205 @@ sap.ui.define([
 
         await this._executeLote(oAction, "NFSe revertida(s)");
       },
+
+    /* ====================================================== *
+    *  CSV - Upload de Arquivo                                *
+    * ======================================================= */
+
+    onOpenUploadDialog: function () {
+        if (!this._oUploadDialog) {
+            Fragment.load({
+                id: this.getView().getId(), // Adiciona o ID da view como prefixo
+                name: "lojacap.view.fragments.UploadFreteDialog", // Use o caminho correto do seu fragmento
+                controller: this
+            }).then(oDialog => {
+                this._oUploadDialog = oDialog;
+                this.getView().addDependent(this._oUploadDialog);
+                this._oUploadDialog.open();
+            });
+        } else {
+            this._oUploadDialog.open();
+        }
+    },
+    
+    // Fecha o Dialog
+    onUploadDialogClose: function () {
+        this._resetFileUploader();
+        if (this._oUploadDialog) {
+            this._oUploadDialog.close();
+        }
+    },
+    
+    // Evento disparado ao selecionar um arquivo
+    onFileChange: function (oEvent) {
+        // Guarda a referência do arquivo e habilita o botão de upload
+        this._file = oEvent.getParameter("files") && oEvent.getParameter("files")[0];
+        this.byId("btnConfirmUpload").setEnabled(!!this._file);
+    },
+    
+    // Disparado ao clicar no botão "Processar" do Dialog
+    onPressUploadFrete: function () {
+        if (!this._file) {
+            MessageBox.error("Por favor, selecione um arquivo CSV.");
+            return;
+        }
+    
+        // Usa a API FileReader para ler o conteúdo do arquivo no navegador
+        const oReader = new FileReader();
+    
+        // Callback para quando a leitura do arquivo for concluída
+        oReader.onload = (oEvent) => {
+            var sFileContent = oEvent.target.result;
+            console.log("[FRONTEND-LOG] Arquivo lido. O conteúdo em Base64 começa com:", sFileContent.substring(0, 80));
+            this._callUploadAction(sFileContent);
+        };
+    
+        oReader.onerror = (oError) => {
+            MessageBox.error("Erro ao ler o arquivo selecionado.");
+            console.error("FileReader Error:", oError);
+        };
+    
+        // Inicia a leitura do arquivo
+        oReader.readAsDataURL(this._file);
+    },
+
+    /* ====================================================== *
+    *  Inserção Frete Manual                                  *
+    * ======================================================= */
+
+    onAbrirDialogoCriacao: function () {
+        const oView = this.getView();
+        // Modelo JSON com uma estrutura vazia para o formulário
+        const oNovoRegistroModel = new JSONModel({
+            status: "01", // Status inicial padrão
+            issRetido: "2",
+            estornado: false,
+            logErroFlag: false
+            // Outros campos iniciarão como undefined ou vazios
+        });
+    
+        if (!this._oCriarFreteDialog) {
+            Fragment.load({
+                id: oView.getId(),
+                name: "lojacap.view.fragments.CriarFreteDialog",
+                controller: this
+            }).then(oDialog => {
+                this._oCriarFreteDialog = oDialog;
+                oView.addDependent(this._oCriarFreteDialog);
+                oDialog.setModel(oNovoRegistroModel, "novoRegistro");
+                oDialog.open();
+            });
+        } else {
+            // Limpa o modelo com a estrutura padrão e abre o dialog
+            this._oCriarFreteDialog.getModel("novoRegistro").setData(oNovoRegistroModel.getData());
+            this._oCriarFreteDialog.open();
+        }
+    },
+    onCancelarDialogoCriacao: function() {
+        this._oCriarFreteDialog.close();
+    },
+    onSalvarNovoRegistro: function() {
+        const oDialog = this.byId("criarFreteDialog");
+        const oNovoRegistroModel = oDialog.getModel("novoRegistro");
+        const oNovoRegistroData = oNovoRegistroModel.getData();
+    
+        // 1. Validação no Frontend (UX Imediata)
+        if (!oNovoRegistroData.idAlocacaoSAP || !oNovoRegistroData.orderIdPL) {
+            MessageBox.error("Por favor, preencha os campos de identificação obrigatórios.");
+            return;
+        }
+        const oModel = this.getView().getModel();
+        // O binding para a coleção correta
+        const oListBinding = oModel.bindList("/NotaFiscalServicoMonitor");
+    
+        oDialog.setBusy(true);
+    
+        // 2. Chamada para o CREATE padrão do OData
+        oListBinding.create(oNovoRegistroData)
+            .created()
+            .then(() => {
+                MessageToast.show("Novo registro de frete criado com sucesso!");
+                this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
+            })
+            .catch((oError) => {
+                MessageBox.error("Erro ao criar registro: " + oError.message);
+            })
+            .finally(() => {
+                oDialog.setBusy(false);
+                oDialog.close();
+            });
+        },
   
       /* ======================================================= *
        *  SORT                                                   *
        * ======================================================= */
       onPressAscending()  { this._sortByStatus(false); },
       onPressDescending() { this._sortByStatus(true ); },
+
+      /* ======================================================= *
+       *  Botão de Soma                                          *
+       * ======================================================= */
+
+      onCalcularTotal: function(oEvent) {
+        const oMenuItem = oEvent.getParameter("item");
+        const sActionKey = oMenuItem.data("coluna");
+
+        const oTable = this.byId(TBL_NOTAS);
+        // MUDANÇA CRÍTICA: Pegamos os itens renderizados, não os contextos do binding.
+        const aItems = oTable.getItems(); 
+        const oTotalModel = this.getView().getModel("totalModel");
+
+        // Limpa a visibilidade de todos os totais antes de calcular
+        oTotalModel.setProperty("/bruto/visible", false);
+        oTotalModel.setProperty("/liquido/visible", false);
+        oTotalModel.setProperty("/frete/visible", false);
+
+        if (sActionKey === "todos") {
+            // Passamos a lista de itens para a função auxiliar
+            const sTotalBruto = this._calculateColumnTotal(aItems, "valorBrutoNfse");
+            const sTotalLiquido = this._calculateColumnTotal(aItems, "valorLiquidoFreteNfse");
+            const sTotalFrete = this._calculateColumnTotal(aItems, "valorEfetivoFrete");
+
+            oTotalModel.setProperty("/bruto/value", sTotalBruto);
+            oTotalModel.setProperty("/liquido/value", sTotalLiquido);
+            oTotalModel.setProperty("/frete/value", sTotalFrete);
+
+            oTotalModel.setProperty("/bruto/visible", true);
+            oTotalModel.setProperty("/liquido/visible", true);
+            oTotalModel.setProperty("/frete/visible", true);
+
+            MessageToast.show("Todos os totais foram calculados.");
+
+        } else {
+            const sTotalFormatado = this._calculateColumnTotal(aItems, sActionKey);
+            
+            if (sActionKey === 'valorBrutoNfse') {
+                oTotalModel.setProperty("/bruto/value", sTotalFormatado);
+                oTotalModel.setProperty("/bruto/visible", true);
+            } else if (sActionKey === 'valorLiquidoFreteNfse') {
+                oTotalModel.setProperty("/liquido/value", sTotalFormatado);
+                oTotalModel.setProperty("/liquido/visible", true);
+            } else if (sActionKey === 'valorEfetivoFrete') {
+                oTotalModel.setProperty("/frete/value", sTotalFormatado);
+                oTotalModel.setProperty("/frete/visible", true);
+            }
+
+            MessageToast.show(`Total da coluna '${oMenuItem.getText()}' calculado: ${sTotalFormatado}`);
+        }
+    },
+
+      /* ======================================================= *
+       *  Imprimir                                               *
+       * ======================================================= */
+
+      onPressPrint: function ()  {
+        const oController = this; 
+        const oTable = oController.byId("tableNotaFiscalServicoMonitor");
+        sap.ui.require(["lojacap/util/PrintUtil"], function (PrintUtil) {
+            MessageToast.show("Módulo de impressão carregado sob demanda!");
+            PrintUtil.printTable(oTable, oController._coresLinha);
+        });
+    },
   
       /* ======================================================= *
        *  LOG – diálogo e filtro “NF com erro”                   *
@@ -387,67 +582,6 @@ sap.ui.define([
             .finally(() => oTable.setBusy(false));
         }
       },
-    onCalcularTotal: function(oEvent) {
-        const oMenuItem = oEvent.getParameter("item");
-        const sActionKey = oMenuItem.data("coluna");
-
-        const oTable = this.byId(TBL_NOTAS);
-        // MUDANÇA CRÍTICA: Pegamos os itens renderizados, não os contextos do binding.
-        const aItems = oTable.getItems(); 
-        const oTotalModel = this.getView().getModel("totalModel");
-
-        // Limpa a visibilidade de todos os totais antes de calcular
-        oTotalModel.setProperty("/bruto/visible", false);
-        oTotalModel.setProperty("/liquido/visible", false);
-        oTotalModel.setProperty("/frete/visible", false);
-
-          if (sActionKey === "limpartodos") {
-            oTotalModel.setProperty("/bruto", { value: "", visible: false });
-            oTotalModel.setProperty("/liquido", { value: "", visible: false });
-            oTotalModel.setProperty("/frete", { value: "", visible: false });
-            oTotalModel.setProperty("/mostrarTotais", false); // Oculta o footer inteiro
-        
-            MessageToast.show("Totais limpos.");
-            return; 
-        }
-        if (sActionKey === "todos") {
-            // Passamos a lista de itens para a função auxiliar
-            const sTotalBruto = this._calculateColumnTotal(aItems, "valorBrutoNfse");
-            const sTotalLiquido = this._calculateColumnTotal(aItems, "valorLiquidoFreteNfse");
-            const sTotalFrete = this._calculateColumnTotal(aItems, "valorEfetivoFrete");
-
-            oTotalModel.setProperty("/bruto/value", sTotalBruto);
-            oTotalModel.setProperty("/liquido/value", sTotalLiquido);
-            oTotalModel.setProperty("/frete/value", sTotalFrete);
-
-            oTotalModel.setProperty("/bruto/visible", true);
-            oTotalModel.setProperty("/liquido/visible", true);
-            oTotalModel.setProperty("/frete/visible", true);
-
-            MessageToast.show("Todos os totais foram calculados.");
-
-        } else {
-            const sTotalFormatado = this._calculateColumnTotal(aItems, sActionKey);
-            
-            if (sActionKey === 'valorBrutoNfse') {
-                oTotalModel.setProperty("/bruto/value", sTotalFormatado);
-                oTotalModel.setProperty("/bruto/visible", true);
-                oTotalModel.setProperty("/mostrarTotais", true);
-            } else if (sActionKey === 'valorLiquidoFreteNfse') {
-                oTotalModel.setProperty("/liquido/value", sTotalFormatado);
-                oTotalModel.setProperty("/liquido/visible", true);
-                oTotalModel.setProperty("/mostrarTotais", true);
-
-            } else if (sActionKey === 'valorEfetivoFrete') {
-                oTotalModel.setProperty("/frete/value", sTotalFormatado);
-                oTotalModel.setProperty("/frete/visible", true);
-                oTotalModel.setProperty("/mostrarTotais", true);
-
-            }
-
-            MessageToast.show(`Total da coluna '${oMenuItem.getText()}' calculado: ${sTotalFormatado}`);
-        }
-    },
 
     /* ======================================================= *
      *  HELPERS privados                                       *
@@ -476,7 +610,46 @@ sap.ui.define([
             style: 'currency',
             currency: 'BRL'
         });
+    },
+    
+    // Dispara para fazer o upload do arquivo de frete.
+    _callUploadAction: function(sFileContent) {
+        const oModel = this.getView().getModel();
+        const oActionBinding = oModel.bindContext("/uploadArquivoFrete(...)");
+    
+        oActionBinding.setParameter("data", sFileContent);
+        this.getView().setBusy(true);
+    
+        console.log("[FRONTEND-LOG] Preparando para executar a action 'uploadArquivoFrete' no backend.");
+    
+        oActionBinding.execute()
+            .then(() => {
+                console.log("[FRONTEND-LOG] Ação 'uploadArquivoFrete' executada com sucesso no backend.");
+                const bSuccess = oActionBinding.getBoundContext().getObject();
+                if (bSuccess) {
+                    MessageBox.success("Arquivo processado e registros importados com sucesso!");
+                    this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
+                    this.onUploadDialogClose();
+                }
+            })
+            .catch((oError) => {
+                console.error("[FRONTEND-LOG] Erro retornado pelo backend ao executar a ação:", oError);
+                MessageBox.error(oError.message); 
+            })
+            .finally(() => {
+                this.getView().setBusy(false);
+            });
+    },
+    
+    // Reseta o FileUploader para um novo upload
+    _resetFileUploader: function() {
+        const oFileUploader = this.byId("fileUploader");
+        if (oFileUploader) {
+            oFileUploader.clear();
+            this.byId("btnConfirmUpload").setEnabled(false);
+            this._file = null;
+        }
     }
-    });
-  });
+    });  
+});
   

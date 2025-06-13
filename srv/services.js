@@ -822,99 +822,77 @@ async function gravarLog(
 );
 }
 this.on('voltarStatusNFs', async (req) => {
-  const { notasFiscaisIDs } = req.data || {};
-  if (!notasFiscaisIDs?.length) return req.error(400, 'Selecione ao menos uma NFSe para reverter.');
+  const { grpFilho, grpStatus } = req.data;
 
+  if (!grpFilho || grpStatus === undefined) {
+      return req.error(400, 'Critérios inválidos. Chave do documento filho e status são obrigatórios.');
+  }
+  
   const tx = cds.transaction(req);
-  const notas = await tx.read(NotaFiscalServicoMonitor)
-      .where({ idAlocacaoSAP: { in: notasFiscaisIDs } });
+  const notasParaReverter = await tx.read(NotaFiscalServicoMonitor).where({
+      chaveDocumentoFilho: grpFilho,
+      status: grpStatus 
+  });
 
-  if (notas.length !== notasFiscaisIDs.length)
-      return req.error(400, 'Alguma NFSe selecionada não foi encontrada.');
-
-  const filhos = new Set(notas.map(n => n.chaveDocumentoFilho));
-  const status = new Set(notas.map(n => n.status));
-
-  if (filhos.size > 1) return req.error(400, 'Selecione registros com o mesmo documento filho.');
-  if (status.size > 1) return req.error(400, 'Selecione registros com o mesmo status.');
-
-  const statusAtual = [...status][0];
-  let resultados;
-
-  switch (statusAtual) {
-      case '50': resultados = await trans50para35_reverso(tx, notasFiscaisIDs); break;
-      case '35': resultados = await trans35para30_reverso(tx, notasFiscaisIDs); break;
-      case '30': resultados = await trans30para15_reverso(tx, notasFiscaisIDs); break;
-      case '15': resultados = await trans15para05_reverso(tx, notasFiscaisIDs); break;
-      case '05': resultados = await trans05para01_reverso(tx, notasFiscaisIDs); break;
-      default: return req.error(400, `Reversão não permitida para o status ${statusAtual}.`);
+  if (notasParaReverter.length === 0) {
+      return [];
   }
 
-  return resultados;
+  switch (grpStatus) {
+      case '50': return trans50para35_reverso(tx, notasParaReverter);
+      case '35': return trans35para30_reverso(tx, notasParaReverter);
+      case '30': return trans30para15_reverso(tx, notasParaReverter);
+      case '15': return trans15para05_reverso(tx, notasParaReverter);
+      case '05': return trans05para01_reverso(tx, notasParaReverter);
+      default:
+          return req.error(400, `Reversão não permitida para o status ${grpStatus}.`);
+  }
 });
+
+// =======================================================
+// ==                  FUNÇÕES HELPER                   ==
+// =======================================================
+
 /** Reverte 50 → 35 */
-async function trans50para35_reverso(tx, ids) {
-  console.log(`[REVERT_LOG] 50->35: Revertendo status de finalizado.`);
-  // Baseado na especificação, a etapa 50 é o "Retorno PL". A reversão
-  // apenas retorna o status, pois não há dados novos no modelo CAP para limpar.
-  await tx.update(NotaFiscalServicoMonitor)
-      .set({ status: '35' })
-      .where({ idAlocacaoSAP: { in: ids } });
+async function trans50para35_reverso(tx, notas) {
+  const ids = notas.map(n => n.idAlocacaoSAP);
+  const criterio = { chaveDocumentoFilho: notas[0].chaveDocumentoFilho, status: notas[0].status };
+  await tx.update(NotaFiscalServicoMonitor).set({ status: '35' }).where(criterio);
   return sucesso(ids, '35', {}, "Status revertido para 'Fatura Criada'.");
 }
 
 /** Reverte 35 → 30 */
-async function trans35para30_reverso(tx, ids) {
-  console.log(`[REVERT_LOG] 35->30: Revertendo Fatura (MIRO) e NF.`);
-  // Esta etapa apaga a referência ao documento da MIRO/Fatura.
-  // No cenário real, seria necessário estornar os documentos no SAP.
-  await tx.update(NotaFiscalServicoMonitor)
-      .set({
-          status: '30',
-          numeroDocumentoMIRO: null // Limpa o número da MIRO gerado na etapa 30->35
-      })
-      .where({ idAlocacaoSAP: { in: ids } });
+async function trans35para30_reverso(tx, notas) {
+  const ids = notas.map(n => n.idAlocacaoSAP);
+  const criterio = { chaveDocumentoFilho: notas[0].chaveDocumentoFilho, status: notas[0].status };
+  await tx.update(NotaFiscalServicoMonitor).set({ status: '30', numeroDocumentoMIRO: null }).where(criterio);
   return sucesso(ids, '30', {}, "Status revertido. Dados da Fatura/MIRO removidos.");
 }
 
 /** Reverte 30 → 15 */
-async function trans30para15_reverso(tx, ids) {
-  console.log(`[REVERT_LOG] 30->15: Revertendo Pedido de Compra.`);
-  // Esta etapa apaga os valores e referências do Pedido de Compra.
-  // No cenário real, seria necessário marcar o Pedido de Compra para eliminação no SAP.
+async function trans30para15_reverso(tx, notas) {
+  const ids = notas.map(n => n.idAlocacaoSAP);
+  const criterio = { chaveDocumentoFilho: notas[0].chaveDocumentoFilho, status: notas[0].status };
   await tx.update(NotaFiscalServicoMonitor)
-      .set({
-          status: '15',
-          valorBrutoNfse: 0.00,        // Limpa valores gerados na simulação da BAPI
-          valorEfetivoFrete: 0.00,
-          valorLiquidoFreteNfse: 0.00
-          // EBELN e EBELP também seriam limpos aqui
-      })
-      .where({ idAlocacaoSAP: { in: ids } });
+      .set({ status: '15', valorBrutoNfse: 0.00, valorEfetivoFrete: 0.00, valorLiquidoFreteNfse: 0.00 })
+      .where(criterio);
   return sucesso(ids, '15', {}, "Status revertido. Dados do Pedido de Compra removidos.");
 }
 
 /** Reverte 15 → 05 */
-async function trans15para05_reverso(tx, ids) {
-  console.log(`[REVERT_LOG] 15->05: Revertendo cálculo de absorção.`);
-  // A etapa 05->15 é apenas uma mudança de status, então a reversão também é.
-  await tx.update(NotaFiscalServicoMonitor)
-      .set({ status: '05' })
-      .where({ idAlocacaoSAP: { in: ids } });
+async function trans15para05_reverso(tx, notas) {
+  const ids = notas.map(n => n.idAlocacaoSAP);
+  const criterio = { chaveDocumentoFilho: notas[0].chaveDocumentoFilho, status: notas[0].status };
+  await tx.update(NotaFiscalServicoMonitor).set({ status: '05' }).where(criterio);
   return sucesso(ids, '05', {}, "Status revertido para 'NF Atribuída'.");
 }
 
 /** Reverte 05 → 01 */
-async function trans05para01_reverso(tx, ids) {
-  console.log(`[REVERT_LOG] 05->01: Revertendo atribuição da NF.`);
-  // Esta etapa apaga o número da NF de serviço que foi gerado.
-  await tx.update(NotaFiscalServicoMonitor)
-      .set({
-          status: '01',
-          numeroNfseServico: null // Limpa o número da NF gerado na etapa 01->05
-      })
-      .where({ idAlocacaoSAP: { in: ids } });
-  return sucesso(ids, '01', {}, "Status revertido para 'Não Atribuída'. Dados da NF de Serviço removidos.");
+async function trans05para01_reverso(tx, notas) {
+  const ids = notas.map(n => n.idAlocacaoSAP);
+  const criterio = { chaveDocumentoFilho: notas[0].chaveDocumentoFilho, status: notas[0].status };
+  await tx.update(NotaFiscalServicoMonitor).set({ status: '01', numeroNfseServico: null }).where(criterio);
+  return sucesso(ids, '01', {}, "Status revertido para 'Não Atribuída'.");
 }
 
 srv.on('uploadArquivoFrete', async (req) => {

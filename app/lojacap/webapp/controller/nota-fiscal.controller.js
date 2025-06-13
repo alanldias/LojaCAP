@@ -181,13 +181,17 @@ sap.ui.define([
   
       /* ---------- voltar etapa (lote) ---------- */
       async onVoltarEtapa() {
-        const { aIds }   = this._collectIdsDoGrupo();
-        if (!aIds.length) return;
-  
+        const { grpFilho, grpStatus } = this._collectIdsDoGrupo();
+        if (!grpFilho) {
+            return;
+        }
+
         const oAction = this.getView().getModel()
-                          .bindContext("/voltarStatusNFs(...)")
-                          .setParameter("notasFiscaisIDs", aIds);
-  
+            .bindContext("/voltarStatusNFs(...)");
+
+        oAction.setParameter("grpFilho", grpFilho);
+        oAction.setParameter("grpStatus", grpStatus); 
+
         await this._executeLote(oAction, "NFSe revertida(s)");
       },
 

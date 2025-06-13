@@ -61,10 +61,11 @@ service ShopService {
         quantidade    : Integer,
         precoUnitario : Decimal // Passar o preço unitário do momento da compra
     ) returns UUID;
-    action voltarStatusNFs(notasFiscaisIDs: array of String) returns array of {
+    action voltarStatusNFs(grpFilho: String, grpStatus: Integer) returns array of {
         idAlocacaoSAP : String;
         success       : Boolean;
         message       : String;
         novoStatus    : String;
     };
+
 }

@@ -29,9 +29,9 @@ service ShopService {
 
     entity NotaFiscalServicoLog     as projection on shop.NotaFiscalServicoLog;
 
-
+    action uploadArquivoFrete(data: LargeBinary) returns Boolean;
     
-   action avancarStatusNFs(
+    action avancarStatusNFs(
         notasFiscaisIDs : array of NotaFiscalServicoMonitor:idAlocacaoSAP // Usando o tipo da chave primária
     ) returns array of {
         idAlocacaoSAP     : String;

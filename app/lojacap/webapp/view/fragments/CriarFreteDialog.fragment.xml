@@ -1,0 +1,51 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:core="sap.ui.core">
+    <Dialog
+        id="criarFreteDialog"
+        title="Adicionar Lançamento de Frete Manual"
+        contentWidth="800px"
+        contentHeight="600px"
+        resizable="true"
+        draggable="true">
+        <content>
+            <IconTabBar id="iconTabBarFrete" class="sapUiResponsiveContentPadding" expandable="false">
+                <items>
+                    <IconTabFilter text="Identificação" icon="sap-icon://tag" key="identificacao">
+                        <f:SimpleForm editable="true" layout="ResponsiveGridLayout" class="sapUiContentPadding">
+                            <Label text="ID Alocação SAP" required="true"/>
+                            <Input value="{novoRegistro>/idAlocacaoSAP}"/>
+                            <Label text="Order ID PL" required="true"/>
+                            <Input value="{novoRegistro>/orderIdPL}"/>
+                            <Label text="Chave Documento Mãe" required="true"/>
+                            <Input value="{novoRegistro>/chaveDocumentoMae}"/>
+                            <Label text="Chave Documento Filho" required="true"/>
+                            <Input value="{novoRegistro>/chaveDocumentoFilho}"/>
+                        </f:SimpleForm>
+                    </IconTabFilter>
+                    <IconTabFilter text="Detalhes NFS-e" icon="sap-icon://document-text" key="nfse">
+                        <f:SimpleForm editable="true" layout="ResponsiveGridLayout" class="sapUiContentPadding">
+                            <Label text="Nº NFS-e Serviço"/>
+                            <Input value="{novoRegistro>/numeroNfseServico}"/>
+                            <Label text="Série NFS-e Serviço"/>
+                            <Input value="{novoRegistro>/serieNfseServico}"/>
+                            <Label text="Data Emissão NFS-e"/>
+                            <DatePicker value="{novoRegistro>/dataEmissaoNfseServico}" valueFormat="yyyy-MM-dd" displayFormat="short"/>
+                            <Label text="Chave Acesso NFS-e"/>
+                            <Input value="{novoRegistro>/chaveAcessoNfseServico}"/>
+                            <Label text="Cód. Verificação NFS-e"/>
+                            <Input value="{novoRegistro>/codigoVerificacaoNfse}"/>
+                        </f:SimpleForm>
+                    </IconTabFilter>
+                    </items>
+            </IconTabBar>
+        </content>
+        <beginButton>
+            <Button text="Criar" type="Emphasized" press="onSalvarNovoRegistro"/>
+        </beginButton>
+        <endButton>
+            <Button text="Cancelar" press="onCancelarDialogoCriacao"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

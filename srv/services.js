@@ -1,6 +1,11 @@
 const cds = require('@sap/cds');
 const validator = require('validator')
 
+const csv = require('csv-parser');
+const { Readable } = require('stream');
+
+const validation = require('./lib/validation');
+
 module.exports = cds.service.impl(async function (srv) {
   const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos, NotaFiscalServicoMonitor, NotaFiscalServicoLog } = srv.entities;
 
@@ -328,6 +333,15 @@ module.exports = cds.service.impl(async function (srv) {
     return statusOrder[currentIndex - 1];
   }
 
+
+
+
+
+
+
+
+
+
   srv.on('avancarStatus', 'Pedidos', async (req) => {
     const tx = cds.transaction(req);
 
@@ -435,6 +449,18 @@ srv.after('READ', 'Pedidos', each => {
     } else {
         each.statusCriticality = 0; // Default se status for nulo
     }
+});
+
+srv.before('CREATE', 'NotaFiscalServicoMonitor', (req) => {
+  // Chamamos nossa função unificada
+  const validacao = validation.validarNotaFiscal(req.data);
+
+  // Se ela retornar que não é válido...
+  if (!validacao.isValid) {
+      // ...nós disparamos o erro do CAP com as mensagens retornadas.
+      const mensagemDeErro = validacao.errors.join('\n');
+      req.error(400, mensagemDeErro);
+  }
 });
 
 this.on('avancarStatusNFs', async req => {
@@ -897,5 +923,115 @@ async function trans05para01_reverso(tx, ids) {
       .where({ idAlocacaoSAP: { in: ids } });
   return sucesso(ids, '01', {}, "Status revertido para 'Não Atribuída'. Dados da NF de Serviço removidos.");
 }
+
+srv.on('uploadArquivoFrete', async (req) => {
+  const { data } = req.data;
+
+  if (!data) {
+      req.error(400, 'Nenhum arquivo recebido.');
+      return false;
+  }
+
+  const buffer = Buffer.from(data.split(';base64,')[1], 'base64');
+  const registrosDoCsv = [];
+
+  return new Promise((resolve, reject) => {
+      Readable.from(buffer)
+          .pipe(csv({
+              separator: ',',
+              mapHeaders: ({ header }) => header.trim()
+          }))
+          .on('data', (row) => {
+              registrosDoCsv.push(row);
+          })
+          .on('end', async () => {
+              console.log(`[UPLOAD-LOG] Fim da leitura do CSV. Encontrados ${registrosDoCsv.length} registros.`);
+              if (registrosDoCsv.length === 0) {
+                  req.warn('O arquivo CSV está vazio ou em formato inválido.');
+                  return resolve(false);
+              }
+
+              const registrosValidos = [];
+              const todosOsErros = [];
+
+              registrosDoCsv.forEach((registro, index) => {
+                  // CHAMANDO A MESMA FUNÇÃO UNIFICADA DE VALIDAÇÃO
+                  const validacao = validation.validarNotaFiscal(registro, index);
+
+                  if (validacao.isValid) {
+                      // Se válido, mapeia o registro para o formato da entidade
+                      registrosValidos.push({
+                          ID: registro.ID,
+                          idAlocacaoSAP: registro.idAlocacaoSAP,
+                          orderIdPL: registro.orderIdPL,
+                          chaveDocumentoMae: registro.chaveDocumentoMae,
+                          chaveDocumentoFilho: registro.chaveDocumentoFilho,
+                          status: registro.status,
+                          numeroNfseServico: registro.numeroNfseServico,
+                          serieNfseServico: registro.serieNfseServico,
+                          dataEmissaoNfseServico: registro.dataEmissaoNfseServico || null,
+                          chaveAcessoNfseServico: registro.chaveAcessoNfseServico,
+                          codigoVerificacaoNfse: registro.codigoVerificacaoNfse,
+                          cnpjTomador: registro.cnpjTomador,
+                          codigoFornecedor: registro.codigoFornecedor,
+                          nomeFornecedor: registro.nomeFornecedor,
+                          numeroPedidoCompra: registro.numeroPedidoCompra,
+                          itemPedidoCompra: registro.itemPedidoCompra,
+                          numeroDocumentoMIRO: registro.numeroDocumentoMIRO,
+                          anoFiscalMIRO: registro.anoFiscalMIRO,
+                          documentoContabilMiroSAP: registro.documentoContabilMiroSAP,
+                          numeroNotaFiscalSAP: registro.numeroNotaFiscalSAP,
+                          serieNotaFiscalSAP: registro.serieNotaFiscalSAP,
+                          numeroControleDocumentoSAP: registro.numeroControleDocumentoSAP,
+                          documentoVendasMae: registro.documentoVendasMae,
+                          documentoFaturamentoMae: registro.documentoFaturamentoMae,
+                          localPrestacaoServico: registro.localPrestacaoServico,
+                          valorEfetivoFrete: parseFloat(registro.valorEfetivoFrete) || 0.0,
+                          valorLiquidoFreteNfse: parseFloat(registro.valorLiquidoFreteNfse) || 0.0,
+                          valorBrutoNfse: parseFloat(registro.valorBrutoNfse) || 0.0,
+                          issRetido: registro.issRetido,
+                          estornado: registro.estornado === 'true',
+                          enviadoParaPL: registro.enviadoParaPL,
+                          logErroFlag: registro.logErroFlag === 'true',
+                          mensagemErro: registro.mensagemErro,
+                          tipoMensagemErro: registro.tipoMensagemErro,
+                          classeMensagemErro: registro.classeMensagemErro,
+                          numeroMensagemErro: registro.numeroMensagemErro
+                      });
+                  } else {
+                      todosOsErros.push(...validacao.errors);
+                  }
+              });
+
+              if (todosOsErros.length > 0) {
+                  const mensagemDeErro = `O arquivo foi rejeitado por conter ${todosOsErros.length} erro(s):\n\n${todosOsErros.join('\n')}`;
+                  console.error("[UPLOAD-VALIDATION] Erros encontrados:\n", mensagemDeErro);
+                  req.error(400, mensagemDeErro);
+                  return resolve(false);
+              }
+
+              try {
+                  if (registrosValidos.length > 0) {
+                      await cds.tx(req).run(UPSERT.into(NotaFiscalServicoMonitor).entries(registrosValidos));
+                      req.notify(`Upload bem-sucedido! ${registrosValidos.length} registros importados/atualizados.`);
+                      console.log(`[UPLOAD-LOG] SUCESSO! Inseridos/Atualizados ${registrosValidos.length} registros.`);
+                      resolve(true);
+                  } else {
+                      req.warn("Nenhum registro válido encontrado no arquivo para processar.");
+                      resolve(false);
+                  }
+              } catch (dbError) {
+                  console.error("[UPLOAD-DB] Erro ao inserir dados no banco:", dbError);
+                  req.error(500, 'Ocorreu um erro interno ao salvar os dados no banco de dados.');
+                  reject(dbError);
+              }
+          })
+          .on('error', (error) => {
+              console.error("[UPLOAD] Erro crítico ao processar o CSV:", error);
+              req.error(500, 'Ocorreu um erro na leitura do arquivo CSV.');
+              reject(error);
+          });
+  });
+});
 
 });

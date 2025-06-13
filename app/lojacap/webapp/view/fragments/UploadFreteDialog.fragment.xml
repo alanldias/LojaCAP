@@ -11,15 +11,13 @@
 
         <content>
             <VBox id="vbox1" class="sapUiSmallMargin">
-                <Label id="label" text="Selecione o arquivo de frete para fazer o upload." class="sapUiSmallMarginBottom"/>
+                <Label id="label" text="Selecione o arquivo de frete no formato CSV para importar." class="sapUiSmallMarginBottom"/>
                 <u:FileUploader
                     id="fileUploader"
-                    name="myFileUpload"
-                    uploadUrl="/odata/v4/catalog/upload" 
+                    name="myFileUpload" 
                     tooltip="Selecione o arquivo para upload"
                     placeholder="Escolha um arquivo..."
-                    fileType="csv,xls,xlsx"
-                    uploadComplete="onUploadComplete"
+                    fileType="csv"
                     change="onFileChange"
                     width="100%"
                 />

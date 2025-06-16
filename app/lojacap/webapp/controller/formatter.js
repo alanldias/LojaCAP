@@ -53,6 +53,20 @@ sap.ui.define([
             // 4. Se a data é válida, formata e retorna.
             const oDateFormat = DateFormat.getDateInstance({ style: "short" });
             return oDateFormat.format(oDate);
-        }
+        },
+        iconTipo: function (sTipo) {
+            switch (sTipo) {
+              case 'E': return 'sap-icon://project-definition-triangle-2';
+              case 'S': return 'sap-icon://color-fill';
+              case 'R': return 'sap-icon://circle-task-2';
+              default : return 'sap-icon://question-mark';
+            }
+          },
+          colorTipo: function (sTipo) {
+            return (sTipo === 'E') ? 'Negative'
+                 : (sTipo === 'S') ? 'Positive'
+                 : (sTipo === 'R') ? 'Critical'
+                 : 'Neutral';
+          }          
     };
 });

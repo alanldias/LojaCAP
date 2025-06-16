@@ -20,6 +20,12 @@ sap.ui.define([
     const TBL_NOTAS = "tableNotaFiscalServicoMonitor";
     const PATH_LOGS = "/NotaFiscalServicoLog";
     const FILTER_ERRO = new Filter("tipoMensagemErro", FilterOperator.EQ, "E");
+    const FILTER_REJ  = new Filter("tipoMensagemErro", FilterOperator.EQ, "R");
+    const FILTER_NAO_S = new sap.ui.model.Filter({
+      filters: [ FILTER_ERRO, FILTER_REJ],
+      and    : false
+    });
+
    
       
     /* =========================================================== *
@@ -583,20 +589,29 @@ sap.ui.define([
         MessageBox.error(err.message || JSON.stringify(err));
       },
 
-      _refreshLogs() {
-        const oTable = sap.ui.getCore().byId("logTable");
-        if (!oTable) return;
+      _refreshLogs: function () {
+        const oTable   = sap.ui.getCore().byId("logTable");
+        if (!oTable) { console.log("[LOG] tabela não encontrada"); return; }
       
-        const oBind = oTable.getBinding("items");
-        if (oBind) {
-          /* ↙  aplica o sort antes de refrescar  */
-          oBind.sort(this._logSorter ||= new sap.ui.model.Sorter("createdAt", /*descending=*/true));
+        const oBinding = oTable.getBinding("items");
+        if (!oBinding) { console.log("[LOG] binding inexistente"); return; }
       
-          oTable.setBusy(true);
-          Promise.resolve(oBind.refresh())           // OData V4 → nova query c/ $orderby
-            .finally(() => oTable.setBusy(false));
-        }
+        oTable.setBusy(true);
+      
+        /* aplica filtro (E ou R) */
+        oBinding.filter([ FILTER_NAO_S ]);     // isto já provoca round-trip em V4
+      
+        /* aplica sort (createdAt desc) */
+        this._logSorter ||= new sap.ui.model.Sorter("createdAt", true);
+        oBinding.sort(this._logSorter);
+      
+        /* refresh explícito — **sem** argumentos em V4  */
+        Promise.resolve(oBinding.refresh())
+          .then(() => console.log(`[LOG] Refresh OK – linhas: ${oBinding.getLength()}`))
+          .catch(err => console.error("[LOG] Erro durante refresh:", err))
+          .finally(() => oTable.setBusy(false));
       },
+      
 
     /* ======================================================= *
      *  HELPERS privados                                       *

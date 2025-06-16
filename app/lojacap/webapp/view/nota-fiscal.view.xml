@@ -289,10 +289,11 @@
                 highlight="{= ${status} === '50' ? 'Success' : (${status} === '55' || ${status} === '99' ? 'Error' : 'None') }">
                     <cells>
                         <HBox id="hboxLogIconsCellNfse" justifyContent="Start" renderType="Bare">
-                            <core:Icon id="iconLogStatusNfse"
-                                src="{= ${status} === '99' ? 'sap-icon://status-error' : (${status} === '55' ? 'sap-icon://alert' : 'sap-icon://status-inactive') }"
-                                size="0.8rem"
-                                color="{= ${status} === '99' ? 'red' : (${status} === '55' ? 'orange' : 'grey') }" />
+                            <core:Icon
+                            id = "umidai"
+                            src="{path:'tipoMensagemErro', formatter:'.formatter.iconTipo'}"
+                            color="{path:'tipoMensagemErro', formatter:'.formatter.colorTipo'}"
+                            size="0.8rem"/>
                         </HBox>
                         <Text id="txtCellIdAlocacaoSAP" text="{idAlocacaoSAP}" />
                         <Text id="txtCellOrderIdPL" text="{orderIdPL}" />

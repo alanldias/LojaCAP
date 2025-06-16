@@ -83,54 +83,61 @@ this.on('avancarStatusNFs', async req => {
   });
 
 
-this.on('rejeitarFrete', async req => {
-  const { grpFilho } = req.data || {};
-  if (!grpFilho) return req.error(400, 'grpFilho é obrigatório');
-
-  const tx = cds.transaction(req);
-
-  /* 1️⃣  SELECT – pegar TODOS os IDs do grupo --------------------- */
-  const linhas = await tx.run(
-    SELECT.from(NotaFiscalServicoMonitor)
-          .columns('idAlocacaoSAP')
-          .where({ chaveDocumentoFilho: grpFilho })
-  );
-  if (!linhas.length) return req.error(404, 'Nenhuma NF no grupo');
-
-  const ids = linhas.map(l => l.idAlocacaoSAP);
-
-  /* 2️⃣  UPDATE em bloco – põe status 55 em todo o grupo ---------- */
-  try {
-    await tx.update(NotaFiscalServicoMonitor)
-            .set({ status: '55' })
-            .where({ chaveDocumentoFilho: grpFilho });
-
-    /* grava LOG de sucesso (tipo = S) */
-    // se preicsar tirar isso de aparecer na tabela de log só mudar isso 
-    await tx.run(
-      INSERT.into(NotaFiscalServicoLog).entries(
-        ids.map(id => ({
-          idAlocacaoSAP      : id,
-          mensagemErro       : 'Frete rejeitado – status 55',
-          tipoMensagemErro   : 'S',
-          classeMensagemErro : 'REJ_FRETE',
-          numeroMensagemErro : '055',
-          origem             : 'rejeitarFrete'
-        }))
-      )
+  this.on('rejeitarFrete', async req => {
+    const { grpFilho } = req.data || {};
+    if (!grpFilho) return req.error(400, 'grpFilho é obrigatório');
+  
+    const tx = cds.transaction(req);
+  
+    /* 1️⃣  Pega todos os IDs do grupo ------------------------- */
+    const linhas = await tx.run(
+      SELECT.from(NotaFiscalServicoMonitor)
+            .columns('idAlocacaoSAP')
+            .where({ chaveDocumentoFilho: grpFilho })
     );
-
-    return sucesso(ids, '55');                         // helper padrão
-
-  } catch (e) {
-    /* qualquer erro → 1 log por NF com helper gravarLog */
-    for (const id of ids) {
-      await gravarLog(tx, id, e.message,
-                      'E', 'REJ_FRETE', '055', 'rejeitarFrete');
+    if (!linhas.length) return req.error(404, 'Nenhuma NF no grupo');
+  
+    const ids = linhas.map(l => l.idAlocacaoSAP);
+  
+    /* 2️⃣  Atualiza status para 55 + grava LOG "R" ------------ */
+    try {
+      await tx.update(NotaFiscalServicoMonitor)
+              .set({ status: '55' })
+              .where({ chaveDocumentoFilho: grpFilho });
+  
+      // um log "R" para cada NF  ➜ gravarLog já propaga campos na tabela
+      await Promise.all(
+        ids.map(id =>
+          gravarLog(
+            tx,
+            id,
+            'Frete rejeitado – status 55',
+            'R',                       // tipoMensagemErro = Rejeitado
+            'REJ_FRETE',               // classe
+            '055',                     // número
+            'rejeitarFrete'            // origem
+          )
+        )
+      );
+  
+      return sucesso(ids, '55');       // helper padrão
+  
+    } catch (e) {
+      // Se algo falhar, gera um log de erro por NF
+      await Promise.all(
+        ids.map(id =>
+          gravarLog(
+            tx,
+            id,
+            e.message,
+            'E', 'REJ_FRETE', '055', 'rejeitarFrete'
+          )
+        )
+      );
+      return falha(ids, '55', 'Falha ao rejeitar: ' + e.message);
     }
-    return falha(ids, 'erro', 'Falha ao rejeitar: ' + e.message);
-  }
-});
+  });
+  
 
 // =======================================================
 // ==                  FUNÇÕES HELPER                   ==

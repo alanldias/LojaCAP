@@ -2,7 +2,6 @@
 const cds = require('@sap/cds');
 const { sucesso, falha, gravarLog } = require('./log');
 
-const { SELECT } = cds;   // se precisar
 function gerarNumeroNF() {
   return Math.floor(1_000_000_000 + Math.random() * 900_000_000).toString();
 }
@@ -14,157 +13,197 @@ module.exports = function buildEtapas(srv) {
   /* --------------------------------------------------------- *
    *            Funções de AVANÇAR (01->05->15…)               *
    * --------------------------------------------------------- */
-  async function trans01para05(tx, ids) {
+  async function trans01para05 (tx, ids) {
     const numeroNF = gerarNumeroNF();
+  
     try {
       await tx.update(NotaFiscalServicoMonitor)
               .set({ status: '05', numeroNfseServico: numeroNF })
               .where({ idAlocacaoSAP: { in: ids } });
+  
+      /* loga sucesso */
+      await Promise.all(
+        ids.map(id =>
+          gravarLog(tx, id,
+            `Status 01→05 gerado – NF ${numeroNF}.`,
+            'S', 'TRANS_01_05', '000')
+        )
+      );
+  
       return sucesso(ids, '05', { numeroNfseServico: numeroNF });
+  
     } catch (e) {
       for (const id of ids)
         await gravarLog(tx, id, e.message, 'E', 'TRANS_01_05', '002');
       return falha(ids, '01', 'Erro 01→05: ' + e.message);
     }
   }
-
- /** 05 → 15 (apenas status) */
-async function trans05para15(tx, ids) {
+  
+  /* --------------------------------------------------- *
+   * 05 → 15                                              *
+   * --------------------------------------------------- */
+  async function trans05para15 (tx, ids) {
     try {
       await tx.update(NotaFiscalServicoMonitor)
               .set({ status: '15' })
               .where({ idAlocacaoSAP: { in: ids } });
+  
+      await Promise.all(
+        ids.map(id =>
+          gravarLog(tx, id, 'Status 05→15 confirmado.', 'S', 'TRANS_05_15', '000')
+        )
+      );
+  
       return sucesso(ids, '15');
+  
     } catch (e) {
       for (const id of ids)
         await gravarLog(tx, id, e.message, 'E', 'TRANS_05_15', '003');
       return falha(ids, '05', 'Erro 05→15: ' + e.message);
     }
   }
-
- /** 15 → 30  (all-or-nothing, lista **todos** os erros) */
-async function trans15para30(tx, notas) {
-  const resultados     = [];
-  const valoresPorNota = new Map();
-  const erros          = new Map();
-
-  for (const nota of notas) {
-    const id   = nota.idAlocacaoSAP;
-    const resp = await BAPI_PO_CREATE1(nota);
-
-    if (!resp.ok) {
-      erros.set(id, resp.msg);
-      await gravarLog(tx, id, resp.msg, 'E', 'BAPI_PO_CREATE1', '100');
-      continue;                               // continua validando
+  
+  /* --------------------------------------------------- *
+   * 15 → 30  (all-or-nothing)                            *
+   * --------------------------------------------------- */
+  async function trans15para30 (tx, notas) {
+    const resultados     = [];
+    const valoresPorNota = new Map();
+    const erros          = new Map();
+  
+    /* 1. Validação BAPI ------------------------------------ */
+    for (const nota of notas) {
+      const id   = nota.idAlocacaoSAP;
+      const resp = await BAPI_PO_CREATE1(nota);
+  
+      if (!resp.ok) {
+        erros.set(id, resp.msg);
+        await gravarLog(tx, id, resp.msg, 'E', 'BAPI_PO_CREATE1', '100');
+        continue;
+      }
+      valoresPorNota.set(id, resp.valores);
     }
-    valoresPorNota.set(id, resp.valores);
-  }
-
-  if (erros.size) {
-    const idsComErro = [...erros.keys()].join(', ');
-    notas.forEach(nota => {
-      const id  = nota.idAlocacaoSAP;
+  
+    /* 2. Houve erro → devolve só falhas --------------------- */
+    if (erros.size) {
+      notas.forEach(nota => {
+        const id = nota.idAlocacaoSAP;
+        resultados.push({
+          idAlocacaoSAP : id,
+          success       : false,
+          message       : erros.get(id) ||
+                          'Processo abortado — erros em outras NFs',
+          novoStatus    : '15'
+        });
+      });
+      return resultados;
+    }
+  
+    /* 3. Nenhum erro → atualiza, loga sucessos -------------- */
+    for (const nota of notas) {
+      const id      = nota.idAlocacaoSAP;
+      const valores = valoresPorNota.get(id);
+  
+      await tx.update(NotaFiscalServicoMonitor)
+              .set({ status: '30', ...valores })
+              .where({ idAlocacaoSAP: id });
+  
+      await gravarLog(
+        tx, id,
+        'Status 15→30 e valores gravados.',
+        'S', 'TRANS_15_30', '000'
+      );
+  
       resultados.push({
         idAlocacaoSAP : id,
-        success       : false,
-        message       : erros.get(id) ||
-                        `Processo abortado — erros nas NFs em outras NFS`,
-        novoStatus    : '15'
+        success       : true,
+        message       : 'Status 15→30 e valores gravados.',
+        novoStatus    : '30'
       });
-    });
-    return resultados;
-  }
-
-  /* 3. Nenhum erro → grava todas e devolve sucesso - */
-  for (const nota of notas) {
-    const id      = nota.idAlocacaoSAP;
-    const valores = valoresPorNota.get(id);
-
-    await tx.update(NotaFiscalServicoMonitor)
-            .set({ status: '30', ...valores })
-            .where({ idAlocacaoSAP: id });
-
-    resultados.push({
-      idAlocacaoSAP : id,
-      success       : true,
-      message       : 'Status 15→30 e valores gravados.',
-      novoStatus    : '30'
-    });
-  }
-  return resultados;
-}
-
-async function trans30para35(tx, notas) {
-    const resultados = [];
-    // Esta etapa é complexa e geralmente processada uma a uma (ou por documento filho)
-    for (const nota of notas) {
-        const { idAlocacaoSAP: id } = nota;
-        console.log(`[TRANSITION_LOG] Iniciando 30->35 para a NF ${id}`);
-  
-        try {
-            // --- ETAPA 1: Criar a MIRO ---
-            const respMiro = await BAPI_INCOMINGINVOICE_CREATE1(nota);
-            if (!respMiro.ok) {
-                // Se a primeira BAPI falha, logamos o erro e pulamos para a próxima nota
-                throw new Error(respMiro.msg);
-            }
-            console.log(`[TRANSITION_LOG] MIRO criada para NF ${id}. Documento: ${respMiro.valores.numeroDocumentoMIRO}`);
-  
-            // --- ETAPA 2: Criar a Nota Fiscal ---
-            const respNF = await BAPI_J_1B_NF_CREATEFROMDATA(nota, respMiro.valores.numeroDocumentoMIRO);
-            if (!respNF.ok) {
-                // Se a segunda BAPI falha, a MIRO já foi "criada".
-                // No mundo real, aqui teríamos uma lógica de compensação (cancelar a MIRO).
-                // Na simulação, vamos apenas registrar o erro.
-                console.error(`[TRANSITION_LOG] MIRO criada, mas criação da NF falhou para ${id}. Requer ação manual!`);
-                throw new Error(respNF.msg);
-            }
-            console.log(`[TRANSITION_LOG] NF de serviço criada para ${id}.`);
-  
-            // --- ETAPA 3: Sucesso! Atualizar o status e gravar os dados ---
-            await tx.update(NotaFiscalServicoMonitor)
-                .set({
-                    status: '35',
-                    numeroDocumentoMIRO: respMiro.valores.numeroDocumentoMIRO,
-                    // Adicione outros campos que a BAPI de NF retornaria, se houver
-                })
-                .where({ idAlocacaoSAP: id });
-            
-            resultados.push({
-                idAlocacaoSAP: id,
-                success: true,
-                message: 'Fatura e Nota Fiscal criadas com sucesso.',
-                novoStatus: '35'
-            });
-  
-        } catch (error) {
-            // Se qualquer passo falhar, o CATCH captura
-            console.error(`[TRANSITION_LOG] Erro no fluxo 30->35 para NF ${id}:`, error.message);
-            
-            // Atualiza a NF para o status de erro
-            await tx.update(NotaFiscalServicoMonitor)
-                      .set({ status: '99', MSG_TEXT: error.message.substring(0,120) }) // Adicionei MSG_TEXT
-                      .where({ idAlocacaoSAP: id });
-            
-            resultados.push({
-                idAlocacaoSAP: id,
-                success: false,
-                message: error.message,
-                novoStatus: '99'
-            });
-        }
     }
     return resultados;
   }
   
- /** 35 → 50 */
-async function trans35para50(tx, ids) {
+  /* --------------------------------------------------- *
+   * 30 → 35                                              *
+   * --------------------------------------------------- */
+  async function trans30para35 (tx, notas) {
+    const resultados = [];
+  
+    for (const nota of notas) {
+      const id = nota.idAlocacaoSAP;
+      console.log(`[TRANSITION_LOG] Iniciando 30->35 para NF ${id}`);
+  
+      try {
+        /* MIRO */
+        const respMiro = await BAPI_INCOMINGINVOICE_CREATE1(nota);
+        if (!respMiro.ok) throw new Error(respMiro.msg);
+  
+        /* NF */
+        const respNF = await BAPI_J_1B_NF_CREATEFROMDATA(nota, respMiro.valores.numeroDocumentoMIRO);
+        if (!respNF.ok) throw new Error(respNF.msg);
+  
+        /* sucesso */
+        await tx.update(NotaFiscalServicoMonitor)
+                .set({
+                  status: '35',
+                  numeroDocumentoMIRO: respMiro.valores.numeroDocumentoMIRO
+                })
+                .where({ idAlocacaoSAP: id });
+  
+        await gravarLog(
+          tx, id,
+          'Status 30→35 concluído com sucesso.',
+          'S', 'TRANS_30_35', '000'
+        );
+  
+        resultados.push({
+          idAlocacaoSAP: id,
+          success      : true,
+          message      : 'Fatura e Nota Fiscal criadas com sucesso.',
+          novoStatus   : '35'
+        });
+  
+      } catch (error) {
+        console.error(`[TRANSITION_LOG] Erro 30->35 para NF ${id}:`, error.message);
+  
+        await tx.update(NotaFiscalServicoMonitor)
+                .set({ status: '99', MSG_TEXT: error.message.substring(0,120) })
+                .where({ idAlocacaoSAP: id });
+  
+        await gravarLog(
+          tx, id,
+          error.message,
+          'E', 'TRANS_30_35', '999'
+        );
+  
+        resultados.push({
+          idAlocacaoSAP: id,
+          success      : false,
+          message      : error.message,
+          novoStatus   : '99'
+        });
+      }
+    }
+    return resultados;
+  }
+  
+  /* --------------------------------------------------- *
+   * 35 → 50                                              *
+   * --------------------------------------------------- */
+  async function trans35para50 (tx, ids) {
     await tx.update(NotaFiscalServicoMonitor)
             .set({ status: '50' })
             .where({ idAlocacaoSAP: { in: ids } });
+  
+    await Promise.all(
+      ids.map(id =>
+        gravarLog(tx, id, 'Status 35→50 confirmado.', 'S', 'TRANS_35_50', '000')
+      )
+    );
+  
     return sucesso(ids, '50');
   }
-  
 
   /* --------------------------------------------------------- *
    *            Funções de REVERTER (50->35->30…)              *

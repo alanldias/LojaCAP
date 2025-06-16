@@ -27,15 +27,27 @@ service ShopService {
 
     entity NotaFiscalServicoMonitor as projection on shop.NotaFiscalServicoMonitor;
 
-    
-   action avancarStatusNFs(
-        notasFiscaisIDs : array of NotaFiscalServicoMonitor:idAlocacaoSAP // Usando o tipo da chave primária
+    entity NotaFiscalServicoLog     as projection on shop.NotaFiscalServicoLog;
+
+    action uploadArquivoFrete(data: LargeBinary) returns Boolean;
+   
+    action avancarStatusNFs(
+        grpFilho      : String     
+
     ) returns array of {
         idAlocacaoSAP     : String;
         success           : Boolean;
         message           : String;
         novoStatus        : String;
         numeroNfseServico : String;
+    };
+    action rejeitarFrete(
+        grpFilho      : String
+    ) returns array of {
+        idAlocacaoSAP : String;
+        success       : Boolean;
+        message       : String;
+        novoStatus    : String;
     };
     
     action registerCliente(nome: String, email: String, senha: String) returns String;
@@ -49,5 +61,11 @@ service ShopService {
         quantidade    : Integer,
         precoUnitario : Decimal // Passar o preço unitário do momento da compra
     ) returns UUID;
+    action voltarStatusNFs(grpFilho: String, grpStatus: Integer) returns array of {
+        idAlocacaoSAP : String;
+        success       : Boolean;
+        message       : String;
+        novoStatus    : String;
+    };
 
 }

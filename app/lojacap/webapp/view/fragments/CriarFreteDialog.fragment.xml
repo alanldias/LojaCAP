@@ -1,0 +1,158 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:f="sap.ui.layout.form"
+    xmlns:l="sap.ui.layout"
+    xmlns:core="sap.ui.core">
+    <Dialog
+        id="criarFreteDialog"
+        title="Adicionar Lançamento de Frete Manual"
+        contentWidth="50rem"
+        contentHeight="42rem"
+        resizable="true"
+        draggable="true">
+        <content>
+            <IconTabBar
+                id="iconTabBarFrete"
+                class="sapUiResponsiveContentPadding"
+                expandable="false">
+                <items>
+                    <IconTabFilter id="identificacaoTab" text="Identificação" icon="sap-icon://tag" key="identificacao">
+                        <f:SimpleForm
+                            id="identificacaoForm" editable="true" layout="ResponsiveGridLayout"
+                            labelSpanL="12" labelSpanM="12" columnsL="1" columnsM="1">
+                            <f:content>
+                                <Label id="1" text="ID Alocação SAP" required="true"/>
+                                <Input id="2" value="{novoRegistro>/idAlocacaoSAP}"/>
+                                <Label id="3" text="Order ID PL" required="true"/>
+                                <Input id="4" value="{novoRegistro>/orderIdPL}"/>
+                                <Label id="5" text="Chave Documento Mãe" required="true"/>
+                                <Input id="6" value="{novoRegistro>/chaveDocumentoMae}"/>
+                                <Label id="7" text="Chave Documento Filho" required="true"/>
+                                <Input id="8" value="{novoRegistro>/chaveDocumentoFilho}"/>
+                                <Label id="9" text="Documento de Vendas Mãe"/>
+                                <Input id="10" value="{novoRegistro>/documentoVendasMae}"/>
+                                <Label id="11" text="Documento de Faturamento Mãe"/>
+                                <Input id="12" value="{novoRegistro>/documentoFaturamentoMae}"/>
+                                <Label id="13" text="Número Pedido de Compra"/>
+                                <Input id="14" value="{novoRegistro>/numeroPedidoCompra}"/>
+                                <Label id="15" text="Item Pedido de Compra"/>
+                                <Input id="16" value="{novoRegistro>/itemPedidoCompra}"/>
+                                <Label id="17" text="Número Controle Documento SAP"/>
+                                <Input id="18" value="{novoRegistro>/numeroControleDocumentoSAP}"/>
+                            </f:content>
+                        </f:SimpleForm>
+                    </IconTabFilter>
+
+                    <IconTabFilter id="nfseTab" text="Detalhes NF" icon="sap-icon://document-text" key="nfse">
+                        <f:SimpleForm
+                            id="nfseForm" editable="true" layout="ResponsiveGridLayout"
+                            labelSpanL="12" labelSpanM="12" columnsL="1" columnsM="1">
+                            <f:content>
+                                <Label id="19" text=""/> 
+                                <l:Grid id="20" defaultSpan="L12 M12 S12" hSpacing="1" vSpacing="0" class="removeFormGridIndentation">
+                                    <l:content>
+                                        <VBox id="21"><layoutData><l:GridData id="22" span="L9 M9 S12" /></layoutData>
+                                            <items>
+                                                <Label id="23" text="Nº NFS-e"/>
+                                                <Input id="24" value="{novoRegistro>/numeroNfseServico}"/>
+                                            </items>
+                                        </VBox>
+                                        <VBox id="25"><layoutData><l:GridData id="26" span="L3 M3 S12" /></layoutData>
+                                            <items>
+                                                <Label id="27" text="Série"/>
+                                                <Input id="28" value="{novoRegistro>/serieNfseServico}"/>
+                                            </items>
+                                        </VBox>
+                                    </l:content>
+                                </l:Grid>
+                                
+                                <Label id="29" text=""/>
+                                <HBox id="30" height="1px" width="100%" class="sapUiTinyMarginTopBottom sapUiMediumMarginBeginEnd" backgroundDesign="Solid">
+                                    <layoutData>
+                                        <l:GridData id="31" span="L12 M12 S12" />
+                                    </layoutData>
+                                </HBox>
+
+                                <Label id="32" text="Data Emissão NFS-e"/>
+                                <DatePicker id="33" value="{novoRegistro>/dataEmissaoNfseServico}" valueFormat="yyyy-MM-dd" displayFormat="short"/>
+                                <Label id="34" text="Chave Acesso NFS-e"/>
+                                <Input id="35" value="{novoRegistro>/chaveAcessoNfseServico}"/>
+                                <Label id="36" text="Cód. Verificação NFS-e"/>
+                                <Input id="37" value="{novoRegistro>/codigoVerificacaoNfse}"/>
+                                <Label id="38" text="CNPJ Tomador"/>
+                                <Input id="39" value="{novoRegistro>/cnpjTomador}"/>
+                                <Label id="40" text="Código Fornecedor"/>
+                                <Input id="41" value="{novoRegistro>/codigoFornecedor}"/>
+                                <Label id="42" text="Nome Fornecedor"/>
+                                <Input id="43" value="{novoRegistro>/nomeFornecedor}"/>
+                                <Label id="44" text="Nº Nota Fiscal (SAP)"/>
+                                <Input id="45" value="{novoRegistro>/numeroNotaFiscalSAP}"/>
+                                <Label id="46" text="Série Nota Fiscal (SAP)"/>
+                                <Input id="47" value="{novoRegistro>/serieNotaFiscalSAP}"/>
+                                <Label id="48" text="Local Prestação Serviço"/>
+                                <Input id="49" value="{novoRegistro>/localPrestacaoServico}"/>
+                            </f:content>
+                        </f:SimpleForm>
+                    </IconTabFilter>
+                    
+                    <IconTabFilter id="miroTab" text="Valores e MIRO" icon="sap-icon://money-bills" key="miro">
+                        <f:SimpleForm
+                            id="miroForm" editable="true" layout="ResponsiveGridLayout"
+                            labelSpanL="12" labelSpanM="12" columnsL="1" columnsM="1">
+                            <f:content>
+                                <Label id="50" text="Nº Documento MIRO" />
+                                <Input id="51" value="{novoRegistro>/numeroDocumentoMIRO}"/>
+                                <Label id="52" text="Ano Fiscal MIRO" />
+                                <Input id="53" value="{novoRegistro>/anoFiscalMIRO}" type="Number"/>
+                                <Label id="54" text="Documento Contábil MIRO (SAP)" />
+                                <Input id="55" value="{novoRegistro>/documentoContabilMiroSAP}"/>
+                                <Label id="56" text="Valor Bruto NFS-e" />
+                                <Input id="57" value="{novoRegistro>/valorBrutoNfse}" type="Number"/>
+                                <Label id="58" text="Valor Líquido Frete NFS-e" />
+                                <Input id="59" value="{novoRegistro>/valorLiquidoFreteNfse}" type="Number"/>
+                                <Label id="60" text="Valor Efetivo Frete" />
+                                <Input id="61" value="{novoRegistro>/valorEfetivoFrete}" type="Number"/>
+                                <Label id="62" text="ISS Retido"/>
+                                <Switch id="63" state="{novoRegistro>/issRetido}" customTextOn="Sim" customTextOff="Não"/>
+                            </f:content>
+                        </f:SimpleForm>
+                    </IconTabFilter>
+                    <IconTabFilter id="statusTab" text="Status e Logs" icon="sap-icon://activity-items" key="status">
+                        <f:SimpleForm
+                            id="statusForm" editable="true" layout="ResponsiveGridLayout"
+                            labelSpanL="12" labelSpanM="12" columnsL="1" columnsM="1">
+                            <f:content>
+                                <Label id="64" text="Status"/>
+                                <Input id="65" value="{novoRegistro>/status}"/>
+                                <Label id="66" text="Criado por"/>
+                                <Input id="67" value="{novoRegistro>/createdBy}"/>
+                                <Label id="68" text="Criado em"/>
+                                <DateTimePicker id="69" value="{novoRegistro>/createdAt}" editable="false"/>
+                                <Label id="70" text="Estornado"/>
+                                <Switch id="71" state="{novoRegistro>/estornado}" customTextOn="Sim" customTextOff="Não"/>
+                                <Label id="72" text="Enviado para PL"/>
+                                <Switch id="73" state="{novoRegistro>/enviadoParaPL}" customTextOn="Sim" customTextOff="Não"/>
+                                <Label id="74" text="Flag de Erro"/>
+                                <Switch id="75" state="{novoRegistro>/logErroFlag}" customTextOn="Sim" customTextOff="Não"/>
+                                <Label id="76" text="Mensagem de Erro"/>
+                                <TextArea id="77" value="{novoRegistro>/mensagemErro}" growing="true" width="100%"/>
+                                <Label id="78" text="Tipo Mensagem Erro"/>
+                                <Input id="79" value="{novoRegistro>/tipoMensagemErro}"/>
+                                <Label id="80" text="Classe Mensagem Erro"/>
+                                <Input id="81" value="{novoRegistro>/classeMensagemErro}"/>
+                                <Label id="82" text="Número Mensagem Erro"/>
+                                <Input id="83" value="{novoRegistro>/numeroMensagemErro}"/>
+                                <Label id="84" text="ID do Registro"/>
+                                <Input id="85" value="{novoRegistro>/ID}" editable="false"/>
+                            </f:content>
+                        </f:SimpleForm>
+                    </IconTabFilter>
+                </items>
+            </IconTabBar>
+        </content>
+        <buttons>
+            <Button id="createFreightButton" text="Criar" type="Emphasized" press="onSalvarNovoRegistro"/>
+            <Button id="cancelDialogButton" text="Cancelar" press="onCancelarDialogoCriacao"/>
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

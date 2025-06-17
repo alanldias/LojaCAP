@@ -5,6 +5,9 @@ const { Readable } = require('stream');
 
 const validation = require('./lib/validation');
 
+const axios = require('axios');
+require('dotenv').config();
+
 const handlers = [
   require('./lojacap/cliente'),
   require('./lojacap/produto'),
@@ -19,9 +22,60 @@ module.exports = cds.service.impl(function (srv) {
   const etapas = require('./nf/etapas')(srv);    // devolve { avancar, voltar }
   const { sucesso, falha, gravarLog } = require('./nf/log');
 
-  const { NotaFiscalServicoMonitor, NotaFiscalServicoLog, as } = srv.entities;
+  const { NotaFiscalServicoMonitor } = srv.entities;
 
   console.log("✅ CAP Service inicializado");
+
+
+  srv.on('getPOSubcontractingComponents', async req => {
+    const axiosCfg = {
+        headers: {
+            Accept: 'application/json',
+            APIKey: process.env.PO_API_KEY
+        },
+        timeout: 10_000
+    };
+
+    const base = `${process.env.PO_API_BASE}/POSubcontractingComponent`;
+    const top = 50;
+    let url = `${base}?$top=${top}`;
+    let result = [];
+    let pageCount = 1; // Contador de páginas para o log
+
+    try {
+        while (url && result.length < top) {
+            console.log(`🔎 Página ${pageCount}: Chamando a URL -> ${url}`);
+            const { data } = await axios.get(url, axiosCfg);
+            
+            if (data.value) {
+                console.log(`✅ Página ${pageCount}: Recebidos ${data.value.length} itens.`);
+                result = result.concat(data.value);
+            } else {
+                console.log(`⚠️ Página ${pageCount}: A resposta não continha um array 'value'.`);
+            }
+
+            // O log mais importante de todos!
+            console.log(`📦 A resposta da página ${pageCount} contém um @odata.nextLink? ->`, data['@odata.nextLink'] || 'Não');
+
+            // server-driven paging ➜ segue o @odata.nextLink
+            url = data['@odata.nextLink']
+                ? `${process.env.PO_API_BASE}/${data['@odata.nextLink']}` // Cuidado aqui, veja a observação abaixo
+                : null;
+            
+            pageCount++;
+        }
+        
+        console.log(`🏁 Fim do loop. Total de itens acumulados: ${result.length}`);
+        return JSON.stringify(result.slice(0, top)); // garante no máx. 50
+
+    } catch (e) {
+        req.error(
+            e.response?.status || 500,
+            e.response?.data?.error?.message?.value || e.message
+        );
+    }
+});
+  
 
 srv.before('CREATE', 'NotaFiscalServicoMonitor', (req) => {
   // Chamamos nossa função unificada

@@ -222,6 +222,12 @@
                         type="Ghost"
                         tooltip="Status: Processo Finalizado - Retorno PL (50)" 
                         class="sapUiTinyMargin"/>
+
+                        <Button id="chamadaapi"
+                        icon="sap-icon://sys-enter" 
+                        tooltip="Todas as NFSe"
+                        class="sapUiTinyMargin"
+                        press = "onCallApi" />
             </HBox>
         </Toolbar>
 

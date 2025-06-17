@@ -10,6 +10,7 @@
     "@sap/cds": "^8",
     "@sap/xssec": "^4",
     "csv-parser": "^3.2.0",
+    "dotenv": "^16.5.0",
     "express": "^4",
     "jsonwebtoken": "^9.0.2",
     "print-js": "^1.6.0",

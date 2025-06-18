@@ -29,6 +29,8 @@ service ShopService {
 
     entity NotaFiscalServicoLog     as projection on shop.NotaFiscalServicoLog;
 
+    entity ConfiguracoesISS as projection on shop.ZTMM_ISS_CFG;
+
     action uploadArquivoFrete(data: LargeBinary) returns Boolean;
    
     action avancarStatusNFs(

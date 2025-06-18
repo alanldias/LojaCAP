@@ -1,0 +1,62 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">
+    
+    <Dialog id="ConfiguracaoISSDialog" title="Nova Configuração de ISS">
+        <content>
+            <f:SimpleForm editable="true" layout="ResponsiveGridLayout">
+                <Label text="Mandante" />
+                <Input value="{mandt}"/>
+
+                <Label text="Empresa" required="true"/>
+                <Input value="{empresa}"/>
+
+                <Label text="Local de Negócios" required="true"/>
+                <Input value="{loc_neg}"/>
+
+                <Label text="Local do Fornecedor"/>
+                <Input value="{loc_fornec}"/>
+
+                <Label text="Prestação do Serviço"/>
+                <Input value="{prestac_serv}"/>
+
+                <Label text="Prestador do Serviço"/>
+                <Input value="{prestad_serv}"/>
+
+                <Label text="Serviço Prestado"/>
+                <Input value="{serv_prest}"/>
+
+                <Label text="Tipo de Serviço"/>
+                <Input value="{serv_type}"/>
+
+                <Label text="Aplicável?"/>
+                <CheckBox selected="{= ${verif} === 'X' }" />
+
+                <Label text="Válido De"/>
+                <DatePicker 
+                    value="{
+                        path: 'val_de', 
+                        type: 'sap.ui.model.type.Date',
+                        formatOptions: { style: 'short', strictParsing: true }
+                    }"
+                />
+
+                <Label text="Válido Até"/>
+                <DatePicker 
+                    value="{
+                        path: 'val_ate', 
+                        type: 'sap.ui.model.type.Date',
+                        formatOptions: { style: 'short', strictParsing: true }
+                    }"
+                />
+            </f:SimpleForm>
+        </content>
+        <beginButton>
+            <Button text="Salvar" type="Emphasized" press=".onSave"/>
+        </beginButton>
+        <endButton>
+            <Button text="Cancelar" press=".onCloseDialog"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

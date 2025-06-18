@@ -1,6 +1,7 @@
 // srv/services.cds
 using my.shop as shop from '../db/schema';
 
+
 service ShopService {
 
   @odata.draft.enabled
@@ -69,5 +70,5 @@ service ShopService {
         message       : String;
         novoStatus    : String;
     };
-
+  function getPOSubcontractingComponents() returns LargeString;
 }

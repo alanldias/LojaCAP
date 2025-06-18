@@ -11,7 +11,7 @@ sap.ui.define([
          * @param {sap.m.Table} oTable A instância da tabela que será impressa.
          * @param {object} mCoresLinha Um mapa de IDs para classes de cor (ex: { 'someId': 'linhaVerde' }).
          */
-        printTable: function (oTable, mCoresLinha) {
+        printTable: function (oTable) {
             if (!oTable) {
                 MessageToast.show("Tabela não encontrada para impressão.");
                 return;
@@ -19,7 +19,7 @@ sap.ui.define([
 
             const oBinding = oTable.getBinding("items");
             if (!oBinding) {
-                MessageToast.show("Nenhum binding de itens encontrado na tabela.");
+                MessageToast.show("Nenhum binding de itens encontrado na tabela.");  
                 return;
             }
 
@@ -35,11 +35,39 @@ sap.ui.define([
 
                 const aDadosTabela = aContexts.map(oContext => {
                     const oRowData = oContext.getObject();
-                    const id = oRowData.idAlocacaoSAP;
-                    const classeCor = mCoresLinha[id] || "";
+                    let classeCor = "";
+                    if (oRowData.status === "50") {
+                        classeCor = "linhaVerde";
+                    } else if (oRowData.status === "55") {
+                        classeCor = "linhaVermelha";
+                    }
+
+                    let logSymbolHTML = "";
+                    const tipoMensagem = oRowData.tipoMensagemErro;
+
+                    switch (tipoMensagem) {
+                        case 'S': // Sucesso
+                            // Usamos um símbolo Unicode para o 'check' e aplicamos a cor verde.
+                            logSymbolHTML = `<span style="color: green; font-size: 1.2em;">&#x2705;</span>`;
+                            break;
+                        case 'E': // Erro
+                            // Símbolo de triângulo vermelho, como na sua imagem.
+                            logSymbolHTML = `<span style="color: red; font-size: 1.2em;">&#x1F53A;</span>`;
+                            break;
+                        case 'R': // Rejeição (assumindo uma cor de aviso/laranja)
+                            // Símbolo de aviso.
+                            logSymbolHTML = `<span style="color: orange; font-size: 1.2em;">&#x26A0;</span>`;
+                            break;
+                        default:
+                            // Se não houver tipo de mensagem, não exibe nada.
+                            logSymbolHTML = "";
+                            break;
+                    }
+
                     return {
                         classeCor: classeCor,
-                        log: oRowData.logErroFlag ? oRowData.mensagemErro : "",
+                        log: logSymbolHTML, // <--- AQUI USAMOS O HTML GERADO
+                        mensagemErro: oRowData.mensagemErro || "",
                         idAlocacaoSAP: oRowData.idAlocacaoSAP || "",
                         orderIdPL: oRowData.orderIdPL || "",
                         chaveDocumentoMae: oRowData.chaveDocumentoMae || "",
@@ -127,7 +155,7 @@ sap.ui.define([
                         <tbody>
                             ${aDadosTabela.map(row => `
                                 <tr class="${row.classeCor}">
-                                    <td>${row.log}</td>
+                                    <td class="col-log" title="${row.mensagemErro}">${row.log}</td>
                                     <td>${row.idAlocacaoSAP}</td>
                                     <td>${row.orderIdPL}</td>
                                     <td>${row.chaveDocumentoMae}</td>

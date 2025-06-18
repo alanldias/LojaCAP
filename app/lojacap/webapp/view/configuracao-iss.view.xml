@@ -1,0 +1,80 @@
+<mvc:View
+    controllerName="lojacap.controller.configuracao-iss"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns="sap.m"
+    xmlns:l="sap.ui.layout">
+    <Page id="pageConfiguracoesISS" showHeader="false">
+        <Toolbar id="toolbarCabecalhoTopoIss" class="cabecalhoTopo">
+            <HBox id="hboxCabecalhoIss" width="100%" alignItems="Center" justifyContent="SpaceBetween">
+                <HBox id="hboxEsquerdaIss" alignItems="Center">
+                    <Button id="btnVoltarTopoIss"
+                            icon="sap-icon://nav-back"
+                            type="Transparent"
+                            tooltip="Voltar"/>
+                    <Image id="logoTopoIss"
+                           src="https://upload.wikimedia.org/wikipedia/commons/5/59/SAP_2011_logo.svg"
+                           height="2rem"
+                           width="auto"
+                           class="sapUiTinyMarginBegin" />
+                </HBox>
+                <HBox id="hboxCentroIss" width="100%" justifyContent="Center">
+                    <Text id="tituloCabecalhoIss"
+                          text="GBLOG - Plataforma Logística - Configuração de ISS"
+                          class="cabecalhoTexto" />
+                </HBox>
+                <HBox id="hboxDireitaIss" width="2rem" />
+            </HBox>
+        </Toolbar>
+        <content>
+            <Button
+                id="btnNovoRegistro"
+                icon="sap-icon://add"
+                text="Novo Registro"
+                press=".onOpenDialog"
+                class="sapUiSmallMargin" />
+            <Table
+                id="tblConfiguracoes"
+                inset="false"
+                items="{
+                    path: '/ConfiguracoesISS',
+                    sorter: {
+                        path: 'createdAt',
+                        descending: true
+                    }
+                }">
+                <columns>
+                    <Column id="colEmpresa">
+                        <Text id="txtHdrEmpresa" text="Empresa" />
+                    </Column>
+                    <Column id="colLocNeg">
+                        <Text id="txtHdrLocNeg" text="Local de Negócios" />
+                    </Column>
+                    <Column id="colLocFornec">
+                        <Text id="txtHdrLocFornec" text="Local do Fornecedor" />
+                    </Column>
+                    <Column id="colServPrest">
+                        <Text id="txtHdrServPrest" text="Serviço Prestado" />
+                    </Column>
+                    <Column id="colValDe">
+                        <Text id="txtHdrValDe" text="Válido De" />
+                    </Column>
+                    <Column id="colValAte">
+                        <Text id="txtHdrValAte" text="Válido Até" />
+                    </Column>
+                </columns>
+                <items>
+                    <ColumnListItem id="itemConfiguracao" type="Navigation" press="onOpenDialog">
+                        <cells>
+                            <Text id="txtCellEmpresa" text="{empresa}" />
+                            <Text id="txtCellLocNeg" text="{loc_neg}" />
+                            <Text id="txtCellLocFornec" text="{loc_fornec}" />
+                            <Text id="txtCellServPrest" text="{serv_prest}" />
+                            <Text id="txtCellValDe" text="{path: 'val_de', type: 'sap.ui.model.type.Date', formatOptions: { style: 'short' }}" />
+                            <Text id="txtCellValAte" text="{path: 'val_ate', type: 'sap.ui.model.type.Date', formatOptions: { style: 'short' }}" />
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </content>
+    </Page>
+</mvc:View>

@@ -169,3 +169,17 @@ entity NotaFiscalServicoLog : managed {
     numeroMensagemErro  : String(3);
     origem              : String(30);   // 'avancarStatusNFs', 'BAPI_XYZ', e tals
 }
+
+entity ZTMM_ISS_CFG : cuid, managed {
+    mandt        : String(3);
+    empresa      : String(4);
+    loc_neg      : String(4);
+    loc_fornec   : String(15);
+    prestac_serv : String(15);
+    prestad_serv : String(10);
+    serv_prest   : String(4);
+    serv_type    : String(16);
+    verif        : String(1);
+    val_de       : Date;
+    val_ate      : Date;
+}

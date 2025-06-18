@@ -69,8 +69,8 @@
                             <Text id="txtCellLocNeg" text="{loc_neg}" />
                             <Text id="txtCellLocFornec" text="{loc_fornec}" />
                             <Text id="txtCellServPrest" text="{serv_prest}" />
-                            <Text id="txtCellValDe" text="{path: 'val_de', type: 'sap.ui.model.type.Date', formatOptions: { style: 'short' }}" />
-                            <Text id="txtCellValAte" text="{path: 'val_ate', type: 'sap.ui.model.type.Date', formatOptions: { style: 'short' }}" />
+                            <Text id="txtCellValDe" text="{val_de}" />
+                            <Text id="txtCellValAte" text="{val_ate}" />
                         </cells>
                     </ColumnListItem>
                 </items>

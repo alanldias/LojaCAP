@@ -13,7 +13,40 @@ module.exports = function buildEtapas(srv) {
   /* --------------------------------------------------------- *
    *            Funções de AVANÇAR (01->05->15…)               *
    * --------------------------------------------------------- */
-  async function trans01para05 (tx, ids) {
+  async function trans01para05 (tx, notas) {
+    const resultados = [];
+    const ids        = notas.map(n => n.idAlocacaoSAP);
+  
+    /* 1. Validação ISS Retido ------------------------------------- */
+    const temRetido = notas.some(n => n.issRetido === '1');
+    if (temRetido) {
+      for (const nota of notas) {
+        const id   = nota.idAlocacaoSAP;
+        const ehRetida = nota.issRetido === '1';
+  
+        const msg = ehRetida
+          ? 'NF bloqueada — ISS Retido = Sim.'
+          : 'Processo abortado — outra NF do grupo tem ISS Retido = Sim.';
+  
+        /* log */
+        await gravarLog(
+          tx, id, msg,
+          ehRetida ? 'E' : 'I',          // erro p/ a retida; info p/ as demais
+          'VALID_ISS_RETIDO',
+          ehRetida ? '901' : '902'
+        );
+  
+        resultados.push({
+          idAlocacaoSAP : id,
+          success       : !ehRetida,     // ← apenas a retida é false
+          message       : msg,
+          novoStatus    : '01'
+        });
+      }
+      return resultados;                 // ninguém avança
+    }
+  
+    /* 2. Nenhum retido → fluxo original --------------------------- */
     const numeroNF = gerarNumeroNF();
   
     try {
@@ -21,23 +54,34 @@ module.exports = function buildEtapas(srv) {
               .set({ status: '05', numeroNfseServico: numeroNF })
               .where({ idAlocacaoSAP: { in: ids } });
   
-      /* loga sucesso */
-      await Promise.all(
-        ids.map(id =>
-          gravarLog(tx, id,
-            `Status 01→05 gerado – NF ${numeroNF}.`,
-            'S', 'TRANS_01_05', '000')
-        )
-      );
-  
-      return sucesso(ids, '05', { numeroNfseServico: numeroNF });
+      for (const id of ids) {
+        await gravarLog(
+          tx, id,
+          `Status 01→05 gerado – NF ${numeroNF}.`,
+          'S', 'TRANS_01_05', '000'
+        );
+        resultados.push({
+          idAlocacaoSAP : id,
+          success       : true,
+          message       : `Status 01→05 gerado – NF ${numeroNF}.`,
+          novoStatus    : '05'
+        });
+      }
+      return resultados;
   
     } catch (e) {
-      for (const id of ids)
+      for (const id of ids) {
         await gravarLog(tx, id, e.message, 'E', 'TRANS_01_05', '002');
-      return falha(ids, '01', 'Erro 01→05: ' + e.message);
+        resultados.push({
+          idAlocacaoSAP : id,
+          success       : false,
+          message       : 'Erro 01→05: ' + e.message,
+          novoStatus    : '01'
+        });
+      }
+      return resultados;
     }
-  }
+  }  
   
   /* --------------------------------------------------- *
    * 05 → 15                                              *
@@ -83,21 +127,33 @@ module.exports = function buildEtapas(srv) {
       }
       valoresPorNota.set(id, resp.valores);
     }
-  
-    /* 2. Houve erro → devolve só falhas --------------------- */
-    if (erros.size) {
-      notas.forEach(nota => {
-        const id = nota.idAlocacaoSAP;
-        resultados.push({
-          idAlocacaoSAP : id,
-          success       : false,
-          message       : erros.get(id) ||
-                          'Processo abortado — erros em outras NFs',
-          novoStatus    : '15'
-        });
-      });
-      return resultados;
-    }
+              
+    /* 2. Houve erro → ninguém avança, mas indicamos quem falhou */
+      if (erros.size) {
+        for (const nota of notas) {                 // ← trocado de forEach p/ for…of
+          const id     = nota.idAlocacaoSAP;
+          const falhou = erros.has(id);
+
+          if (!falhou) {
+            await gravarLog(                       // agora o await é permitido
+              tx, id,
+              'Processo abortado — erro em outra NF.',
+              'I', 'BAPI_PO_CREATE1', '101'
+            );
+          }
+
+          resultados.push({
+            idAlocacaoSAP : id,
+            success       : !falhou,               // true se a BAPI passou
+            message       : falhou
+              ? erros.get(id)
+              : 'Processo abortado — erros em outras NFs',
+            novoStatus    : '15'
+          });
+        }
+        return resultados;
+      }
+
   
     /* 3. Nenhum erro → atualiza, loga sucessos -------------- */
     for (const nota of notas) {
@@ -123,6 +179,7 @@ module.exports = function buildEtapas(srv) {
     }
     return resultados;
   }
+  
   
   /* --------------------------------------------------- *
    * 30 → 35                                              *

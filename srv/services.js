@@ -59,7 +59,7 @@ module.exports = cds.service.impl(function (srv) {
 
             // server-driven paging ➜ segue o @odata.nextLink
             url = data['@odata.nextLink']
-                ? `${process.env.PO_API_BASE}/${data['@odata.nextLink']}` // Cuidado aqui, veja a observação abaixo
+                ? `${process.env.PO_API_BASE}/${data['@odata.nextLink']}` 
                 : null;
             
             pageCount++;
@@ -96,7 +96,7 @@ this.on('avancarStatusNFs', async req => {
     const tx   = cds.transaction(req);
     const rows = await tx.run(
       SELECT.from(NotaFiscalServicoMonitor).columns(
-        'idAlocacaoSAP', 'status', 'valorBrutoNfse',
+        'idAlocacaoSAP', 'status', 'issRetido','valorBrutoNfse',
         'valorEfetivoFrete', 'valorLiquidoFreteNfse'
       ).where({ chaveDocumentoFilho: grpFilho })
     );
@@ -106,7 +106,7 @@ this.on('avancarStatusNFs', async req => {
     const ids       = rows.map(r => r.idAlocacaoSAP);
 
     switch (grpStatus) {
-      case '01': return etapas.avancar.trans01para05(tx, ids);
+      case '01': return etapas.avancar.trans01para05(tx, rows);
       case '05': return etapas.avancar.trans05para15(tx, ids);
       case '15': return etapas.avancar.trans15para30(tx, rows);
       case '30': return etapas.avancar.trans30para35(tx, rows);

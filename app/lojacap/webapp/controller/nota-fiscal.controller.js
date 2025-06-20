@@ -644,32 +644,50 @@ sap.ui.define([
     
     // Dispara para fazer o upload do arquivo de frete.
     _callUploadAction: function(sFileContent) {
-        const oModel = this.getView().getModel();
-        const oActionBinding = oModel.bindContext("/uploadArquivoFrete(...)");
-    
-        oActionBinding.setParameter("data", sFileContent);
-        this.getView().setBusy(true);
-    
-        console.log("[FRONTEND-LOG] Preparando para executar a action 'uploadArquivoFrete' no backend.");
-    
-        oActionBinding.execute()
-            .then(() => {
-                console.log("[FRONTEND-LOG] Ação 'uploadArquivoFrete' executada com sucesso no backend.");
-                const bSuccess = oActionBinding.getBoundContext().getObject();
-                if (bSuccess) {
-                    MessageBox.success("Arquivo processado e registros importados com sucesso!");
-                    this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
-                    this.onUploadDialogClose();
-                }
-            })
-            .catch((oError) => {
-                console.error("[FRONTEND-LOG] Erro retornado pelo backend ao executar a ação:", oError);
-                MessageBox.error(oError.message); 
-            })
-            .finally(() => {
-                this.getView().setBusy(false);
-            });
-    },
+      const oModel = this.getView().getModel();
+      const oActionBinding = oModel.bindContext("/uploadArquivoFrete(...)");
+  
+      oActionBinding.setParameter("data", sFileContent);
+      this.getView().setBusy(true);
+  
+      console.log("[FRONTEND-LOG] Preparando para executar a action 'uploadArquivoFrete' no backend.");
+      
+      oActionBinding.execute()
+          .then(() => {
+              // <<< MUDANÇA: O sucesso agora é gerenciado pelas mensagens padrão do OData/CAP
+              // O backend envia uma notificação (`req.notify`) que o UI5 V4 exibe automaticamente como um MessageToast.
+              // Nós só precisamos fazer as ações de UI, como fechar o diálogo e atualizar a tabela.
+              
+              console.log("[FRONTEND-LOG] Ação 'uploadArquivoFrete' executada. A resposta de sucesso foi recebida.");
+
+              // <<< MUDANÇA: Lógica para buscar e exibir a mensagem de sucesso >>>
+            const oMessageManager = sap.ui.getCore().getMessageManager();
+            const aMessages = oMessageManager.getMessageModel().getData();
+            
+            // Filtra pela mensagem de sucesso mais recente
+            const oSuccessMessage = aMessages.find(m => m.type === "Success" && m.persistent);
+            if (oSuccessMessage) {
+                MessageBox.success(oSuccessMessage.message);
+            }
+            // Limpa as mensagens para não aparecerem de novo
+            oMessageManager.removeAllMessages();
+  
+              // A mensagem "Êxito" que você vê virá do `req.notify` do backend.
+              // Não precisamos mais do MessageBox.success aqui.
+              this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
+              this.onUploadDialogClose();
+          })
+          .catch((oError) => {
+              // O seu .catch já está correto. Ele vai pegar o req.error(400, message) do backend.
+              console.error("[FRONTEND-LOG] Erro retornado pelo backend ao executar a ação:", oError);
+              
+              // oError.message já contém a mensagem de erro detalhada que definimos no backend.
+              MessageBox.error(oError.message); 
+          })
+          .finally(() => {
+              this.getView().setBusy(false);
+          });
+  },
     
     // Reseta o FileUploader para um novo upload
     _resetFileUploader: function() {

@@ -9,7 +9,7 @@ function validarNotaFiscal(data, indice = 0) {
     // A linha real no arquivo é o índice da linha de dados + 1 (para o cabeçalho)
     const linha = `Item ${indice + 1} do arquivo:`;
 
-    console.log(`[VALIDATION] Validando dados do Item ${indice + 1} do arquivo (ID: ${data.idAlocacaoSAP || 'N/A'})`);
+    console.log(`[VALIDATION] Validando dados do Item ${indice} do arquivo (ID: ${data.idAlocacaoSAP || 'N/A'})`);
 
     // --- Validações de Campos Obrigatórios ---
     if (!data.idAlocacaoSAP) {
@@ -63,46 +63,6 @@ function validarNotaFiscal(data, indice = 0) {
     };
 }
 
-function validarConsistenciaMaeFilho(registros) {
-    const errors = [];
-    const filhoParaMaeMap = new Map();
-
-    registros.forEach((registro, index) => {
-        const linhaAtual = index + 2; // Linha real no arquivo (dados começam na linha 2)
-        const { chaveDocumentoFilho, chaveDocumentoMae } = registro;
-
-        // Só processa se ambas as chaves existirem (a validação de campos obrigatórios já foi feita)
-        if (chaveDocumentoFilho && chaveDocumentoMae) {
-            
-            // Verifica se já vimos essa chave filha antes
-            if (filhoParaMaeMap.has(chaveDocumentoFilho)) {
-                
-                // Se já vimos, compara a mãe atual com a mãe que foi guardada
-                const primeiraOcorrencia = filhoParaMaeMap.get(chaveDocumentoFilho);
-                if (primeiraOcorrencia.mae !== chaveDocumentoMae) {
-                    
-                    // ERRO! A mesma chave filha tem mães diferentes.
-                    const erroMsg = `Inconsistência no Item ${linhaAtual}: A chave de filho "${chaveDocumentoFilho}" está ligada à mãe "${chaveDocumentoMae}", mas na Linha ${primeiraOcorrencia.linha} ela já estava ligada à mãe "${primeiraOcorrencia.mae}".`;
-                    errors.push(erroMsg);
-                }
-
-            } else {
-                // Se é a primeira vez que vemos essa chave filha, guardamos sua mãe e a linha
-                filhoParaMaeMap.set(chaveDocumentoFilho, { 
-                    mae: chaveDocumentoMae, 
-                    linha: linhaAtual 
-                });
-            }
-        }
-    });
-
-    return {
-        isValid: errors.length === 0,
-        errors: errors
-    };
-}
-
 module.exports = {
-    validarNotaFiscal,
-    validarConsistenciaMaeFilho 
+    validarNotaFiscal 
 };

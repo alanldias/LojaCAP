@@ -641,6 +641,93 @@ sap.ui.define([
             currency: 'BRL'
         });
     },
+
+    onCallApi: async function () {
+      const oModel = this.getView().getModel(); // modelo OData V4
+      const oFunction = oModel.bindContext("/getPOSubcontractingComponents()");
+
+      try {
+        const oResult = await oFunction.requestObject(); // GET automatico
+        const aItens  = JSON.parse(oResult.value);
+
+        await this._openSubcompDialog(aItens);           // 👈 abre popup
+
+        console.log(oResult)
+        console.log(aItens)
+      } catch (e) {
+        console.error(e);
+        MessageBox.error("Falha na chamada: " + e.message);
+      }
+    },
+
+    /* =========== helper ========= */
+    _openSubcompDialog: async function (aItens) {
+      // 1) cria ou obtém o fragment carregado
+      if (!this._pSubcompDialog) {
+        this._pSubcompDialog = Fragment.load({
+          id: this.getView().getId(),                    // garante IDs únicos
+          name: "lojacap.view.fragments.SubcompDialog",   // caminho do XML
+          controller: this                               // reusa handlers
+        }).then(oDialog => {
+          this.getView().addDependent(oDialog);          // cuida de destroy
+          return oDialog;
+        });
+      }
+
+      const oDialog = await this._pSubcompDialog;
+
+      // 2) define / atualiza o JSONModel com os dados
+      const oJson = new JSONModel(aItens);
+      oDialog.setModel(oJson, "subcomp");
+
+      // 3) abre o diálogo
+      oDialog.open();
+    },
+
+    onSubcompDialogClose: function (oEvent) {
+      oEvent.getSource().getParent().close();
+    },
+    onFilterBarSearch: function () {
+
+      const sQueryPO = this.byId("sfPurchaseOrder").getValue();
+      const oDateRange = this.byId("drsCreationDate");
+      const dStartDate = oDateRange.getDateValue();
+      const dEndDate = oDateRange.getSecondDateValue();
+
+      console.log("FilterBar clicado! Buscando por:", { po: sQueryPO, start: dStartDate, end: dEndDate });
+
+      const aFilters = [];
+
+      if (sQueryPO) {
+          aFilters.push(new Filter("PurchaseOrder", FilterOperator.Contains, sQueryPO));
+      }
+
+      if (dStartDate && dEndDate) {
+          const oDateFormat = DateFormat.getDateTimeInstance({ pattern: "yyyy-MM-dd'T'HH:mm:ss" });
+          const sFormattedStart = oDateFormat.format(dStartDate, true) + "Z";
+          const sFormattedEnd = oDateFormat.format(dEndDate, true) + "Z";
+          aFilters.push(new Filter("CreationDate", FilterOperator.BT, sFormattedStart, sFormattedEnd));
+      }
+
+      const oTable = this.byId("tblSubcomp");
+      const oBinding = oTable.getBinding("items");
+      
+      console.log("Aplicando filtros do FilterBar:", aFilters);
+      oBinding.filter(aFilters);
+  },
+  // para limpar
+  onFilterBarClear: function () {
+      console.log("Limpando filtros do FilterBar.");
+
+      // Limpa os valores dos controles de filtro
+      this.byId("sfPurchaseOrder").setValue("");
+      this.byId("drsCreationDate").setValue("");
+
+      // Limpa o filtro da tabela passando um array vazio
+      const oTable = this.byId("tblSubcomp");
+      const oBinding = oTable.getBinding("items");
+      oBinding.filter([]);
+  },
     
     // Dispara para fazer o upload do arquivo de frete.
     _callUploadAction: function(sFileContent) {

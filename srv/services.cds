@@ -1,6 +1,7 @@
 // srv/services.cds
 using my.shop as shop from '../db/schema';
 
+
 service ShopService {
 
   @odata.draft.enabled
@@ -28,6 +29,8 @@ service ShopService {
     entity NotaFiscalServicoMonitor as projection on shop.NotaFiscalServicoMonitor;
 
     entity NotaFiscalServicoLog     as projection on shop.NotaFiscalServicoLog;
+
+    entity ConfiguracoesISS as projection on shop.ZTMM_ISS_CFG;
 
     action uploadArquivoFrete(data: LargeBinary) returns Boolean;
    
@@ -67,5 +70,5 @@ service ShopService {
         message       : String;
         novoStatus    : String;
     };
-
+  function getPOSubcontractingComponents() returns LargeString;
 }

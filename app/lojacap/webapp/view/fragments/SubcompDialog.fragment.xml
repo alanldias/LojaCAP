@@ -1,0 +1,120 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:mvc="sap.ui.core.mvc"
+    xmlns:l="sap.ui.layout"
+    xmlns:fb="sap.ui.comp.filterbar">
+
+    <Dialog
+        id="dlgSubcomp"
+        title="Componentes de Subcontratação"
+        draggable="true"
+        resizable="true"
+        contentWidth="100%"
+        class="sapUiResponsivePadding--content">
+
+         <fb:FilterBar
+            id="filterBarSubcomp"
+            persistencyKey="myPersKey"
+            search="onFilterBarSearch"
+            clear="onFilterBarClear">
+            
+            <fb:filterGroupItems>
+                <fb:FilterGroupItem
+                    id="fgiPO"
+                    groupName="__$INTERNAL$"
+                    name="PurchaseOrder"
+                    label="Pedido (PO)"
+                    visibleInFilterBar="true">
+                    
+                    <fb:control>
+                        <SearchField
+                            id="sfPurchaseOrder"
+                            width="100%" />
+                    </fb:control>
+                </fb:FilterGroupItem>
+
+                <fb:FilterGroupItem
+                    id="fgiCreationDate"
+                    groupName="__$INTERNAL$"
+                    name="CreationDate"
+                    label="Data de Criação"
+                    visibleInFilterBar="true">
+
+                    <fb:control>
+                        <DateRangeSelection
+                            id="drsCreationDate"
+                            width="100%" />
+                    </fb:control>
+                </fb:FilterGroupItem>
+
+            </fb:filterGroupItems>
+        </fb:FilterBar>
+        
+
+        <ScrollContainer
+            id="scrollerSubcomp"
+            horizontal="true"
+            vertical="true"
+            width="100%"
+            height="70vh"
+            focusable="false">
+
+            <Table
+                id="tblSubcomp"
+                width="1600px"
+                inset="false"
+                growing="true"
+                fixedLayout="true"
+                items="{subcomp>/}">
+
+                <columns>
+                    <Column id="colPO"><Text id="hdrPO" text="PO"/></Column>
+                    <Column id="colItem"><Text id="hdrItem" text="Item"/></Column>
+                    <Column id="colSchedLine"><Text id="hdrSchedLine" text="Sched.Line"/></Column>
+                    <Column id="colReservaItem1"><Text id="hdrReservaItem1" text="Reservation Item"/></Column>
+                    <Column id="colMaterial"><Text id="hdrMaterial" text="Material"/></Column>
+                    <Column id="colIsBulk"><Text id="hdrIsBulk" text="Is Bulk?"/></Column>
+                    <Column id="colEntryUnit"><Text id="hdrEntryUnit" text="Entry Unit"/></Column>
+                    <Column id="colBomItem"><Text id="hdrBomItem" text="BOM Item Nr."/></Column>
+                    <Column id="colPlant"><Text id="hdrPlant" text="Plant"/></Column>
+                    <Column id="colQtyEntry"><Text id="hdrQtyEntry" text="Qtd (Entry Unit)"/></Column>
+                    <Column id="colReqQty"><Text id="hdrReqQty" text="Required Qtd"/></Column>
+                    <Column id="colReqDate"><Text id="hdrReqDate" text="Req. Date"/></Column>
+                    <Column id="colReqTime"><Text id="hdrReqTime" text="Req. Time"/></Column>
+                    <Column id="colReservation"><Text id="hdrReservation" text="Reservation"/></Column>
+                    <Column id="colResFinal"><Text id="hdrResFinal" text="Is Final?"/></Column>
+                    <Column id="colReservaItem2"><Text id="hdrReservaItem2" text="Reservation Item"/></Column>
+                </columns>
+
+                <items>
+                    <ColumnListItem id="itemSubcompTemplate">
+                        <cells>
+                            <Text id="cellPO" text="{subcomp>PurchaseOrder}"/>
+                            <Text id="cellItem" text="{subcomp>PurchaseOrderItem}"/>
+                            <Text id="cellSchedLine" text="{subcomp>ScheduleLine}"/>
+                            <Text id="cellReservaItem1" text="{subcomp>ReservationItem}"/>
+                            <Text id="cellMaterial" text="{subcomp>Material}"/>
+                            <Text id="cellIsBulk" text="{subcomp>IsBulkMaterialComponent}"/>
+                            <Text id="cellEntryUnit" text="{subcomp>EntryUnit}"/>
+                            <Text id="cellBomItem" text="{subcomp>BillOfMaterialItemNumber}"/>
+                            <Text id="cellPlant" text="{subcomp>Plant}"/>
+                            <Text id="cellQtyEntry" text="{subcomp>QuantityInEntryUnit}"/>
+                            <Text id="cellReqQty" text="{subcomp>RequiredQuantity}"/>
+                            <Text id="cellReqDate" text="{subcomp>RequirementDate}"/>
+                            <Text id="cellReqTime" text="{subcomp>RequirementTime}"/>
+                            <Text id="cellReservation" text="{subcomp>Reservation}"/>
+                            <Text id="cellResFinal" text="{subcomp>ReservationIsFinallyIssued}"/>
+                            <Text id="cellReservaItem2" text="{subcomp>ReservationItem}"/>
+                        </cells>
+                    </ColumnListItem>
+                </items>
+            </Table>
+        </ScrollContainer>
+
+        <endButton>
+            <Button id="btnCloseSubcompDialog" text="Fechar" press="onSubcompDialogClose"/>
+        </endButton>
+    </Dialog>
+
+</core:FragmentDefinition>

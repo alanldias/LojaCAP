@@ -197,114 +197,124 @@ this.on('avancarStatusNFs', async req => {
 // ==                  FUNÇÕES HELPER                   ==
 // =======================================================
 
-srv.on('uploadArquivoFrete', async (req) => {
+this.on('uploadArquivoFrete', async (req) => {
+  console.log('\n[Upload de Arquivo] 🚀 Início do processamento.');
   const { data } = req.data;
-
-  if (!data) {
-      req.error(400, 'Nenhum arquivo recebido.');
-      return false;
+  if (!data) { 
+      return req.error(400, 'Nenhum arquivo recebido.');
   }
 
   const buffer = Buffer.from(data.split(';base64,')[1], 'base64');
-  const registrosDoCsv = [];
+  const stream = Readable.from(buffer).pipe(csv({ 
+      mapHeaders: ({ header }) => header.trim()
+  }));
 
-  return new Promise((resolve, reject) => {
-      Readable.from(buffer)
-          .pipe(csv({
-              separator: ',',
-              mapHeaders: ({ header }) => header.trim()
-          }))
-          .on('data', (row) => {
-              registrosDoCsv.push(row);
-          })
-          .on('end', async () => {
-              console.log(`[UPLOAD-LOG] Fim da leitura do CSV. Encontrados ${registrosDoCsv.length} registros.`);
-              if (registrosDoCsv.length === 0) {
-                  req.warn('O arquivo CSV está vazio ou em formato inválido.');
-                  return resolve(false);
+  try {
+      console.log('⏳ Tentando iniciar a transação (forçada)...');
+
+      // <<< MUDANÇA CRÍTICA: Removido o 'req' para forçar uma transação de DB real >>>
+      await cds.tx(async (tx) => { 
+          
+          // <<< IMPORTANTE: Reatribuindo o contexto da requisição à transação >>>
+          tx.req = req;
+
+          console.log('✅✅✅ SUCESSO! Transação iniciada.');
+
+          let batch = [];
+          let contadorDeLinhas = 0;
+          const todosOsIdsDoArquivo = [];
+
+          console.log('[UPLOAD-LOG] Iniciando processamento de stream transacional...');
+
+          for await (const registro of stream) {
+              contadorDeLinhas++;
+              if (registro.idAlocacaoSAP) {
+                  todosOsIdsDoArquivo.push(registro.idAlocacaoSAP);
               }
-
-              const registrosValidos = [];
-              const todosOsErros = [];
-
-              registrosDoCsv.forEach((registro, index) => {
-                  // CHAMANDO A MESMA FUNÇÃO UNIFICADA DE VALIDAÇÃO
-                  const validacao = validation.validarNotaFiscal(registro, index);
-
-                  if (validacao.isValid) {
-                      // Se válido, mapeia o registro para o formato da entidade
-                      registrosValidos.push({
-                          ID: registro.ID,
-                          idAlocacaoSAP: registro.idAlocacaoSAP,
-                          orderIdPL: registro.orderIdPL,
-                          chaveDocumentoMae: registro.chaveDocumentoMae,
-                          chaveDocumentoFilho: registro.chaveDocumentoFilho,
-                          status: registro.status,
-                          numeroNfseServico: registro.numeroNfseServico,
-                          serieNfseServico: registro.serieNfseServico,
-                          dataEmissaoNfseServico: registro.dataEmissaoNfseServico || null,
-                          chaveAcessoNfseServico: registro.chaveAcessoNfseServico,
-                          codigoVerificacaoNfse: registro.codigoVerificacaoNfse,
-                          cnpjTomador: registro.cnpjTomador,
-                          codigoFornecedor: registro.codigoFornecedor,
-                          nomeFornecedor: registro.nomeFornecedor,
-                          numeroPedidoCompra: registro.numeroPedidoCompra,
-                          itemPedidoCompra: registro.itemPedidoCompra,
-                          numeroDocumentoMIRO: registro.numeroDocumentoMIRO,
-                          anoFiscalMIRO: registro.anoFiscalMIRO,
-                          documentoContabilMiroSAP: registro.documentoContabilMiroSAP,
-                          numeroNotaFiscalSAP: registro.numeroNotaFiscalSAP,
-                          serieNotaFiscalSAP: registro.serieNotaFiscalSAP,
-                          numeroControleDocumentoSAP: registro.numeroControleDocumentoSAP,
-                          documentoVendasMae: registro.documentoVendasMae,
-                          documentoFaturamentoMae: registro.documentoFaturamentoMae,
-                          localPrestacaoServico: registro.localPrestacaoServico,
-                          valorEfetivoFrete: parseFloat(registro.valorEfetivoFrete) || 0.0,
-                          valorLiquidoFreteNfse: parseFloat(registro.valorLiquidoFreteNfse) || 0.0,
-                          valorBrutoNfse: parseFloat(registro.valorBrutoNfse) || 0.0,
-                          issRetido: registro.issRetido,
-                          estornado: registro.estornado === 'true',
-                          enviadoParaPL: registro.enviadoParaPL,
-                          logErroFlag: registro.logErroFlag === 'true',
-                          mensagemErro: registro.mensagemErro,
-                          tipoMensagemErro: registro.tipoMensagemErro,
-                          classeMensagemErro: registro.classeMensagemErro,
-                          numeroMensagemErro: registro.numeroMensagemErro
-                      });
-                  } else {
-                      todosOsErros.push(...validacao.errors);
-                  }
+              const validacao = validation.validarNotaFiscal(registro, contadorDeLinhas);
+              if (!validacao.isValid) {
+                const linhaDoArquivo = contadorDeLinhas + 1;
+                throw new Error(`O arquivo foi rejeitado. Erro encontrado no item ${linhaDoArquivo} do seu CSV:\n\n${validacao.errors.join('\n')}`);
+              }
+              
+              // Monta o batch SEM o campo 'ID'
+              batch.push({ 
+                  idAlocacaoSAP: registro.idAlocacaoSAP,
+                  orderIdPL: registro.orderIdPL,
+                  chaveDocumentoMae: registro.chaveDocumentoMae,
+                  // ... e todos os outros campos do seu CSV
+                  chaveDocumentoFilho: registro.chaveDocumentoFilho,
+                  status: registro.status,
+                  numeroNfseServico: registro.numeroNfseServico,
+                  serieNfseServico: registro.serieNfseServico,
+                  dataEmissaoNfseServico: registro.dataEmissaoNfseServico || null,
+                  chaveAcessoNfseServico: registro.chaveAcessoNfseServico,
+                  codigoVerificacaoNfse: registro.codigoVerificacaoNfse,
+                  cnpjTomador: registro.cnpjTomador,
+                  codigoFornecedor: registro.codigoFornecedor,
+                  nomeFornecedor: registro.nomeFornecedor,
+                  numeroPedidoCompra: registro.numeroPedidoCompra,
+                  itemPedidoCompra: registro.itemPedidoCompra,
+                  numeroDocumentoMIRO: registro.numeroDocumentoMIRO,
+                  anoFiscalMIRO: registro.anoFiscalMIRO,
+                  documentoContabilMiroSAP: registro.documentoContabilMiroSAP,
+                  numeroNotaFiscalSAP: registro.numeroNotaFiscalSAP,
+                  serieNotaFiscalSAP: registro.serieNotaFiscalSAP,
+                  numeroControleDocumentoSAP: registro.numeroControleDocumentoSAP,
+                  documentoVendasMae: registro.documentoVendasMae,
+                  documentoFaturamentoMae: registro.documentoFaturamentoMae,
+                  localPrestacaoServico: registro.localPrestacaoServico,
+                  valorEfetivoFrete: parseFloat(registro.valorEfetivoFrete) || 0.0,
+                  valorLiquidoFreteNfse: parseFloat(registro.valorLiquidoFreteNfse) || 0.0,
+                  valorBrutoNfse: parseFloat(registro.valorBrutoNfse) || 0.0,
+                  issRetido: registro.issRetido,
+                  estornado: registro.estornado === 'true',
+                  enviadoParaPL: registro.enviadoParaPL,
+                  logErroFlag: registro.logErroFlag === 'true',
+                  mensagemErro: registro.mensagemErro,
+                  tipoMensagemErro: registro.tipoMensagemErro,
+                  classeMensagemErro: registro.classeMensagemErro,
+                  numeroMensagemErro: registro.numeroMensagemErro
               });
+          }
 
-              if (todosOsErros.length > 0) {
-                  const mensagemDeErro = `O arquivo foi rejeitado por conter ${todosOsErros.length} erro(s):\n\n${todosOsErros.join('\n')}`;
-                  console.error("[UPLOAD-VALIDATION] Erros encontrados:\n", mensagemDeErro);
-                  req.error(400, mensagemDeErro);
-                  return resolve(false);
-              }
+          console.log(`  [Upload de Arquivo] 📄 ${contadorDeLinhas} itens lidos e validados individualmente.`);
+          if (contadorDeLinhas === 0) {
+              throw new Error("O arquivo está vazio ou em um formato inválido.");
+          }
 
-              try {
-                  if (registrosValidos.length > 0) {
-                      await cds.tx(req).run(UPSERT.into(NotaFiscalServicoMonitor).entries(registrosValidos));
-                      req.notify(`Upload bem-sucedido! ${registrosValidos.length} registros importados/atualizados.`);
-                      console.log(`[UPLOAD-LOG] SUCESSO! Inseridos/Atualizados ${registrosValidos.length} registros.`);
-                      resolve(true);
-                  } else {
-                      req.warn("Nenhum registro válido encontrado no arquivo para processar.");
-                      resolve(false);
-                  }
-              } catch (dbError) {
-                  console.error("[UPLOAD-DB] Erro ao inserir dados no banco:", dbError);
-                  req.error(500, 'Ocorreu um erro interno ao salvar os dados no banco de dados.');
-                  reject(dbError);
-              }
-          })
-          .on('error', (error) => {
-              console.error("[UPLOAD] Erro crítico ao processar o CSV:", error);
-              req.error(500, 'Ocorreu um erro na leitura do arquivo CSV.');
-              reject(error);
-          });
-  });
+          console.log("  [Upload de Arquivo] 🔗 Verificando consistência Mãe-Filho no arquivo completo...");
+          const consistencia = validation.validarConsistenciaMaeFilho(batch);
+          if(!consistencia.isValid) {
+            const mensagemDeErro = `O arquivo foi rejeitado por inconsistência nos dados:\n\n- ${consistencia.errors.join('\n- ')}`;
+            throw new Error(mensagemDeErro);
+          }
+          console.log("    [Upload de Arquivo] ✅ Consistência de dados validada.");
+
+          console.log(`  [Upload de Arquivo] 🔍 Verificando se os ${contadorDeLinhas} registros já existem no banco...`);
+          const idsExistentes = await tx.run(
+              SELECT.from(NotaFiscalServicoMonitor, ['idAlocacaoSAP']).where({ idAlocacaoSAP: { in: todosOsIdsDoArquivo } })
+          );
+          if (idsExistentes.length > 0) {
+              const listaIds = idsExistentes.map(nf => nf.idAlocacaoSAP).join(', ');
+              throw new Error(`O arquivo foi rejeitado. As seguintes NFs já existem no sistema: ${listaIds}`);
+          }
+          console.log("    [Upload de Arquivo] ✅ Registros são novos, prontos para inserção.");
+
+          console.log(`  [Upload de Arquivo] 💾 Inserindo ${batch.length} novos registros no banco de dados...`);
+          await tx.run(INSERT.into(NotaFiscalServicoMonitor).entries(batch));
+         
+          console.log("  [Upload de Arquivo] ✨ Tudo certo! Preparando para salvar as alterações.");
+          req.notify(`Arquivo processado e ${contadorDeLinhas} registros importados com sucesso!`);
+      });
+
+      console.log('[Upload de Arquivo] ✅ Processo finalizado com sucesso.');
+      return true;
+
+  } catch (error) {
+    console.error(`\n[Upload de Arquivo] ❌ FALHA! Rollback executado. Motivo: ${error.message}\n`);
+    return req.error(400, error.message);
+  }
 });
 
 });

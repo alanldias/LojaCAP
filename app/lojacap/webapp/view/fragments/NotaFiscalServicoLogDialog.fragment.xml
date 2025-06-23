@@ -13,9 +13,19 @@
 
         <Table
             id="logTable"
-            items="{/NotaFiscalServicoLog}"
             growing="true"
-            growingScrollToLoad="true">
+            growingScrollToLoad="true"
+            items="{
+            path: '/NotaFiscalServicoLog',
+            filters: [
+                { path: 'tipoMensagemErro', operator: 'EQ', value1: 'E' },
+                { path: 'tipoMensagemErro', operator: 'EQ', value1: 'R' }
+            ],
+            parameters: {
+                $orderby: 'createdAt desc'
+            }
+            }">
+
             <columns>
                 <Column id="colCreatedAt">
                     <Text id="txtHeaderData" text="Data"/>

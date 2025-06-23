@@ -32,27 +32,30 @@ sap.ui.define([
         },
 
         //não é o ideal mas só para o console log parar de reclamar 
-        formatDate: function(sDateString) {
-            // 1. Primeira verificação: se não veio nada, retorna vazio.
-            if (!sDateString) {
-                return "";
+        formatDate: function(oDate) { // O nome 'oDate' reforça que esperamos um objeto
+
+            // 1. Sempre verifique se o valor de entrada existe
+            if (!oDate) {
+                return ""; // Retorna vazio se a data for nula ou indefinida
             }
-
-            // 2. Tenta criar um objeto de Data.
-            const oDate = new Date(sDateString);
-
-            // 3. <<< CORREÇÃO PRINCIPAL >>>
-            //    Verifica se a data criada é válida. `oDate.getTime()` retorna NaN 
-            //    (Not-a-Number) para datas inválidas, e NaN nunca é igual a si mesmo.
-            //    É um truque certeiro para validar datas em JavaScript!
-            if (isNaN(oDate.getTime())) {
-                console.warn(`[Formatter] Valor de data inválido recebido: ${sDateString}`);
-                return ""; // Retorna vazio se a data for inválida, evitando o erro.
+        
+            // 2. Verifique se o valor já não é um objeto Date. Se for, use-o diretamente.
+            // Se não for, tente convertê-lo.
+            const dateObject = (oDate instanceof Date) ? oDate : new Date(oDate);
+            
+            // 3. Verifique se a conversão resultou em uma data válida
+            if (isNaN(dateObject.getTime())) {
+                console.warn(`[Formatter] Valor de data inválido recebido: ${oDate}`); // O aviso que você viu
+                return "Data Inválida"; // Retorna um texto de erro amigável na tela
             }
-
-            // 4. Se a data é válida, formata e retorna.
-            const oDateFormat = DateFormat.getDateInstance({ style: "short" });
-            return oDateFormat.format(oDate);
+        
+            // 4. Se tudo estiver certo, formate a data para o padrão brasileiro
+            // Garanta que o sap.ui.core.format.DateFormat está importado no seu controller/formatter
+            var oDateFormat = sap.ui.core.format.DateFormat.getDateTimeInstance({
+                pattern: "dd/MM/yyyy"
+            });
+        
+            return oDateFormat.format(dateObject);
         },
         iconTipo: function (sTipo) {
             switch (sTipo) {

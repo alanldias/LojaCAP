@@ -2,10 +2,10 @@
 const cds = require('@sap/cds');
 
 module.exports = function (srv) {
-    const { Carrinhos, ItemCarrinho, Clientes } = srv.entities;
+  const { Carrinhos, ItemCarrinho, Clientes } = srv.entities;
 
-    
-    srv.on('mergeCarrinho', async (req) => {
+
+  srv.on('mergeCarrinho', async (req) => {
     const { carrinhoAnonimoID } = req.data; // ID do localStorage
     if (!carrinhoAnonimoID) {
       return req.error(400, "ID do carrinho anônimo não fornecido.");
@@ -87,6 +87,6 @@ module.exports = function (srv) {
         return { carrinhoID: idCarrinhoFinal };
       }
     }
-});
-  
+  });
+
 }

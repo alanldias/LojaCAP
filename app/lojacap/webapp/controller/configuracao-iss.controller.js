@@ -68,16 +68,19 @@ sap.ui.define([
         onSave: function () {
             const oView = this.getView();
             const oDialog = this.byId("ConfiguracaoISSDialog");
-
-            // O data-binding do UI5 já atualizou os dados no modelo em memória.
-            // O submitBatch envia todas as alterações pendentes para o backend (neste caso, o CREATE ou UPDATE).
-            oView.getModel().submitBatch("$auto").then(() => {
+            const oModel = oView.getModel();
+        
+            oModel.submitBatch("$auto").then(() => {
                 MessageToast.show("Salvo com sucesso!");
                 oDialog.close();
+        
+                // Atualiza os dados da entidade no front-end após o save
+                oModel.refresh(); 
+        
             }).catch((oError) => {
-                // Em caso de erro do backend, exibe a mensagem.
                 MessageToast.show("Erro ao salvar: " + oError.message);
             });
         }
+        
     });
 });

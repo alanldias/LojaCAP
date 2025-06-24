@@ -186,13 +186,22 @@ sap.ui.define([
                 const oJanelaImpressao = window.open(sUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
 
                 if (oJanelaImpressao) {
+                    // Adiciona um evento para revogar o blob quando a janela de impressão for fechada
+                    oJanelaImpressao.onbeforeunload = () => {
+                        URL.revokeObjectURL(sUrl);
+                        console.log('Blob URL revogado ao fechar a janela de impressão.');
+                    };
+
                     oJanelaImpressao.onload = () => {
                         oJanelaImpressao.focus();
                         oJanelaImpressao.print();
-                        URL.revokeObjectURL(sUrl);
+                        // Importante: NÃO revogue o URL do blob aqui imediatamente
+                        // Deixe o onbeforeunload da janela de impressão cuidar disso.
                     };
                 } else {
                     MessageToast.show("Não foi possível abrir a janela de impressão. Por favor, desative o bloqueador de pop-ups.");
+                    // Se a janela não puder ser aberta, revogue o blob imediatamente para evitar vazamento.
+                    URL.revokeObjectURL(sUrl);
                 }
 
             }).catch(oError => {

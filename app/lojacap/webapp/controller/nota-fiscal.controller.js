@@ -20,13 +20,6 @@ sap.ui.define([
   const TBL_NOTAS = "tableNotaFiscalServicoMonitor";
   const PATH_LOGS = "/NotaFiscalServicoLog";
   const FILTER_ERRO = new Filter("tipoMensagemErro", FilterOperator.EQ, "E");
-  const FILTER_REJ = new Filter("tipoMensagemErro", FilterOperator.EQ, "R");
-  const FILTER_NAO_S = new sap.ui.model.Filter({
-    filters: [FILTER_ERRO, FILTER_REJ],
-    and: false
-  });
-
-
 
   /* =========================================================== *
    *  Controller                                                 *
@@ -497,19 +490,6 @@ sap.ui.define([
     /* ======================================================= *
      *  HELPERS privados                                       *
      * ======================================================= */
-    /** único ID selecionado → bind action */
-    _prepareSingleIdAction(path) {
-      const oTable = this.byId(TBL_NOTAS);
-      const aCtx = oTable.getSelectedContexts();
-      if (aCtx.length !== 1) {
-        MessageToast.show("Selecione exatamente 1 NFSe.");
-        return {};
-      }
-      const id = aCtx[0].getProperty("idAlocacaoSAP");
-      const oAction = this.getView().getModel().bindContext(path)
-        .setParameter(path.includes("rejeitar") ? "idAlocacaoSAP" : "notasFiscaisIDs", path.includes("rejeitar") ? id : [id]);
-      return { id, oAction };
-    },
 
     /** coleta IDs do mesmo grupo (filho + status) — usado em avançar / voltar */
     _collectIdsDoGrupo() {
@@ -521,15 +501,14 @@ sap.ui.define([
       }
       const grpFilho = aCtxSel[0].getProperty("chaveDocumentoFilho");
       const grpStatus = aCtxSel[0].getProperty("status");
-      const aIds = [];
+     
       oTable.getItems().forEach(item => {
         const c = item.getBindingContext();
         const match = c && c.getProperty("chaveDocumentoFilho") === grpFilho &&
           c.getProperty("status") === grpStatus;
         item.setSelected(match);
-        if (match) aIds.push(c.getProperty("idAlocacaoSAP"));
       });
-      return { aIds, grpFilho, grpStatus };
+      return {grpFilho, grpStatus };
     },
 
     /** executa action de lote e mostra toast/erros */
@@ -610,12 +589,6 @@ sap.ui.define([
         .catch(err => console.error("[LOG] Erro durante refresh:", err))
         .finally(() => oTable.setBusy(false));
     },
-
-
-    /* ======================================================= *
-     *  HELPERS privados                                       *
-     * ======================================================= */
-
     // ***** COLE A FUNÇÃO _calculateColumnTotal AQUI *****
     _calculateColumnTotal: function (aItems, sColunaKey) {
       let fTotal = 0;
@@ -661,7 +634,7 @@ sap.ui.define([
 
     /* =========== helper ========= */
     _openSubcompDialog: async function (aItens) {
-      // 1) cria ou obtém o fragment carregado
+      // 1) cria ou obtém o fragment carregado 
       if (!this._pSubcompDialog) {
         this._pSubcompDialog = Fragment.load({
           id: this.getView().getId(),                    // garante IDs únicos

@@ -1,7 +1,7 @@
 // srv/nf/log.js
 const cds = require('@sap/cds');
 
-function sucesso(ids, proximoStatus, extra = {}, msg = `NF avançada para ${proximoStatus}.`) {
+function sucesso(ids, proximoStatus, extra = {}, msg = `NF avançada ou retrocedida para ${proximoStatus}.`) {
   return ids.map(id => ({ idAlocacaoSAP: id, success: true, message: msg, novoStatus: proximoStatus, ...extra }));
 }
 

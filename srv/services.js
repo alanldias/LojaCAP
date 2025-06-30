@@ -2,6 +2,8 @@ const cds = require('@sap/cds');
 
 const csv = require('csv-parser');
 const { Readable } = require('stream');
+const OpenAI = require("openai");
+
 
 const validation = require('./lib/validation');
 const processor = require('./lib/uploadProcessor');
@@ -17,6 +19,11 @@ const handlers = [
   require('./lojacap/pedidos')
 ];
 
+const openai = new OpenAI({
+  baseURL: 'https://api.deepseek.com',
+  apiKey: process.env.DEEPSEEK_API_KEY
+});
+
 module.exports = cds.service.impl(function (srv) {
   handlers.forEach(register => register(srv));
 
@@ -27,6 +34,28 @@ module.exports = cds.service.impl(function (srv) {
 
   console.log("✅ CAP Service inicializado");
 
+  srv.on('callDeepSeek', async req => {
+    const { question } = req.data;
+    console.log('[DeepSeek] question 👉', question);
+
+    try {
+      const { choices } = await openai.chat.completions.create({
+        model: "deepseek-chat",
+        messages: [
+          { role: "system", content: "You are a helpful assistant." },
+          { role: "user",   content: question }
+        ]
+      });
+
+      const answer = choices?.[0]?.message?.content ?? "";
+      console.log('[DeepSeek] answer  👈', answer);
+
+      return answer;               // <-- string pura ou  { value: answer }
+    } catch (e) {
+      console.error('[DeepSeek] ERRO', e);
+      req.error(500, e.message);
+    }
+  });
 
   srv.on('getPOSubcontractingComponents', async req => {
     const axiosCfg = {
@@ -76,7 +105,6 @@ module.exports = cds.service.impl(function (srv) {
       );
     }
   });
-
 
   srv.before('CREATE', 'NotaFiscalServicoMonitor', (req) => {
     // Chamamos nossa função unificada

@@ -41,6 +41,9 @@ sap.ui.define([
           onGoIss: function () {
             this.getOwnerComponent().getRouter().navTo("RouteConfiguracaoISS");
           },
+          onchatbot: function () {
+            this.getOwnerComponent().getRouter().navTo("Routechatbot");
+          },
 
 
 

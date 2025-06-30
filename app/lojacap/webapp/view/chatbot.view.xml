@@ -1,0 +1,52 @@
+<mvc:View
+    controllerName="lojacap.controller.chatbot"
+    xmlns="sap.m"
+    xmlns:mvc="sap.ui.core.mvc"
+    displayBlock="true"
+    height="100%"
+    xmlns:core="sap.ui.core">
+
+    <Page id="chatbotPage" title="ChatGPT 6o" showHeader="true">
+        <content>
+            <ScrollContainer id="scrollContainer" height="100%" width="100%" vertical="true">
+               <List
+                        id="chatList"
+                        class="sapUiResponsivePadding--header"
+                        showSeparators="None"
+                        items="{chat>/chat}"
+                        noDataText="Faça sua primeira pergunta :)"
+                        updateFinished=".onChatUpdateFinished"> <items>
+                            <CustomListItem id = "asio123">
+                                <HBox id = "asio11223"
+                                    width="100%"
+                                    class="sapUiSmallMarginBottom"
+                                    justifyContent="{= ${chat>sender} === 'user' ? 'Start' : 'End' }">
+                                    <VBox id = "asio12as13"
+                                        class="chat-bubble sapUiTinyMargin sapUiRounded sapUiContentPadding"> <Text id = "aa13sio123" text="{= ${chat>sender} === 'user' ? ${chat>text} : '' + ${chat>text} }" wrapping="true"/>
+                                    </VBox>
+                                </HBox>
+                            </CustomListItem>
+                        </items>
+                    </List>
+            </ScrollContainer>
+        </content>
+         <footer>
+            <Toolbar id="inputBar" width="98%" style="Clear" class="sapUiSmallMargin">
+                <TextArea id="input"
+                          width="100%"
+                          growing="true"
+                          growingMaxLines="4"
+                          placeholder="Digite sua pergunta...">
+                    <layoutData>
+                        <ToolbarLayoutData id = "a123ASs123" shrinkable="true"/>
+                    </layoutData>
+                </TextArea>
+                <Button id="btnSend"
+                        icon="sap-icon://paper-plane"
+                        type="Emphasized"
+                        press="onSend"
+                        class="sapUiTinyMarginBegin"/>
+            </Toolbar>
+        </footer>
+    </Page>
+</mvc:View>

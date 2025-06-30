@@ -70,4 +70,6 @@ service ShopService {
         novoStatus    : String;
     };
   function getPOSubcontractingComponents() returns LargeString;
+
+  function callDeepSeek(question: String) returns String;
 }

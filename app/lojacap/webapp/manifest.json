@@ -140,7 +140,12 @@
           "name": "RouteConfiguracaoISS",
           "pattern": "configuracaoISS",   
           "target": ["TargetConfiguracaoISS"]
-      }
+        },
+        {
+          "name": "Routechatbot",
+          "pattern": "chatbot",   
+          "target": ["Targetchatbot"]
+        }
       ],
       "targets": {
         "Targethome-page": {
@@ -185,6 +190,10 @@
         "TargetConfiguracaoISS": { 
           "viewName": "configuracao-iss",
           "viewId": "configuracao-iss"
+        },
+        "Targetchatbot": { 
+          "viewName": "chatbot",
+          "viewId": "chatbot"
         }
       }
     },

@@ -3,50 +3,112 @@
     xmlns="sap.m"
     xmlns:mvc="sap.ui.core.mvc"
     displayBlock="true"
-    height="100%"
-    xmlns:core="sap.ui.core">
+    height="100%">
 
-    <Page id="chatbotPage" title="ChatGPT 6o" showHeader="true">
-        <content>
-            <ScrollContainer id="scrollContainer" height="100%" width="100%" vertical="true">
-               <List
-                        id="chatList"
-                        class="sapUiResponsivePadding--header"
-                        showSeparators="None"
-                        items="{chat>/chat}"
-                        noDataText="Faça sua primeira pergunta :)"
-                        updateFinished=".onChatUpdateFinished"> <items>
-                            <CustomListItem id = "asio123">
-                                <HBox id = "asio11223"
-                                    width="100%"
-                                    class="sapUiSmallMarginBottom"
-                                    justifyContent="{= ${chat>sender} === 'user' ? 'Start' : 'End' }">
-                                    <VBox id = "asio12as13"
-                                        class="chat-bubble sapUiTinyMargin sapUiRounded sapUiContentPadding"> <Text id = "aa13sio123" text="{= ${chat>sender} === 'user' ? ${chat>text} : '' + ${chat>text} }" wrapping="true"/>
-                                    </VBox>
-                                </HBox>
-                            </CustomListItem>
+    <SplitContainer id="splitContainer">
+        <masterPages>
+            <Page id="masterPage" title="Meus Chats" showHeader="true">
+                <content>
+                    <List
+                        id="chatMasterList"
+                        items="{/Chats}"
+                        mode="SingleSelectMaster"
+                        growing="true"
+                        growingScrollToLoad="true"
+                        selectionChange=".onChatSelect">
+                        <items>
+                            <StandardListItem
+                                id="chatMasterListItem"
+                                title="{= ${lastMessage} ? ${lastMessage} : 'Sem titulo' }" />
                         </items>
                     </List>
-            </ScrollContainer>
-        </content>
-         <footer>
-            <Toolbar id="inputBar" width="98%" style="Clear" class="sapUiSmallMargin">
-                <TextArea id="input"
-                          width="100%"
-                          growing="true"
-                          growingMaxLines="4"
-                          placeholder="Digite sua pergunta...">
-                    <layoutData>
-                        <ToolbarLayoutData id = "a123ASs123" shrinkable="true"/>
-                    </layoutData>
-                </TextArea>
-                <Button id="btnSend"
-                        icon="sap-icon://paper-plane"
-                        type="Emphasized"
-                        press="onSend"
-                        class="sapUiTinyMarginBegin"/>
-            </Toolbar>
-        </footer>
-    </Page>
+                </content>
+
+                <footer>
+                    <Bar id="masterFooterBar">
+                        <contentRight>
+                            <Button
+                                id="btnNewChat"
+                                text="Novo Chat"
+                                type="Emphasized"
+                                press="onCreateChat" />
+                        </contentRight>
+                    </Bar>
+                </footer>
+            </Page>
+        </masterPages>
+
+        <detailPages>
+            <Page id="detailPage" title="Chat" showHeader="true">
+                <content>
+                    <ScrollContainer
+                        id="scrollContainer"
+                        height="100%"
+                        width="100%"
+                        vertical="true">
+
+                        <!-- mensagens vem do modelo "local" -->
+                        <List
+                            id="messageList"
+                            items="{local>/messages}"
+                            showSeparators="None"
+                            width="100%"
+                            noDataText="Faça sua primeira pergunta 🙂"
+                            updateFinished=".onChatUpdateFinished">
+
+                            <items>
+                                <CustomListItem id="messageListItem">
+                                    <HBox
+                                        id="messageHBox"
+                                        width="100%"
+                                        class="sapUiSmallMarginBottom"
+                                        justifyContent="{= ${local>sender} === 'user' ? 'Start' : 'End' }">
+
+                                        <VBox
+                                            id="messageVBox"
+                                            class="chat-bubble sapUiTinyMargin sapUiRounded sapUiContentPadding">
+                                            <Text
+                                                id="messageText"
+                                                text="{local>text}"
+                                                wrapping="true"/>
+                                        </VBox>
+
+                                    </HBox>
+                                </CustomListItem>
+                            </items>
+                        </List>
+                    </ScrollContainer>
+                </content>
+
+                <!-- Campo + botão na mesma linha -->
+                <footer>
+                    <Toolbar id="inputToolbar" class="sapUiSmallMargin">
+                        <TextArea
+                            id="input"
+                            width="100%"
+                            growing="true"
+                            growingMaxLines="4"
+                            placeholder="Digite sua pergunta...">
+                            <layoutData>
+                                <ToolbarLayoutData id = "sadas123" shrinkable="true"/>
+                            </layoutData>
+                        </TextArea>
+
+                        <Button
+                            id="btnSend"
+                            icon="sap-icon://paper-plane"
+                            type="Emphasized"
+                            press="onSend"
+                            class="sapUiTinyMarginBegin">
+                            <layoutData>
+                                <!-- nunca mandar para overflow -->
+                                <ToolbarLayoutData id = "as123"/>
+                            </layoutData>
+                        </Button>
+                    </Toolbar>
+                </footer>
+            </Page>
+        </detailPages>
+
+    </SplitContainer>
 </mvc:View>

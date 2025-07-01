@@ -30,32 +30,86 @@ module.exports = cds.service.impl(function (srv) {
   const etapas = require('./nf/etapas')(srv);    // devolve { avancar, voltar }
   const { sucesso, falha, gravarLog } = require('./nf/log');
 
-  const { NotaFiscalServicoMonitor } = srv.entities;
+  const MAX_CONTEXT = 10;                       // quantas msgs anteriores enviar
+
+  const { NotaFiscalServicoMonitor, Chats, Messages } = srv.entities;
 
   console.log("✅ CAP Service inicializado");
 
-  srv.on('callDeepSeek', async req => {
-    const { question } = req.data;
-    console.log('[DeepSeek] question 👉', question);
-
-    try {
-      const { choices } = await openai.chat.completions.create({
-        model: "deepseek-chat",
-        messages: [
-          { role: "system", content: "You are a helpful assistant." },
-          { role: "user",   content: question }
-        ]
-      });
-
-      const answer = choices?.[0]?.message?.content ?? "";
-      console.log('[DeepSeek] answer  👈', answer);
-
-      return answer;               // <-- string pura ou  { value: answer }
-    } catch (e) {
-      console.error('[DeepSeek] ERRO', e);
-      req.error(500, e.message);
-    }
+  srv.on('startChat', async req => {
+    const { title } = req.data;
+    const [chat] = await cds.run(INSERT.into(Chats).entries({ title }));
+    return chat;
   });
+
+  srv.on('sendMessage', async req => {
+    //  Extrai parâmetros
+    const chatGuid = typeof req.data.chat === 'string'
+          ? req.data.chat
+          : req.data.chat.ID;          // entidade = {ID: …}
+    const question = req.data.question;
+  
+    // Grava pergunta do usuário (sincrono)                  
+    await INSERT.into(Messages).entries({
+      chat_ID : chatGuid,              // GUID puro
+      sender  : 'user',
+      text    : question
+    });
+  
+    //DISPARA processamento assincrono (não await!)            
+    (async () => {
+      try {
+        // busca últimas N*2 mensagens para contexto           
+        const prev = await SELECT.from(Messages)
+          .where({ chat_ID : chatGuid })
+          .orderBy('createdAt desc')
+          .limit(MAX_CONTEXT * 2);
+  
+        const contextMsgs = prev.reverse().map(m => ({
+          role   : m.sender === 'user' ? 'user' : 'assistant',
+          content: m.text
+        }));
+  
+        // monta payload e chama DeepSeek                      
+        const { choices } = await openai.chat.completions.create({
+          model   : 'deepseek-chat',
+          messages: [
+            { role: 'system',
+              content: 'Você é um assistente SAP CAP/BTP em pt-BR.' },
+            ...contextMsgs,
+            { role: 'user', content: question }
+          ]
+        });
+  
+        const answer = choices?.[0]?.message?.content ?? "❔";
+  
+        //grava resposta do bot                               
+        await INSERT.into(Messages).entries({
+          chat_ID : chatGuid,
+          sender  : 'bot',
+          text    : answer
+        });
+  
+        // atualiza resumo no Chat  
+        await UPDATE(Chats, { ID : chatGuid }).with({ lastMessage : answer });
+  
+        console.log("[DeepSeek] resposta gravada para chat", chatGuid);
+      } catch (e) {
+        console.error("[DeepSeek bg] erro:", e);
+  
+        // grava mensagem de falha para o usuário ver
+        await INSERT.into(Messages).entries({
+          chat_ID : chatGuid,
+          sender  : 'bot',
+          text    : "⚠️ Erro ao consultar IA. Tente novamente mais tarde."
+        });
+      }
+    })();   // ← dispara e esquece
+  
+    // Resposta imediata para o frontend                
+    return { status : "queued" };      // front ativa polling e logo vê a resposta
+  });
+
 
   srv.on('getPOSubcontractingComponents', async req => {
     const axiosCfg = {

@@ -183,3 +183,24 @@ entity ZTMM_ISS_CFG : cuid, managed {
     val_de       : Date;
     val_ate      : Date;
 }
+
+entity Chats : cuid, managed {
+    title       : String(255);
+    lastMessage : LargeString;
+    
+    // A mágica acontece aqui! A Composição define a relação Pai-Filho.
+    // O chat "contém" muitas mensagens. Se o chat for deletado, as mensagens vão junto.
+    messages    : Composition of many Messages on messages.chat = $self;
+}
+entity Messages : cuid, managed {
+    // Esta é a associação gerenciada de volta para o Pai.
+    // O CAP vai cuidar da chave estrangeira (chat_ID) automaticamente.
+    chat   : Association to Chats; 
+    
+    // Esta é a nova sintaxe para enums, muito mais limpa.
+    sender : String enum { 
+        user; 
+        bot; 
+    };
+    text   : LargeString;
+}

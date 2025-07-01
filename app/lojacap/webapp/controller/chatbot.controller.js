@@ -14,7 +14,7 @@ sap.ui.define([
         _pollTimer   : null,
         _pollChatId : null,
 
-        /* Lifecycle                                               */
+        //Lifecycle                                      
         onInit: function () {
             console.log("[chatbot] onInit…");
 

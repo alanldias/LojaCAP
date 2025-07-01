@@ -1,14 +1,11 @@
 const cds = require('@sap/cds');
-
 const csv = require('csv-parser');
 const { Readable } = require('stream');
 const OpenAI = require("openai");
-
-
 const validation = require('./lib/validation');
 const processor = require('./lib/uploadProcessor');
-
 const axios = require('axios');
+
 require('dotenv').config();
 
 const handlers = [
@@ -24,12 +21,14 @@ const openai = new OpenAI({
   apiKey: process.env.DEEPSEEK_API_KEY
 });
 
+
+
 module.exports = cds.service.impl(function (srv) {
   handlers.forEach(register => register(srv));
 
   const etapas = require('./nf/etapas')(srv);    // devolve { avancar, voltar }
   const { sucesso, falha, gravarLog } = require('./nf/log');
-
+  
   const MAX_CONTEXT = 10;                       // quantas msgs anteriores enviar
 
   const { NotaFiscalServicoMonitor, Chats, Messages } = srv.entities;

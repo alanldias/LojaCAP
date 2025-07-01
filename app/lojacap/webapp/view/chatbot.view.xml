@@ -39,15 +39,37 @@
         </masterPages>
 
         <detailPages>
-            <Page id="detailPage" title="Chat" showHeader="true">
-                <content>
-                    <ScrollContainer
-                        id="scrollContainer"
-                        height="100%"
-                        width="100%"
-                        vertical="true">
+        <Page id="detailPage" showHeader="true">
+            <customHeader>
+                <Toolbar id="detailHeaderToolbar">
+                    <Title id="detailHeaderTitle" text="Chat 😎" />
+                    <ToolbarSpacer id="detailHeaderSpacer" />
+                    <MenuButton
+                        id="menuChatOptions"
+                        text="Mudar modelo"
+                        icon="sap-icon://action"
+                        tooltip="Ações do Chat"
+                        buttonMode="Split"
+                        defaultAction="onDefaultActionChat"
+                        beforeMenuOpen="onBeforeMenuOpenChat">
+                        <menu>
+                            <Menu id="chatOptionsMenu">
+                                <MenuItem id="menuItemDeleteAll" text="Chat GPT 5" icon="sap-icon://biometric-thumb" press="onDeleteChatMessages" />
+                                <MenuItem id="menuItemRename" text="Ultra Mega Grook" icon="sap-icon://goal" press="onRenameChat" />
+                                <MenuItem id="menuItemChaos" text="Super DeepSeek" icon="sap-icon://verified" press="onChaosMode" />
+                                <MenuItem id="menuItemSticker" text="Abacus (imagine usar issokkk)" icon="sap-icon://delete" press="onStickerSend" />
+                            </Menu>
+                        </menu>
+                    </MenuButton>
+                </Toolbar>
+            </customHeader>
 
-                        <!-- mensagens vem do modelo "local" -->
+            <content>
+                <ScrollContainer
+                    id="scrollContainer"
+                    height="100%"
+                    width="100%"
+                    vertical="true">
                         <List
                             id="messageList"
                             items="{local>/messages}"
@@ -79,8 +101,6 @@
                         </List>
                     </ScrollContainer>
                 </content>
-
-                <!-- Campo + botão na mesma linha -->
                 <footer>
                     <Toolbar id="inputToolbar" class="sapUiSmallMargin">
                         <TextArea
@@ -101,7 +121,6 @@
                             press="onSend"
                             class="sapUiTinyMarginBegin">
                             <layoutData>
-                                <!-- nunca mandar para overflow -->
                                 <ToolbarLayoutData id = "as123"/>
                             </layoutData>
                         </Button>

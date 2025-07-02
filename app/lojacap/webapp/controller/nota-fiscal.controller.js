@@ -266,38 +266,30 @@ sap.ui.define([
     *  Inserção Frete Manual                                  *
     * ======================================================= */
 
-    onAbrirDialogoCriacao: function () {
-        const oView = this.getView();
-        // Modelo JSON com uma estrutura vazia para o formulário
-        const oNovoRegistroModel = new JSONModel({
-            status: "01", // Status inicial padrão
-            issRetido: "2",
-            estornado: false,
-            logErroFlag: false
-            // Outros campos iniciarão como undefined ou vazios
+    async onAbrirDialogoCriacao() {
+      const oView = this.getView();
+
+      if (!this._oCriarFreteDialog) {
+        this._oCriarFreteDialog = await Fragment.load({
+          id: oView.getId(),
+          name: "lojacap.view.fragments.CriarFreteDialog",
+          controller: this
         });
-    
-        if (!this._oCriarFreteDialog) {
-            Fragment.load({
-                id: oView.getId(),
-                name: "lojacap.view.fragments.CriarFreteDialog",
-                controller: this
-            }).then(oDialog => {
-                this._oCriarFreteDialog = oDialog;
-                oView.addDependent(this._oCriarFreteDialog);
-                oDialog.setModel(oNovoRegistroModel, "novoRegistro");
-                oDialog.open();
-            });
-        } else {
-            // Limpa o modelo com a estrutura padrão e abre o dialog
-            this._oCriarFreteDialog.getModel("novoRegistro").setData(oNovoRegistroModel.getData());
-            this._oCriarFreteDialog.open();
-        }
+        oView.addDependent(this._oCriarFreteDialog);
+      }
+      const oNovoRegistroModel = new JSONModel({
+        status: "01",
+        issRetido: false,
+        estornado: false,
+        logErroFlag: false
+      });
+      this._oCriarFreteDialog.setModel(oNovoRegistroModel, "novoRegistro");
+      this._oCriarFreteDialog.open();
     },
-    onCancelarDialogoCriacao: function() {
+    onCancelarDialogoCriacao() {
         this._oCriarFreteDialog.close();
     },
-    onSalvarNovoRegistro: function() {
+    onSalvarNovoRegistro() {
         const oDialog = this.byId("criarFreteDialog");
         const oNovoRegistroModel = oDialog.getModel("novoRegistro");
         const oNovoRegistroData = oNovoRegistroModel.getData();
@@ -339,7 +331,7 @@ sap.ui.define([
        *  Botão de Soma                                          *
        * ======================================================= */
 
-      onCalcularTotal: function(oEvent) {
+      onCalcularTotal(oEvent) {
         const oMenuItem = oEvent.getParameter("item");
         const sActionKey = oMenuItem.data("coluna");
 

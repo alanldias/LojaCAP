@@ -72,7 +72,7 @@ async function processarStream(stream, validation) {
 async function validarLoteCompleto(batch, tx, NotaFiscalServicoMonitor) {
     // 1. Validação de Consistência Mãe-Filho
     console.log("  [Processador] 🔗 Verificando consistência Mãe-Filho no arquivo completo...");
-    validarConsistenciaMaeFilho(batch); // Esta função vai lançar um erro se falhar
+    _validarConsistenciaMaeFilho(batch); // Esta função vai lançar um erro se falhar
     console.log("    [Processador] ✅ Consistência de dados validada.");
 
     // 2. Verificação de Duplicados no Banco
@@ -103,7 +103,7 @@ async function inserirRegistros(batch, tx, NotaFiscalServicoMonitor) {
 
 // --- Funções Auxiliares Internas ---
 
-function validarConsistenciaMaeFilho(registros) {
+function _validarConsistenciaMaeFilho(registros) {
     const filhoParaMaeMap = new Map();
     registros.forEach((registro, index) => {
         const linhaAtual = index + 1;

@@ -76,7 +76,6 @@ module.exports = cds.service.impl(function (srv) {
         );
     }
 });
-  
 
 srv.before('CREATE', 'NotaFiscalServicoMonitor', (req) => {
   // Chamamos nossa função unificada

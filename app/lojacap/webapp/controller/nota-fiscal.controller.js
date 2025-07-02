@@ -205,7 +205,7 @@ sap.ui.define([
     *  CSV - Upload de Arquivo                                *
     * ======================================================= */
 
-    onOpenUploadDialog: function () {
+    onOpenUploadDialog() {
         if (!this._oUploadDialog) {
             Fragment.load({
                 id: this.getView().getId(), // Adiciona o ID da view como prefixo
@@ -222,7 +222,7 @@ sap.ui.define([
     },
     
     // Fecha o Dialog
-    onUploadDialogClose: function () {
+    onUploadDialogClose() {
         this._resetFileUploader();
         if (this._oUploadDialog) {
             this._oUploadDialog.close();
@@ -230,14 +230,14 @@ sap.ui.define([
     },
     
     // Evento disparado ao selecionar um arquivo
-    onFileChange: function (oEvent) {
+    onFileChange(oEvent) {
         // Guarda a referência do arquivo e habilita o botão de upload
         this._file = oEvent.getParameter("files") && oEvent.getParameter("files")[0];
         this.byId("btnConfirmUpload").setEnabled(!!this._file);
     },
     
     // Disparado ao clicar no botão "Processar" do Dialog
-    onPressUploadFrete: function () {
+    onPressUploadFrete() {
         if (!this._file) {
             MessageBox.error("Por favor, selecione um arquivo CSV.");
             return;
@@ -406,9 +406,9 @@ sap.ui.define([
        *  Imprimir                                               *
        * ======================================================= */
 
-      onPressPrint: function ()  {
+      onPressPrint()  {
         const oController = this; 
-        const oTable = oController.byId("tableNotaFiscalServicoMonitor");
+        const oTable = oController.byId(TBL_NOTAS);
         sap.ui.require(["lojacap/util/PrintUtil"], function (PrintUtil) {
             MessageToast.show("Módulo de impressão carregado sob demanda!");
             PrintUtil.printTable(oTable);
@@ -777,7 +777,7 @@ sap.ui.define([
   },
     
     // Reseta o FileUploader para um novo upload
-    _resetFileUploader: function() {
+    _resetFileUploader() {
         const oFileUploader = this.byId("fileUploader");
         if (oFileUploader) {
             oFileUploader.clear();

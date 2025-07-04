@@ -170,9 +170,14 @@ entity NotaFiscalServicoLog : managed {
     origem              : String(30);   // 'avancarStatusNFs', 'BAPI_XYZ', e tals
 }
 
+//lista de empresas
+entity Empresas {
+    key ID   : String(4); // O código de 4 caracteres
+        nome : String(100);
+}
 entity ZTMM_ISS_CFG : cuid, managed {
     mandt        : String(3);
-    empresa      : String(4);
+    empresa      : Association to Empresas; 
     loc_neg      : String(4);
     loc_fornec   : String(15);
     prestac_serv : String(15);

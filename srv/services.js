@@ -4,6 +4,7 @@ const csv = require('csv-parser');
 const { Readable } = require('stream');
 
 const validation = require('./lib/validation');
+const processor = require('./lib/uploadProcessor');
 
 const axios = require('axios');
 require('dotenv').config();
@@ -29,11 +30,11 @@ module.exports = cds.service.impl(function (srv) {
 
   srv.on('getPOSubcontractingComponents', async req => {
     const axiosCfg = {
-        headers: {
-            Accept: 'application/json',
-            APIKey: process.env.PO_API_KEY
-        },
-        timeout: 10_000
+      headers: {
+        Accept: 'application/json',
+        APIKey: process.env.PO_API_KEY
+      },
+      timeout: 10_000
     };
 
     const base = `${process.env.PO_API_BASE}/POSubcontractingComponent`;
@@ -43,75 +44,75 @@ module.exports = cds.service.impl(function (srv) {
     let pageCount = 1; // Contador de páginas para o log
 
     try {
-        while (url && result.length < top) {
-            console.log(`🔎 Página ${pageCount}: Chamando a URL -> ${url}`);
-            const { data } = await axios.get(url, axiosCfg);
-            
-            if (data.value) {
-                console.log(`✅ Página ${pageCount}: Recebidos ${data.value.length} itens.`);
-                result = result.concat(data.value);
-            } else {
-                console.log(`⚠️ Página ${pageCount}: A resposta não continha um array 'value'.`);
-            }
+      while (url && result.length < top) {
+        console.log(`🔎 Página ${pageCount}: Chamando a URL -> ${url}`);
+        const { data } = await axios.get(url, axiosCfg);
 
-            // O log mais importante de todos!
-            console.log(`📦 A resposta da página ${pageCount} contém um @odata.nextLink? ->`, data['@odata.nextLink'] || 'Não');
-
-            // server-driven paging ➜ segue o @odata.nextLink
-            url = data['@odata.nextLink']
-                ? `${process.env.PO_API_BASE}/${data['@odata.nextLink']}` // Cuidado aqui, veja a observação abaixo
-                : null;
-            
-            pageCount++;
+        if (data.value) {
+          console.log(`✅ Página ${pageCount}: Recebidos ${data.value.length} itens.`);
+          result = result.concat(data.value);
+        } else {
+          console.log(`⚠️ Página ${pageCount}: A resposta não continha um array 'value'.`);
         }
-        
-        console.log(`🏁 Fim do loop. Total de itens acumulados: ${result.length}`);
-        return JSON.stringify(result.slice(0, top)); // garante no máx. 50
+
+        // O log mais importante de todos!
+        console.log(`📦 A resposta da página ${pageCount} contém um @odata.nextLink? ->`, data['@odata.nextLink'] || 'Não');
+
+        // server-driven paging ➜ segue o @odata.nextLink
+        url = data['@odata.nextLink']
+          ? `${process.env.PO_API_BASE}/${data['@odata.nextLink']}`
+          : null;
+
+        pageCount++;
+      }
+
+      console.log(`🏁 Fim do loop. Total de itens acumulados: ${result.length}`);
+      return JSON.stringify(result.slice(0, top)); // garante no máx. 50
 
     } catch (e) {
-        req.error(
-            e.response?.status || 500,
-            e.response?.data?.error?.message?.value || e.message
-        );
+      req.error(
+        e.response?.status || 500,
+        e.response?.data?.error?.message?.value || e.message
+      );
     }
-});
-  
+  });
 
-srv.before('CREATE', 'NotaFiscalServicoMonitor', (req) => {
-  // Chamamos nossa função unificada
-  const validacao = validation.validarNotaFiscal(req.data);
 
-  // Se ela retornar que não é válido...
-  if (!validacao.isValid) {
+  srv.before('CREATE', 'NotaFiscalServicoMonitor', (req) => {
+    // Chamamos nossa função unificada
+    const validacao = validation.validarNotaFiscal(req.data);
+
+    // Se ela retornar que não é válido...
+    if (!validacao.isValid) {
       // ...nós disparamos o erro do CAP com as mensagens retornadas.
       const mensagemDeErro = validacao.errors.join('\n');
       req.error(400, mensagemDeErro);
-  }
-});
+    }
+  });
 
-this.on('avancarStatusNFs', async req => {
+  this.on('avancarStatusNFs', async req => {
     const { grpFilho } = req.data || {};
     if (!grpFilho) return req.error(400, 'grpFilho é obrigatório');
 
-    const tx   = cds.transaction(req);
+    const tx = cds.transaction(req);
     const rows = await tx.run(
       SELECT.from(NotaFiscalServicoMonitor).columns(
-        'idAlocacaoSAP', 'status', 'valorBrutoNfse',
+        'idAlocacaoSAP', 'status', 'issRetido', 'valorBrutoNfse',
         'valorEfetivoFrete', 'valorLiquidoFreteNfse'
       ).where({ chaveDocumentoFilho: grpFilho })
     );
-    if (!rows.length) return req.error(404,'Nenhuma NF encontrada');
+    if (!rows.length) return req.error(404, 'Nenhuma NF encontrada');
 
     const grpStatus = rows[0].status;
-    const ids       = rows.map(r => r.idAlocacaoSAP);
+    const ids = rows.map(r => r.idAlocacaoSAP);
 
     switch (grpStatus) {
-      case '01': return etapas.avancar.trans01para05(tx, ids);
+      case '01': return etapas.avancar.trans01para05(tx, rows);
       case '05': return etapas.avancar.trans05para15(tx, ids);
       case '15': return etapas.avancar.trans15para30(tx, rows);
       case '30': return etapas.avancar.trans30para35(tx, rows);
       case '35': return etapas.avancar.trans35para50(tx, ids);
-      default:   return req.error(400,`Status ${grpStatus} não suportado`);
+      default: return req.error(400, `Status ${grpStatus} não suportado`);
     }
   });
 
@@ -119,20 +120,21 @@ this.on('avancarStatusNFs', async req => {
     const { grpFilho, grpStatus } = req.data;
     if (!grpFilho || grpStatus === undefined)
       return req.error(400, 'grpFilho e grpStatus são obrigatórios');
-  
-    const tx  = cds.transaction(req);
+
+    const tx = cds.transaction(req);
     const nfs = await tx.read(NotaFiscalServicoMonitor).where({
-      chaveDocumentoFilho: grpFilho, status: grpStatus });
-  
+      chaveDocumentoFilho: grpFilho, status: grpStatus
+    });
+
     if (!nfs.length) return [];
-  
+
     switch (grpStatus) {
       case '50': return etapas.voltar.trans50para35_reverso(tx, nfs);
       case '35': return etapas.voltar.trans35para30_reverso(tx, nfs);
       case '30': return etapas.voltar.trans30para15_reverso(tx, nfs);
       case '15': return etapas.voltar.trans15para05_reverso(tx, nfs);
       case '05': return etapas.voltar.trans05para01_reverso(tx, nfs);
-      default:   return req.error(400, `Reversão não permitida para ${grpStatus}`);
+      default: return req.error(400, `Reversão não permitida para ${grpStatus}`);
     }
   });
 
@@ -140,25 +142,25 @@ this.on('avancarStatusNFs', async req => {
   this.on('rejeitarFrete', async req => {
     const { grpFilho } = req.data || {};
     if (!grpFilho) return req.error(400, 'grpFilho é obrigatório');
-  
+
     const tx = cds.transaction(req);
-  
+
     /* 1️⃣  Pega todos os IDs do grupo ------------------------- */
     const linhas = await tx.run(
       SELECT.from(NotaFiscalServicoMonitor)
-            .columns('idAlocacaoSAP')
-            .where({ chaveDocumentoFilho: grpFilho })
+        .columns('idAlocacaoSAP')
+        .where({ chaveDocumentoFilho: grpFilho })
     );
     if (!linhas.length) return req.error(404, 'Nenhuma NF no grupo');
-  
+
     const ids = linhas.map(l => l.idAlocacaoSAP);
-  
+
     /* 2️⃣  Atualiza status para 55 + grava LOG "R" ------------ */
     try {
       await tx.update(NotaFiscalServicoMonitor)
-              .set({ status: '55' })
-              .where({ chaveDocumentoFilho: grpFilho });
-  
+        .set({ status: '55' })
+        .where({ chaveDocumentoFilho: grpFilho });
+
       // um log "R" para cada NF  ➜ gravarLog já propaga campos na tabela
       await Promise.all(
         ids.map(id =>
@@ -173,9 +175,9 @@ this.on('avancarStatusNFs', async req => {
           )
         )
       );
-  
+
       return sucesso(ids, '55');       // helper padrão
-  
+
     } catch (e) {
       // Se algo falhar, gera um log de erro por NF
       await Promise.all(
@@ -191,120 +193,46 @@ this.on('avancarStatusNFs', async req => {
       return falha(ids, '55', 'Falha ao rejeitar: ' + e.message);
     }
   });
-  
 
-// =======================================================
-// ==                  FUNÇÕES HELPER                   ==
-// =======================================================
 
-srv.on('uploadArquivoFrete', async (req) => {
-  const { data } = req.data;
+  // =======================================================
+  // ==                  FUNÇÕES HELPER                   ==
+  // =======================================================
 
-  if (!data) {
-      req.error(400, 'Nenhum arquivo recebido.');
-      return false;
-  }
+  this.on('uploadArquivoFrete', async (req) => {
+    console.log('\n[Upload de Arquivo] 🚀 Início do processamento.');
+    const { data } = req.data;
+    if (!data) return req.error(400, 'Nenhum arquivo recebido.');
 
-  const buffer = Buffer.from(data.split(';base64,')[1], 'base64');
-  const registrosDoCsv = [];
+    const buffer = Buffer.from(data.split(';base64,')[1], 'base64');
+    const stream = Readable.from(buffer).pipe(csv({ mapHeaders: ({ header }) => header.trim() }));
 
-  return new Promise((resolve, reject) => {
-      Readable.from(buffer)
-          .pipe(csv({
-              separator: ',',
-              mapHeaders: ({ header }) => header.trim()
-          }))
-          .on('data', (row) => {
-              registrosDoCsv.push(row);
-          })
-          .on('end', async () => {
-              console.log(`[UPLOAD-LOG] Fim da leitura do CSV. Encontrados ${registrosDoCsv.length} registros.`);
-              if (registrosDoCsv.length === 0) {
-                  req.warn('O arquivo CSV está vazio ou em formato inválido.');
-                  return resolve(false);
-              }
+    try {
+      await cds.tx(async (tx) => {
+        tx.req = req;
+        console.log("  [Orquestrador] Transação iniciada. Delegando para o processador...");
 
-              const registrosValidos = [];
-              const todosOsErros = [];
+        // 1. Processa o stream e valida linhas individuais
+        const batch = await processor.processarStream(stream, validation);
 
-              registrosDoCsv.forEach((registro, index) => {
-                  // CHAMANDO A MESMA FUNÇÃO UNIFICADA DE VALIDAÇÃO
-                  const validacao = validation.validarNotaFiscal(registro, index);
+        // 2. Executa validações no lote completo (consistência, duplicados)
+        await processor.validarLoteCompleto(batch, tx, NotaFiscalServicoMonitor);
 
-                  if (validacao.isValid) {
-                      // Se válido, mapeia o registro para o formato da entidade
-                      registrosValidos.push({
-                          ID: registro.ID,
-                          idAlocacaoSAP: registro.idAlocacaoSAP,
-                          orderIdPL: registro.orderIdPL,
-                          chaveDocumentoMae: registro.chaveDocumentoMae,
-                          chaveDocumentoFilho: registro.chaveDocumentoFilho,
-                          status: registro.status,
-                          numeroNfseServico: registro.numeroNfseServico,
-                          serieNfseServico: registro.serieNfseServico,
-                          dataEmissaoNfseServico: registro.dataEmissaoNfseServico || null,
-                          chaveAcessoNfseServico: registro.chaveAcessoNfseServico,
-                          codigoVerificacaoNfse: registro.codigoVerificacaoNfse,
-                          cnpjTomador: registro.cnpjTomador,
-                          codigoFornecedor: registro.codigoFornecedor,
-                          nomeFornecedor: registro.nomeFornecedor,
-                          numeroPedidoCompra: registro.numeroPedidoCompra,
-                          itemPedidoCompra: registro.itemPedidoCompra,
-                          numeroDocumentoMIRO: registro.numeroDocumentoMIRO,
-                          anoFiscalMIRO: registro.anoFiscalMIRO,
-                          documentoContabilMiroSAP: registro.documentoContabilMiroSAP,
-                          numeroNotaFiscalSAP: registro.numeroNotaFiscalSAP,
-                          serieNotaFiscalSAP: registro.serieNotaFiscalSAP,
-                          numeroControleDocumentoSAP: registro.numeroControleDocumentoSAP,
-                          documentoVendasMae: registro.documentoVendasMae,
-                          documentoFaturamentoMae: registro.documentoFaturamentoMae,
-                          localPrestacaoServico: registro.localPrestacaoServico,
-                          valorEfetivoFrete: parseFloat(registro.valorEfetivoFrete) || 0.0,
-                          valorLiquidoFreteNfse: parseFloat(registro.valorLiquidoFreteNfse) || 0.0,
-                          valorBrutoNfse: parseFloat(registro.valorBrutoNfse) || 0.0,
-                          issRetido: registro.issRetido,
-                          estornado: registro.estornado === 'true',
-                          enviadoParaPL: registro.enviadoParaPL,
-                          logErroFlag: registro.logErroFlag === 'true',
-                          mensagemErro: registro.mensagemErro,
-                          tipoMensagemErro: registro.tipoMensagemErro,
-                          classeMensagemErro: registro.classeMensagemErro,
-                          numeroMensagemErro: registro.numeroMensagemErro
-                      });
-                  } else {
-                      todosOsErros.push(...validacao.errors);
-                  }
-              });
+        // 3. Insere os registros no banco
+        await processor.inserirRegistros(batch, tx, NotaFiscalServicoMonitor);
 
-              if (todosOsErros.length > 0) {
-                  const mensagemDeErro = `O arquivo foi rejeitado por conter ${todosOsErros.length} erro(s):\n\n${todosOsErros.join('\n')}`;
-                  console.error("[UPLOAD-VALIDATION] Erros encontrados:\n", mensagemDeErro);
-                  req.error(400, mensagemDeErro);
-                  return resolve(false);
-              }
+        console.log("  [Orquestrador] ✨ Processo concluído. Notificando o usuário.");
+        req.notify(`Arquivo processado e ${batch.length} registros importados com sucesso!`);
+      });
 
-              try {
-                  if (registrosValidos.length > 0) {
-                      await cds.tx(req).run(UPSERT.into(NotaFiscalServicoMonitor).entries(registrosValidos));
-                      req.notify(`Upload bem-sucedido! ${registrosValidos.length} registros importados/atualizados.`);
-                      console.log(`[UPLOAD-LOG] SUCESSO! Inseridos/Atualizados ${registrosValidos.length} registros.`);
-                      resolve(true);
-                  } else {
-                      req.warn("Nenhum registro válido encontrado no arquivo para processar.");
-                      resolve(false);
-                  }
-              } catch (dbError) {
-                  console.error("[UPLOAD-DB] Erro ao inserir dados no banco:", dbError);
-                  req.error(500, 'Ocorreu um erro interno ao salvar os dados no banco de dados.');
-                  reject(dbError);
-              }
-          })
-          .on('error', (error) => {
-              console.error("[UPLOAD] Erro crítico ao processar o CSV:", error);
-              req.error(500, 'Ocorreu um erro na leitura do arquivo CSV.');
-              reject(error);
-          });
+      console.log('[Upload de Arquivo] ✅ Processo finalizado com sucesso.');
+      return true;
+
+    } catch (error) {
+      // O erro pode vir de qualquer uma das etapas do processador
+      console.error(`\n[Upload de Arquivo] ❌ FALHA! Rollback executado. Motivo: ${error.message}\n`);
+      return req.error(400, error.message);
+    }
   });
-});
 
 });

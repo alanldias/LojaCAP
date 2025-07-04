@@ -311,7 +311,7 @@
                             state="{parts: [{path: 'status'}], formatter: '.formatter.formatStatusNfseState'}" />
                         <Text id="txtCellNumeroNfseServico" text="{numeroNfseServico}" />
                         <Text id="txtCellSerieNfseServico" text="{serieNfseServico}" />
-                        <Text id="txtCellDataEmissaoNfseServico" text="{path: 'dataEmissaoNfseServico', formatter: '.formatter.formatDate'}" />
+                        <Text id="txtCellDataEmissaoNfseServico" text="{path: 'dataEmissaoNfseServico'}" />
                         <Text id="txtCellChaveAcessoNfseServico" text="{chaveAcessoNfseServico}" />
                         <Text id="txtCellCodigoVerificacaoNfse" text="{codigoVerificacaoNfse}" />
                         <Text id="txtCellNumeroDocumentoMIRO" text="{numeroDocumentoMIRO}" />

@@ -38,7 +38,6 @@ service ShopService {
    
     action avancarStatusNFs(
         grpFilho      : String     
-
     ) returns array of {
         idAlocacaoSAP     : String;
         success           : Boolean;

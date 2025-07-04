@@ -7,23 +7,20 @@ sap.ui.define([
 
     return Controller.extend("lojacap.controller.configuracao-iss", {
 
-        onInit: function () {
-            // Pode adicionar código de inicialização aqui, se precisar.
-        },
+        // ... (onInit, onOpenDialog, onCloseDialog, _clearValueStates, _validateInput)
+        // Suas outras funções podem continuar como na última versão que te passei...
 
-        // Função para abrir o diálogo, tanto para criar um novo quanto para editar.
+        onInit: function () { },
+
         onOpenDialog: function (oEvent) {
             const oView = this.getView();
-            const oDataModel = oView.getModel(); // Modelo OData V4 principal
-            
-            // Determina se é uma edição (se o botão clicado pertence a uma linha da tabela)
-            this._isEdit = !!oEvent.getSource().getBindingContext(); 
+            const oDataModel = oView.getModel();
+            this._isEdit = !!oEvent.getSource().getBindingContext();
 
-            // Carrega o fragmento do diálogo se ainda não foi carregado
             if (!this._pDialog) {
                 this._pDialog = Fragment.load({
                     id: oView.getId(),
-                    name: "lojacap.view.fragments.ConfiguracaoISSDialog", 
+                    name: "lojacap.view.fragments.ConfiguracaoISSDialog",
                     controller: this
                 }).then(function (oDialog) {
                     oView.addDependent(oDialog);
@@ -31,51 +28,87 @@ sap.ui.define([
                 });
             }
 
-            // Depois que o diálogo for carregado, configura e abre
-            this._pDialog.then(function(oDialog) {
+            this._pDialog.then(function (oDialog) {
                 if (this._isEdit) {
-                    // MODO EDIÇÃO
                     oDialog.setTitle("Editar Configuração de ISS");
-                    // O contexto do item clicado já está disponível, apenas o definimos no diálogo
-                    const oContext = oEvent.getSource().getBindingContext();
-                    oDialog.setBindingContext(oContext);
+                    oDialog.setBindingContext(oEvent.getSource().getBindingContext());
                 } else {
-                    // MODO CRIAÇÃO
                     oDialog.setTitle("Nova Configuração de ISS");
-                    // Cria uma nova entrada na entidade do serviço OData.
-                    // Isso acontece em memória e só é enviado ao backend ao salvar.
                     const oListBinding = oDataModel.bindList("/ConfiguracoesISS");
                     const oNewContext = oListBinding.create({});
                     oDialog.setBindingContext(oNewContext);
                 }
+                this._clearValueStates();
                 oDialog.open();
             }.bind(this));
         },
 
-        // Função para fechar o diálogo
         onCloseDialog: function () {
-            const oDialog = this.byId("ConfiguracaoISSDialog");
-            const oContext = oDialog.getBindingContext();
-
-            // Se for um novo registro que foi cancelado, remove a entrada da memória.
-            if (oContext && !this._isEdit) {
-                oContext.delete();
-            }
-            oDialog.close();
+            this.byId("tblConfiguracoes").getBinding("items").resetChanges();
+            this.byId("ConfiguracaoISSDialog").close();
         },
 
-        // Função para salvar os dados
+        _clearValueStates: function () {
+            this.byId("empresaSelect")?.setValueState("None");
+            this.byId("locNegInput")?.setValueState("None");
+        },
+
+        _validateInput: function () {
+            const oEmpresaSelect = this.byId("empresaSelect");
+            const oLocNegInput = this.byId("locNegInput");
+            let bIsValid = true;
+            if (!oEmpresaSelect.getSelectedKey()) {
+                oEmpresaSelect.setValueState("Error").setValueStateText("Este campo é obrigatório.");
+                bIsValid = false;
+            } else { oEmpresaSelect.setValueState("None"); }
+            if (!oLocNegInput.getValue()) {
+                oLocNegInput.setValueState("Error").setValueStateText("Este campo é obrigatório.");
+                bIsValid = false;
+            } else { oLocNegInput.setValueState("None"); }
+            return bIsValid;
+        },
+
+        // 👇 SUBSTITUA SUA FUNÇÃO onSave POR ESTA VERSÃO COMPLETA 👇
         onSave: function () {
+            if (!this._validateInput()) {
+                MessageToast.show("Por favor, preencha todos os campos obrigatórios.");
+                return;
+            }
+        
             const oView = this.getView();
             const oDialog = this.byId("ConfiguracaoISSDialog");
+            const oContext = oDialog.getBindingContext();
+        
+            // Esta parte já está correta para pegar todos os valores!
+            oContext.setProperty('mandt', this.byId('mandtInput').getValue());
+            oContext.setProperty('loc_neg', this.byId('locNegInput').getValue());
+            oContext.setProperty('loc_fornec', this.byId('locFornecInput').getValue()); // <-- Ele está aqui!
+            oContext.setProperty('prestac_serv', this.byId('prestacServInput').getValue());
+            oContext.setProperty('prestad_serv', this.byId('prestadServInput').getValue());
+            oContext.setProperty('serv_prest', this.byId('servPrestInput').getValue());
+            oContext.setProperty('serv_type', this.byId('servTypeInput').getValue());
+            oContext.setProperty('verif', this.byId('verifCheckBox').getSelected() ? 'X' : null);
+            
+            
+            // Para datas, é crucial garantir o formato correto que o OData V4 espera (YYYY-MM-DD)
+            const valDe = this.byId('valDeDatePicker').getDateValue();
+            const valAte = this.byId('valAteDatePicker').getDateValue();
 
-            // O data-binding do UI5 já atualizou os dados no modelo em memória.
-            // O submitBatch envia todas as alterações pendentes para o backend (neste caso, o CREATE ou UPDATE).
+            if (valDe) {
+                oContext.setProperty('val_de', new Date(valDe.getTime() - (valDe.getTimezoneOffset() * 60000)).toISOString().split('T')[0]);
+            }
+            if (valAte) {
+                oContext.setProperty('val_ate', new Date(valAte.getTime() - (valAte.getTimezoneOffset() * 60000)).toISOString().split('T')[0]);
+            }
+            // --- FIM DA CORREÇÃO ---
+
+
             oView.getModel().submitBatch("$auto").then(() => {
                 MessageToast.show("Salvo com sucesso!");
                 oDialog.close();
+                oView.getModel().refresh();
             }).catch((oError) => {
-                // Em caso de erro do backend, exibe a mensagem.
+                console.error("Erro detalhado ao salvar:", oError);
                 MessageToast.show("Erro ao salvar: " + oError.message);
             });
         }

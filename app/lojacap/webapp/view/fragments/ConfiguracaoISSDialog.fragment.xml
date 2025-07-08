@@ -3,47 +3,50 @@
     xmlns:core="sap.ui.core"
     xmlns:f="sap.ui.layout.form">
     
-    <Dialog id="ConfiguracaoISSDialog" title="{formModel>/title}">
+    <Dialog id="ConfiguracaoISSDialog" title="Configuração de ISS" contentWidth="40rem">
         <content>
             <f:SimpleForm id="configForm" editable="true" layout="ResponsiveGridLayout">
                 
-                <Label id="mandtLabel" text="Mandante" />
-                <Input id="mandtInput" value="{formModel>/mandt}"/>
+                <core:Title id="titleDadosGerais" text="Dados Gerais"/>
+                
+                <Label id="lblMandante" text="Mandante" />
+                <Input id="inpMandante" value="{formModel>/mandt}" editable="false"/>
 
-                <Label id="empresaLabel" text="Empresa" required="true"/>
+                <Label id="lblEmpresa" text="Empresa" required="true"/>
                 <Select
                     id="empresaSelect"
                     selectedKey="{formModel>/empresa_ID}"
                     width="100%"
-                    items="{
-                        path: '/Empresas',
-                        sorter: { path: 'nome' }
-                    }">
-                    <core:Item id="empresaItem" key="{ID}" text="{nome}" />
+                    items="{ path: '/Empresas', sorter: { path: 'nome' } }">
+                    <core:Item id="itemEmpresa" key="{ID}" text="{nome}" />
                 </Select>
 
-                <Label id="locNegLabel" text="Local de Negócios" required="true"/>
-                <Input id="locNegInput" value="{formModel>/loc_neg}"/>
+                <Label id="lblLocNeg" text="Local de Negócios" required="true"/>
+                <Input id="locNegInput" value="{formModel>/loc_neg}" maxLength="4"/>
 
-                <Label id="locFornecLabel" text="Local do Fornecedor"/>
-                <Input id="locFornecInput" value="{formModel>/loc_fornec}"/>
+                <Label id="lblLocFornec" text="Local do Fornecedor"/>
+                <Input id="inpLocFornec" value="{formModel>/loc_fornec}" maxLength="15"/>
+                
+                <core:Title id="titleDetalhesServico" text="Detalhes do Serviço"/>
 
-                <Label id="prestacServLabel" text="Prestação do Serviço"/>
-                <Input id="prestacServInput" value="{formModel>/prestac_serv}"/>
+                <Label id="lblPrestacServ" text="Prestação do Serviço"/>
+                <Input id="inpPrestacServ" value="{formModel>/prestac_serv}" maxLength="15"/>
 
-                <Label id="prestadServLabel" text="Prestador do Serviço"/>
-                <Input id="prestadServInput" value="{formModel>/prestad_serv}"/>
+                <Label id="lblPrestadServ" text="Prestador do Serviço"/>
+                <Input id="inpPrestadServ" value="{formModel>/prestad_serv}" maxLength="10"/>
 
-                <Label id="servPrestLabel" text="Serviço Prestado"/>
-                <Input id="servPrestInput" value="{formModel>/serv_prest}"/>
+                <Label id="lblServPrest" text="Serviço Prestado"/>
+                <Input id="inpServPrest" value="{formModel>/serv_prest}" maxLength="4"/>
 
-                <Label id="servTypeLabel" text="Tipo de Serviço"/>
-                <Input id="servTypeInput" value="{formModel>/serv_type}"/>
+                <Label id="lblServType" text="Tipo de Serviço"/>
+                <Input id="inpServType" value="{formModel>/serv_type}" maxLength="16"/>
 
-                <Label id="verifLabel" text="Aplicável?"/>
+                <core:Title id="titleValidade" text="Validade"/>
+
+                <Label id="lblVerif" text="Aplicável?"/>
                 <CheckBox id="verifCheckBox" selected="{formModel>/verif}" />
 
-                <Label id="valDeLabel" text="Válido De"/>
+                <Label id="lblValDe" text="Válido De"/>
                 <DatePicker 
                     id="valDeDatePicker"
                     value="{formModel>/val_de}"
@@ -51,7 +54,7 @@
                     displayFormat="short"
                 />
 
-                <Label id="valAteLabel" text="Válido Até"/>
+                <Label id="lblValAte" text="Válido Até"/>
                 <DatePicker 
                     id="valAteDatePicker"
                     value="{formModel>/val_ate}"
@@ -65,6 +68,5 @@
             <Button id="saveButton" text="Salvar" type="Emphasized" press=".onSave"/>
             <Button id="cancelButton" text="Cancelar" press=".onCloseDialog"/>
         </buttons>
-        
     </Dialog>
 </core:FragmentDefinition>

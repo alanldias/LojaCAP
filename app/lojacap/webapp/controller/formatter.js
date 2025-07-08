@@ -5,7 +5,19 @@ sap.ui.define([
 
     return {
 
-        // Suas outras funções de formatter (formatStatusNfseText, etc.) ficam aqui...
+        formatDate: function (sDate) {
+            if (!sDate) {
+                return ""; // Retorna vazio se a data for nula ou indefinida
+            }
+            // Pega o formatador de data do UI5 para o estilo "short" (dd/MM/aaaa)
+            var oDateFormat = DateFormat.getDateInstance({
+                style: "short",
+                UTC: true // Essencial para evitar problemas de fuso horário!
+            });
+            // Cria um objeto Date a partir da string e formata
+            return oDateFormat.format(new Date(sDate));
+        },
+
         formatStatusNfseText: function (sStatus) {
             switch (sStatus) {
                 case "01": return "Não Atribuída";

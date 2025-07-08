@@ -2,8 +2,11 @@
     controllerName="lojacap.controller.configuracao-iss"
     xmlns:mvc="sap.ui.core.mvc"
     xmlns="sap.m"
+    xmlns:core="sap.ui.core"
     xmlns:l="sap.ui.layout"
-    xmlns:util="lojacap.controller.formatter">  <Page id="pageConfiguracoesISS" showHeader="false" title="Configurações de ISS">
+    xmlns:util="lojacap.controller.formatter">
+
+     <Page id="pageConfiguracoesISS" showHeader="false" title="Configurações de ISS">
                 <Toolbar id="toolbarCabecalhoTopoISS" class="cabecalhoTopo">
             <HBox id="hboxCabecalhoISS" width="100%" alignItems="Center" justifyContent="SpaceBetween">
                 <HBox id="hboxEsquerdaISS" alignItems="Center">
@@ -26,40 +29,48 @@
             </HBox>
         </Toolbar>
         <content>
-            <Button
-                id="btnNovoRegistro"
-                icon="sap-icon://add"
-                text="Novo Registro"
-                press=".onOpenDialog"
-                class="sapUiSmallMargin" />
+                 <Button
+                    id="btnNovoRegistro"
+                    icon="sap-icon://add"
+                    text="Novo Registro"
+                    press=".onOpenDialog"
+                    class="sapUiTinyMarginBegin" />
             <Table
                 id="tblConfiguracoes"
                 inset="false"
                 items="{
                     path: '/ConfiguracoesISS',
                     parameters: {
-                        $select: 'mandt,empresa_ID,loc_neg,loc_fornec,serv_prest,val_de,val_ate',
+                        $select: '*',
                         $expand: 'empresa'
                     },
                     sorter: { path: 'createdAt', descending: true }
                 }">
                 <columns>
-                    <Column id="colEmpresa"><Text id="txtHdrEmpresa" text="Empresa" /></Column>
-                    <Column id="colLocNeg"><Text id="txtHdrLocNeg" text="Local de Negócios" /></Column>
-                    <Column id="colLocFornec"><Text id="txtHdrLocFornec" text="Local do Fornecedor" /></Column>
-                    <Column id="colServPrest"><Text id="txtHdrServPrest" text="Serviço Prestado" /></Column>
-                    <Column id="colValDe"><Text id="txtHdrValDe" text="Válido De" /></Column>
-                    <Column id="colValAte"><Text id="txtHdrValAte" text="Válido Até" /></Column>
+                    <Column id="colMandt" minScreenWidth="Desktop"><Text id="colHdrMandt" text="Mandante" /></Column>
+                    <Column id="colEmpresa"><Text id="colHdrEmpresa" text="Empresa" /></Column>
+                    <Column id="colLocNeg" minScreenWidth="Tablet"><Text id="colHdrLocNeg" text="Local de Negócios" /></Column>
+                    <Column id="colLocFornec" minScreenWidth="Desktop"><Text id="colHdrLocFornec" text="Local do Fornecedor" /></Column>
+                    <Column id="colServPrest" minScreenWidth="Desktop"><Text id="colHdrServPrest" text="Serviço Prestado" /></Column>
+                    <Column id="colVerif" hAlign="Center"><Text id="colHdrVerif" text="Aplicável?" /></Column>
+                    <Column id="colValDe" hAlign="End"><Text id="colHdrValDe" text="Válido De" /></Column>
+                    <Column id="colValAte" hAlign="End"><Text id="colHdrValAte" text="Válido Até" /></Column>
                 </columns>
                 <items>
                     <ColumnListItem id="itemConfiguracao" type="Navigation" press=".onOpenDialog">
                         <cells>
-                            <Text id="txtCellEmpresa" text="{empresa/nome}" />
-                            <Text id="txtCellLocNeg" text="{loc_neg}" />
-                            <Text id="txtCellLocFornec" text="{loc_fornec}" />
-                            <Text id="txtCellServPrest" text="{serv_prest}" />
-                            <Text id="txtCellValDe" text="{path: 'val_de', formatter: 'util.formatter'}" />
-                            <Text id="txtCellValAte" text="{path: 'val_ate', formatter: 'util.formatter'}" />
+                            <Text id="cellTxtMandt" text="{mandt}" />
+                            <Text id="cellTxtEmpresa" text="{empresa/nome}" />
+                            <Text id="cellTxtLocNeg" text="{loc_neg}" />
+                            <Text id="cellTxtLocFornec" text="{loc_fornec}" />
+                            <Text id="cellTxtServPrest" text="{serv_prest}" />
+                            <core:Icon
+                                id="cellIconVerif"
+                                src="{= ${verif} === 'X' ? 'sap-icon://accept' : 'sap-icon://decline' }"
+                                color="{= ${verif} === 'X' ? 'Positive' : 'Negative' }"
+                                tooltip="{= ${verif} === 'X' ? 'Sim' : 'Não' }" />
+                            <Text id="cellTxtValDe" text="{path: 'val_de', formatter: '.formatter.formatDate'}" />
+                            <Text id="cellTxtValAte" text="{path: 'val_ate', formatter: '.formatter.formatDate'}" />
                         </cells>
                     </ColumnListItem>
                 </items>

@@ -3,17 +3,17 @@
     xmlns:core="sap.ui.core"
     xmlns:f="sap.ui.layout.form">
     
-    <Dialog id="ConfiguracaoISSDialog" title="Nova Configuração de ISS">
+    <Dialog id="ConfiguracaoISSDialog" title="{formModel>/title}">
         <content>
             <f:SimpleForm id="configForm" editable="true" layout="ResponsiveGridLayout">
                 
                 <Label id="mandtLabel" text="Mandante" />
-                <Input id="mandtInput" value="{mandt}"/>
+                <Input id="mandtInput" value="{formModel>/mandt}"/>
 
                 <Label id="empresaLabel" text="Empresa" required="true"/>
                 <Select
                     id="empresaSelect"
-                    selectedKey="{empresa_ID}"
+                    selectedKey="{formModel>/empresa_ID}"
                     width="100%"
                     items="{
                         path: '/Empresas',
@@ -23,44 +23,40 @@
                 </Select>
 
                 <Label id="locNegLabel" text="Local de Negócios" required="true"/>
-                <Input id="locNegInput" value="{loc_neg}"/>
+                <Input id="locNegInput" value="{formModel>/loc_neg}"/>
 
                 <Label id="locFornecLabel" text="Local do Fornecedor"/>
-                <Input id="locFornecInput" value="{loc_fornec}"/>
+                <Input id="locFornecInput" value="{formModel>/loc_fornec}"/>
 
                 <Label id="prestacServLabel" text="Prestação do Serviço"/>
-                <Input id="prestacServInput" value="{prestac_serv}"/>
+                <Input id="prestacServInput" value="{formModel>/prestac_serv}"/>
 
                 <Label id="prestadServLabel" text="Prestador do Serviço"/>
-                <Input id="prestadServInput" value="{prestad_serv}"/>
+                <Input id="prestadServInput" value="{formModel>/prestad_serv}"/>
 
                 <Label id="servPrestLabel" text="Serviço Prestado"/>
-                <Input id="servPrestInput" value="{serv_prest}"/>
+                <Input id="servPrestInput" value="{formModel>/serv_prest}"/>
 
                 <Label id="servTypeLabel" text="Tipo de Serviço"/>
-                <Input id="servTypeInput" value="{serv_type}"/>
+                <Input id="servTypeInput" value="{formModel>/serv_type}"/>
 
                 <Label id="verifLabel" text="Aplicável?"/>
-                <CheckBox id="verifCheckBox" selected="{= ${verif} === 'X' }" />
+                <CheckBox id="verifCheckBox" selected="{formModel>/verif}" />
 
                 <Label id="valDeLabel" text="Válido De"/>
                 <DatePicker 
                     id="valDeDatePicker"
-                    value="{
-                        path: 'val_de',
-                        formatOptions: { style: 'short' }
-                    }"
+                    value="{formModel>/val_de}"
                     valueFormat="yyyy-MM-dd"
+                    displayFormat="short"
                 />
 
                 <Label id="valAteLabel" text="Válido Até"/>
                 <DatePicker 
                     id="valAteDatePicker"
-                    value="{
-                        path: 'val_ate',
-                        formatOptions: { style: 'short' }
-                    }"
+                    value="{formModel>/val_ate}"
                     valueFormat="yyyy-MM-dd"
+                    displayFormat="short"
                 />
             </f:SimpleForm>
         </content>

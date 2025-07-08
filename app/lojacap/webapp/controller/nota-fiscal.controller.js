@@ -198,129 +198,164 @@ sap.ui.define([
     *  CSV - Upload de Arquivo                                *
     * ======================================================= */
 
-    onOpenUploadDialog: function () {
-      if (!this._oUploadDialog) {
-        Fragment.load({
-          id: this.getView().getId(), // Adiciona o ID da view como prefixo
-          name: "lojacap.view.fragments.UploadFreteDialog", // Use o caminho correto do seu fragmento
-          controller: this
-        }).then(oDialog => {
-          this._oUploadDialog = oDialog;
-          this.getView().addDependent(this._oUploadDialog);
-          this._oUploadDialog.open();
-        });
-      } else {
-        this._oUploadDialog.open();
-      }
+    onOpenUploadDialog() {
+        if (!this._oUploadDialog) {
+            Fragment.load({
+                id: this.getView().getId(), // Adiciona o ID da view como prefixo
+                name: "lojacap.view.fragments.UploadFreteDialog", // Use o caminho correto do seu fragmento
+                controller: this
+            }).then(oDialog => {
+                this._oUploadDialog = oDialog;
+                this.getView().addDependent(this._oUploadDialog);
+                this._oUploadDialog.open();
+            });
+        } else {
+            this._oUploadDialog.open();
+        }
     },
 
     // Fecha o Dialog
-    onUploadDialogClose: function () {
-      this._resetFileUploader();
-      if (this._oUploadDialog) {
-        this._oUploadDialog.close();
-      }
+    onUploadDialogClose() {
+        this._resetFileUploader();
+        if (this._oUploadDialog) {
+            this._oUploadDialog.close();
+        }
     },
 
     // Evento disparado ao selecionar um arquivo
-    onFileChange: function (oEvent) {
-      // Guarda a referência do arquivo e habilita o botão de upload
-      this._file = oEvent.getParameter("files") && oEvent.getParameter("files")[0];
-      this.byId("btnConfirmUpload").setEnabled(!!this._file);
+    onFileChange(oEvent) {
+        // Guarda a referência do arquivo e habilita o botão de upload
+        this._file = oEvent.getParameter("files") && oEvent.getParameter("files")[0];
+        this.byId("btnConfirmUpload").setEnabled(!!this._file);
     },
 
     // Disparado ao clicar no botão "Processar" do Dialog
-    onPressUploadFrete: function () {
-      if (!this._file) {
-        MessageBox.error("Por favor, selecione um arquivo CSV.");
-        return;
-      }
-
-      // Usa a API FileReader para ler o conteúdo do arquivo no navegador
-      const oReader = new FileReader();
-
-      // Callback para quando a leitura do arquivo for concluída
-      oReader.onload = (oEvent) => {
-        var sFileContent = oEvent.target.result;
-        console.log("[FRONTEND-LOG] Arquivo lido. O conteúdo em Base64 começa com:", sFileContent.substring(0, 80));
-        this._callUploadAction(sFileContent);
-      };
-
-      oReader.onerror = (oError) => {
-        MessageBox.error("Erro ao ler o arquivo selecionado.");
-        console.error("FileReader Error:", oError);
-      };
-
-      // Inicia a leitura do arquivo
-      oReader.readAsDataURL(this._file);
+    onPressUploadFrete() {
+        if (!this._file) {
+            MessageBox.error("Por favor, selecione um arquivo CSV.");
+            return;
+        }
+    
+        // Usa a API FileReader para ler o conteúdo do arquivo no navegador
+        const oReader = new FileReader();
+    
+        // Callback para quando a leitura do arquivo for concluída
+        oReader.onload = (oEvent) => {
+            var sFileContent = oEvent.target.result;
+            console.log("[FRONTEND-LOG] Arquivo lido. O conteúdo em Base64 começa com:", sFileContent.substring(0, 80));
+            this._callUploadAction(sFileContent);
+        };
+        oReader.onerror = (oError) => {
+            MessageBox.error("Erro ao ler o arquivo selecionado.");
+            console.error("FileReader Error:", oError);
+        };
+    
+        // Inicia a leitura do arquivo
+        oReader.readAsDataURL(this._file);
     },
 
     /* ====================================================== *
     *  Inserção Frete Manual                                  *
     * ======================================================= */
 
-    onAbrirDialogoCriacao: function () {
+    async onAbrirDialogoCriacao() {
+      console.log("[DEBUG] 1. onAbrirDialogoCriacao - INÍCIO");
       const oView = this.getView();
-      // Modelo JSON com uma estrutura vazia para o formulário
-      const oNovoRegistroModel = new JSONModel({
-        status: "01", // Status inicial padrão
-        issRetido: "2",
-        estornado: false,
-        logErroFlag: false
-        // Outros campos iniciarão como undefined ou vazios
-      });
 
       if (!this._oCriarFreteDialog) {
-        Fragment.load({
-          id: oView.getId(),
-          name: "lojacap.view.fragments.CriarFreteDialog",
-          controller: this
-        }).then(oDialog => {
-          this._oCriarFreteDialog = oDialog;
+          console.log("[DEBUG] 1.1. Carregando o fragmento do diálogo pela primeira vez.");
+          this._oCriarFreteDialog = await Fragment.load({
+              id: oView.getId(),
+              name: "lojacap.view.fragments.CriarFreteDialog",
+              controller: this
+          });
           oView.addDependent(this._oCriarFreteDialog);
-          oDialog.setModel(oNovoRegistroModel, "novoRegistro");
-          oDialog.open();
-        });
-      } else {
-        // Limpa o modelo com a estrutura padrão e abre o dialog
-        this._oCriarFreteDialog.getModel("novoRegistro").setData(oNovoRegistroModel.getData());
-        this._oCriarFreteDialog.open();
       }
-    },
-    onCancelarDialogoCriacao: function () {
-      this._oCriarFreteDialog.close();
-    },
-    onSalvarNovoRegistro: function () {
-      const oDialog = this.byId("criarFreteDialog");
-      const oNovoRegistroModel = oDialog.getModel("novoRegistro");
-      const oNovoRegistroData = oNovoRegistroModel.getData();
 
-      // 1. Validação no Frontend (UX Imediata)
-      if (!oNovoRegistroData.idAlocacaoSAP || !oNovoRegistroData.orderIdPL) {
+      console.log("[DEBUG] 1.2. Criando o JSONModel para o novo registro.");
+      const oNovoRegistroModel = new JSONModel({
+          idAlocacaoSAP: "", orderIdPL: "", chaveDocumentoMae: "", chaveDocumentoFilho: "",
+          documentoVendasMae: "", documentoFaturamentoMae: "", numeroPedidoCompra: "",
+          itemPedidoCompra: "", numeroControleDocumentoSAP: "", numeroNfseServico: "",
+          serieNfseServico: "", dataEmissaoNfseServico: new Date().toISOString().substring(0, 10), chaveAcessoNfseServico: "",
+          codigoVerificacaoNfse: "", cnpjTomador: "", codigoFornecedor: "", nomeFornecedor: "",
+          numeroNotaFiscalSAP: "", serieNotaFiscalSAP: "", localPrestacaoServico: "",
+          numeroDocumentoMIRO: "", anoFiscalMIRO: null, documentoContabilMiroSAP: "",
+          valorBrutoNfse: 0, valorLiquidoFreteNfse: 0, valorEfetivoFrete: 0,
+          status: "01", issRetido: false, estornado: false, enviadoParaPL: false,
+          logErroFlag: false, mensagemErro: "", tipoMensagemErro: "", classeMensagemErro: "",
+          numeroMensagemErro: ""
+      });
+      this._oCriarFreteDialog.setModel(oNovoRegistroModel, "novoRegistro");
+      
+      console.log("[DEBUG] 1.3. Abrindo o diálogo.");
+      this._oCriarFreteDialog.open();
+      console.log("[DEBUG] 1.4. onAbrirDialogoCriacao - FIM");
+  },
+
+  onCancelarDialogoCriacao() { this._oCriarFreteDialog.close() },
+
+  async onSalvarNovoRegistro() {
+    const oDialog = this._oCriarFreteDialog;
+    if (!oDialog) { return }
+
+    const oPayload = oDialog.getModel("novoRegistro").getData();
+    const oListBinding = this.getView().getModel().bindList("/NotaFiscalServicoMonitor");
+
+    if (!oPayload.idAlocacaoSAP || !oPayload.orderIdPL || !oPayload.chaveDocumentoMae) {
         MessageBox.error("Por favor, preencha os campos de identificação obrigatórios.");
         return;
-      }
-      const oModel = this.getView().getModel();
-      // O binding para a coleção correta
-      const oListBinding = oModel.bindList("/NotaFiscalServicoMonitor");
+    }
+    oPayload.issRetido = oPayload.issRetido ? 'X' : '';
+    oPayload.enviadoParaPL = oPayload.enviadoParaPL ? 'X' : '';
 
-      oDialog.setBusy(true);
+    oDialog.setBusy(true);
 
-      // 2. Chamada para o CREATE padrão do OData
-      oListBinding.create(oNovoRegistroData)
-        .created()
-        .then(() => {
-          MessageToast.show("Novo registro de frete criado com sucesso!");
-          this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
-        })
-        .catch((oError) => {
-          MessageBox.error("Erro ao criar registro: " + oError.message);
-        })
-        .finally(() => {
-          oDialog.setBusy(false);
-          oDialog.close();
-        });
-    },
+    // --- MUDANÇA DE ESTRATÉGIA: USANDO EVENTOS ---
+    // Em vez de try/catch, vamos escutar o evento que o UI5 dispara
+    // quando a operação de criação termina (com sucesso ou falha).
+    oListBinding.attachEventOnce("createCompleted", (oEvent) => {
+        oDialog.setBusy(false);
+        
+        const bSuccess = oEvent.getParameter("success");
+
+        if (bSuccess) {
+            // ---- CENÁRIO DE SUCESSO ----
+            MessageToast.show("Novo registro de frete criado com sucesso!");
+            oDialog.close();
+            this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
+        } else {
+            // ---- CENÁRIO DE FALHA ----
+            // Se a criação falhou, o framework já colocou o erro no MessageManager.
+            // Agora é o momento certo de ler de lá.
+            const oMessageManager = sap.ui.getCore().getMessageManager();
+            const aMessages = oMessageManager.getMessageModel().getData();
+            let sErrorMessage = "Ocorreu um erro desconhecido.";
+
+            if (aMessages.length > 0) {
+                // Filtramos apenas as mensagens de erro que acabaram de chegar
+                const aErrorMessages = aMessages
+                    .filter(msg => msg.getType() === 'Error')
+                    .map(msg => `- ${msg.getMessage()}`); // A mensagem já é "Value ... is not a valid String(13)"
+                
+                if (aErrorMessages.length > 0) {
+                    sErrorMessage = "Por favor, corrija os seguintes erros:\n\n" + aErrorMessages.join("\n");
+                }
+            }
+
+            MessageBox.error(sErrorMessage, {
+                title: "Erro de Validação",
+                onClose: () => {
+                    // Limpa as mensagens de erro para não aparecerem de novo na próxima tentativa
+                    oMessageManager.removeAllMessages();
+                }
+            });
+        }
+    });
+
+    // Dispara a criação. A resposta será tratada no evento "createCompleted" acima.
+    oListBinding.create(oPayload);
+},
 
     /* ======================================================= *
      *  SORT                                                   *
@@ -731,13 +766,13 @@ sap.ui.define([
     },
 
     // Reseta o FileUploader para um novo upload
-    _resetFileUploader: function () {
-      const oFileUploader = this.byId("fileUploader");
-      if (oFileUploader) {
-        oFileUploader.clear();
-        this.byId("btnConfirmUpload").setEnabled(false);
-        this._file = null;
-      }
+    _resetFileUploader() {
+        const oFileUploader = this.byId("fileUploader");
+        if (oFileUploader) {
+            oFileUploader.clear();
+            this.byId("btnConfirmUpload").setEnabled(false);
+            this._file = null;
+        }
     }
   });
 });

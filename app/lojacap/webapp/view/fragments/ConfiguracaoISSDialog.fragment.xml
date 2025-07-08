@@ -3,60 +3,68 @@
     xmlns:core="sap.ui.core"
     xmlns:f="sap.ui.layout.form">
     
-    <Dialog id="ConfiguracaoISSDialog" title="Nova Configuração de ISS">
+    <Dialog id="ConfiguracaoISSDialog" title="{formModel>/title}">
         <content>
-            <f:SimpleForm editable="true" layout="ResponsiveGridLayout">
-                <Label text="Mandante" />
-                <Input value="{mandt}"/>
+            <f:SimpleForm id="configForm" editable="true" layout="ResponsiveGridLayout">
+                
+                <Label id="mandtLabel" text="Mandante" />
+                <Input id="mandtInput" value="{formModel>/mandt}"/>
 
-                <Label text="Empresa" required="true"/>
-                <Input value="{empresa}"/>
+                <Label id="empresaLabel" text="Empresa" required="true"/>
+                <Select
+                    id="empresaSelect"
+                    selectedKey="{formModel>/empresa_ID}"
+                    width="100%"
+                    items="{
+                        path: '/Empresas',
+                        sorter: { path: 'nome' }
+                    }">
+                    <core:Item id="empresaItem" key="{ID}" text="{nome}" />
+                </Select>
 
-                <Label text="Local de Negócios" required="true"/>
-                <Input value="{loc_neg}"/>
+                <Label id="locNegLabel" text="Local de Negócios" required="true"/>
+                <Input id="locNegInput" value="{formModel>/loc_neg}"/>
 
-                <Label text="Local do Fornecedor"/>
-                <Input value="{loc_fornec}"/>
+                <Label id="locFornecLabel" text="Local do Fornecedor"/>
+                <Input id="locFornecInput" value="{formModel>/loc_fornec}"/>
 
-                <Label text="Prestação do Serviço"/>
-                <Input value="{prestac_serv}"/>
+                <Label id="prestacServLabel" text="Prestação do Serviço"/>
+                <Input id="prestacServInput" value="{formModel>/prestac_serv}"/>
 
-                <Label text="Prestador do Serviço"/>
-                <Input value="{prestad_serv}"/>
+                <Label id="prestadServLabel" text="Prestador do Serviço"/>
+                <Input id="prestadServInput" value="{formModel>/prestad_serv}"/>
 
-                <Label text="Serviço Prestado"/>
-                <Input value="{serv_prest}"/>
+                <Label id="servPrestLabel" text="Serviço Prestado"/>
+                <Input id="servPrestInput" value="{formModel>/serv_prest}"/>
 
-                <Label text="Tipo de Serviço"/>
-                <Input value="{serv_type}"/>
+                <Label id="servTypeLabel" text="Tipo de Serviço"/>
+                <Input id="servTypeInput" value="{formModel>/serv_type}"/>
 
-                <Label text="Aplicável?"/>
-                <CheckBox selected="{= ${verif} === 'X' }" />
+                <Label id="verifLabel" text="Aplicável?"/>
+                <CheckBox id="verifCheckBox" selected="{formModel>/verif}" />
 
-                <Label text="Válido De"/>
+                <Label id="valDeLabel" text="Válido De"/>
                 <DatePicker 
-                    value="{
-                        path: 'val_de', 
-                        type: 'sap.ui.model.type.Date',
-                        formatOptions: { style: 'short', strictParsing: true }
-                    }"
+                    id="valDeDatePicker"
+                    value="{formModel>/val_de}"
+                    valueFormat="yyyy-MM-dd"
+                    displayFormat="short"
                 />
 
-                <Label text="Válido Até"/>
+                <Label id="valAteLabel" text="Válido Até"/>
                 <DatePicker 
-                    value="{
-                        path: 'val_ate', 
-                        type: 'sap.ui.model.type.Date',
-                        formatOptions: { style: 'short', strictParsing: true }
-                    }"
+                    id="valAteDatePicker"
+                    value="{formModel>/val_ate}"
+                    valueFormat="yyyy-MM-dd"
+                    displayFormat="short"
                 />
             </f:SimpleForm>
         </content>
-        <beginButton>
-            <Button text="Salvar" type="Emphasized" press=".onSave"/>
-        </beginButton>
-        <endButton>
-            <Button text="Cancelar" press=".onCloseDialog"/>
-        </endButton>
+        
+        <buttons>
+            <Button id="saveButton" text="Salvar" type="Emphasized" press=".onSave"/>
+            <Button id="cancelButton" text="Cancelar" press=".onCloseDialog"/>
+        </buttons>
+        
     </Dialog>
 </core:FragmentDefinition>

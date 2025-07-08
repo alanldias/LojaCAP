@@ -31,12 +31,13 @@ service ShopService {
     entity NotaFiscalServicoLog     as projection on shop.NotaFiscalServicoLog;
 
     entity ConfiguracoesISS as projection on shop.ZTMM_ISS_CFG;
+    @readonly
+    entity Empresas as projection on shop.Empresas;
 
     action uploadArquivoFrete(data: LargeBinary) returns Boolean;
    
     action avancarStatusNFs(
         grpFilho      : String     
-
     ) returns array of {
         idAlocacaoSAP     : String;
         success           : Boolean;

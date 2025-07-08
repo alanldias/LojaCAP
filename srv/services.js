@@ -77,16 +77,40 @@ module.exports = cds.service.impl(function (srv) {
     }
 });
 
-srv.before('CREATE', 'NotaFiscalServicoMonitor', (req) => {
-  // Chamamos nossa função unificada
-  const validacao = validation.validarNotaFiscal(req.data);
+// no seu service.js
 
-  // Se ela retornar que não é válido...
-  if (!validacao.isValid) {
-      // ...nós disparamos o erro do CAP com as mensagens retornadas.
-      const mensagemDeErro = validacao.errors.join('\n');
-      req.error(400, mensagemDeErro);
+srv.before('CREATE', 'NotaFiscalServicoMonitor', async (req) => {
+  console.log("✅ [BACKEND] Recebido 'before CREATE' para NotaFiscalServicoMonitor.");
+  
+  let todosOsErros = [];
+
+  // --- Bloco 1: Validação de Campos ---
+  const validacaoCampos = validation.validarCampos(req.data);
+  if (!validacaoCampos.isValid) {
+      todosOsErros.push(...validacaoCampos.errors);
   }
+
+  // --- Bloco 2: Validação de Consistência no Banco de Dados ---
+  // Só executa se os campos básicos estiverem ok para evitar erros desnecessários.
+  if (validacaoCampos.isValid) {
+      const errosDeConsistencia = await validation.validarConsistenciaMaeFilhoNoBanco(
+          req.data,
+          this, // Passa o contexto do serviço (this)
+          NotaFiscalServicoMonitor // Passa a entidade
+      );
+      if (errosDeConsistencia.length > 0) {
+          todosOsErros.push(...errosDeConsistencia);
+      }
+  }
+
+  // --- Conclusão da Validação ---
+  if (todosOsErros.length > 0) {
+      const mensagemDeErro = todosOsErros.join(' | ');
+      console.error("❌ [BACKEND] Validação falhou. Erros:", mensagemDeErro);
+      return req.error(400, mensagemDeErro);
+  }
+
+  console.log("✅ [BACKEND] Todas as validações passaram. Prosseguindo com a criação.");
 });
 
 this.on('avancarStatusNFs', async req => {
@@ -211,7 +235,7 @@ this.on('uploadArquivoFrete', async (req) => {
           console.log("  [Orquestrador] Transação iniciada. Delegando para o processador...");
 
           // 1. Processa o stream e valida linhas individuais
-          const batch = await processor.processarStream(stream, validation);
+          const batch = await processor.processarStream(stream);
 
           // 2. Executa validações no lote completo (consistência, duplicados)
           await processor.validarLoteCompleto(batch, tx, NotaFiscalServicoMonitor);

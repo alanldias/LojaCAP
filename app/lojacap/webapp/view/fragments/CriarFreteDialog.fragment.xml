@@ -53,14 +53,14 @@
                                     <l:content>
                                         <VBox id="21"><layoutData><l:GridData id="22" span="L9 M9 S12" /></layoutData>
                                             <items>
-                                                <Label id="23" text="Nº NFS-e"/>
+                                                <Label id="23" text="Nº NFS-e" required="true"/>
                                                 <Input id="24" value="{novoRegistro>/numeroNfseServico}"/>
                                             </items>
                                         </VBox>
                                         <VBox id="25"><layoutData><l:GridData id="26" span="L3 M3 S12" /></layoutData>
                                             <items>
-                                                <Label id="27" text="Série"/>
-                                                <Input id="28" value="{novoRegistro>/serieNfseServico}"/>
+                                                <Label id="27" text="Série" required="true"/>
+                                                <Input id="28" value="{novoRegistro>/serieNfseServico}" maxLength="3"/>
                                             </items>
                                         </VBox>
                                     </l:content>
@@ -73,7 +73,7 @@
                                     </layoutData>
                                 </HBox>
 
-                                <Label id="32" text="Data Emissão NFS-e"/>
+                                <Label id="32" text="Data Emissão NFS-e" required="true"/>
                                 <DatePicker id="33" value="{novoRegistro>/dataEmissaoNfseServico}" valueFormat="yyyy-MM-dd" displayFormat="short"/>
                                 <Label id="34" text="Chave Acesso NFS-e"/>
                                 <Input id="35" value="{novoRegistro>/chaveAcessoNfseServico}"/>

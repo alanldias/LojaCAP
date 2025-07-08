@@ -252,7 +252,6 @@ sap.ui.define([
             console.log("[FRONTEND-LOG] Arquivo lido. O conteúdo em Base64 começa com:", sFileContent.substring(0, 80));
             this._callUploadAction(sFileContent);
         };
-    
         oReader.onerror = (oError) => {
             MessageBox.error("Erro ao ler o arquivo selecionado.");
             console.error("FileReader Error:", oError);
@@ -267,60 +266,103 @@ sap.ui.define([
     * ======================================================= */
 
     async onAbrirDialogoCriacao() {
+      console.log("[DEBUG] 1. onAbrirDialogoCriacao - INÍCIO");
       const oView = this.getView();
 
       if (!this._oCriarFreteDialog) {
-        this._oCriarFreteDialog = await Fragment.load({
-          id: oView.getId(),
-          name: "lojacap.view.fragments.CriarFreteDialog",
-          controller: this
-        });
-        oView.addDependent(this._oCriarFreteDialog);
+          console.log("[DEBUG] 1.1. Carregando o fragmento do diálogo pela primeira vez.");
+          this._oCriarFreteDialog = await Fragment.load({
+              id: oView.getId(),
+              name: "lojacap.view.fragments.CriarFreteDialog",
+              controller: this
+          });
+          oView.addDependent(this._oCriarFreteDialog);
       }
+
+      console.log("[DEBUG] 1.2. Criando o JSONModel para o novo registro.");
       const oNovoRegistroModel = new JSONModel({
-        status: "01",
-        issRetido: false,
-        estornado: false,
-        logErroFlag: false
+          idAlocacaoSAP: "", orderIdPL: "", chaveDocumentoMae: "", chaveDocumentoFilho: "",
+          documentoVendasMae: "", documentoFaturamentoMae: "", numeroPedidoCompra: "",
+          itemPedidoCompra: "", numeroControleDocumentoSAP: "", numeroNfseServico: "",
+          serieNfseServico: "", dataEmissaoNfseServico: new Date().toISOString().substring(0, 10), chaveAcessoNfseServico: "",
+          codigoVerificacaoNfse: "", cnpjTomador: "", codigoFornecedor: "", nomeFornecedor: "",
+          numeroNotaFiscalSAP: "", serieNotaFiscalSAP: "", localPrestacaoServico: "",
+          numeroDocumentoMIRO: "", anoFiscalMIRO: null, documentoContabilMiroSAP: "",
+          valorBrutoNfse: 0, valorLiquidoFreteNfse: 0, valorEfetivoFrete: 0,
+          status: "01", issRetido: false, estornado: false, enviadoParaPL: false,
+          logErroFlag: false, mensagemErro: "", tipoMensagemErro: "", classeMensagemErro: "",
+          numeroMensagemErro: ""
       });
       this._oCriarFreteDialog.setModel(oNovoRegistroModel, "novoRegistro");
+      
+      console.log("[DEBUG] 1.3. Abrindo o diálogo.");
       this._oCriarFreteDialog.open();
-    },
-    onCancelarDialogoCriacao() {
-        this._oCriarFreteDialog.close();
-    },
-    onSalvarNovoRegistro() {
-        const oDialog = this.byId("criarFreteDialog");
-        const oNovoRegistroModel = oDialog.getModel("novoRegistro");
-        const oNovoRegistroData = oNovoRegistroModel.getData();
-    
-        // 1. Validação no Frontend (UX Imediata)
-        if (!oNovoRegistroData.idAlocacaoSAP || !oNovoRegistroData.orderIdPL) {
-            MessageBox.error("Por favor, preencha os campos de identificação obrigatórios.");
-            return;
-        }
-        const oModel = this.getView().getModel();
-        // O binding para a coleção correta
-        const oListBinding = oModel.bindList("/NotaFiscalServicoMonitor");
-    
-        oDialog.setBusy(true);
-    
-        // 2. Chamada para o CREATE padrão do OData
-        oListBinding.create(oNovoRegistroData)
-            .created()
-            .then(() => {
-                MessageToast.show("Novo registro de frete criado com sucesso!");
-                this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
-            })
-            .catch((oError) => {
-                MessageBox.error("Erro ao criar registro: " + oError.message);
-            })
-            .finally(() => {
-                oDialog.setBusy(false);
-                oDialog.close();
+      console.log("[DEBUG] 1.4. onAbrirDialogoCriacao - FIM");
+  },
+
+  onCancelarDialogoCriacao() { this._oCriarFreteDialog.close() },
+
+  async onSalvarNovoRegistro() {
+    const oDialog = this._oCriarFreteDialog;
+    if (!oDialog) { return }
+
+    const oPayload = oDialog.getModel("novoRegistro").getData();
+    const oListBinding = this.getView().getModel().bindList("/NotaFiscalServicoMonitor");
+
+    if (!oPayload.idAlocacaoSAP || !oPayload.orderIdPL || !oPayload.chaveDocumentoMae) {
+        MessageBox.error("Por favor, preencha os campos de identificação obrigatórios.");
+        return;
+    }
+    oPayload.issRetido = oPayload.issRetido ? 'X' : '';
+    oPayload.enviadoParaPL = oPayload.enviadoParaPL ? 'X' : '';
+
+    oDialog.setBusy(true);
+
+    // --- MUDANÇA DE ESTRATÉGIA: USANDO EVENTOS ---
+    // Em vez de try/catch, vamos escutar o evento que o UI5 dispara
+    // quando a operação de criação termina (com sucesso ou falha).
+    oListBinding.attachEventOnce("createCompleted", (oEvent) => {
+        oDialog.setBusy(false);
+        
+        const bSuccess = oEvent.getParameter("success");
+
+        if (bSuccess) {
+            // ---- CENÁRIO DE SUCESSO ----
+            MessageToast.show("Novo registro de frete criado com sucesso!");
+            oDialog.close();
+            this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
+        } else {
+            // ---- CENÁRIO DE FALHA ----
+            // Se a criação falhou, o framework já colocou o erro no MessageManager.
+            // Agora é o momento certo de ler de lá.
+            const oMessageManager = sap.ui.getCore().getMessageManager();
+            const aMessages = oMessageManager.getMessageModel().getData();
+            let sErrorMessage = "Ocorreu um erro desconhecido.";
+
+            if (aMessages.length > 0) {
+                // Filtramos apenas as mensagens de erro que acabaram de chegar
+                const aErrorMessages = aMessages
+                    .filter(msg => msg.getType() === 'Error')
+                    .map(msg => `- ${msg.getMessage()}`); // A mensagem já é "Value ... is not a valid String(13)"
+                
+                if (aErrorMessages.length > 0) {
+                    sErrorMessage = "Por favor, corrija os seguintes erros:\n\n" + aErrorMessages.join("\n");
+                }
+            }
+
+            MessageBox.error(sErrorMessage, {
+                title: "Erro de Validação",
+                onClose: () => {
+                    // Limpa as mensagens de erro para não aparecerem de novo na próxima tentativa
+                    oMessageManager.removeAllMessages();
+                }
             });
-        },
-  
+        }
+    });
+
+    // Dispara a criação. A resposta será tratada no evento "createCompleted" acima.
+    oListBinding.create(oPayload);
+} ,
       /* ======================================================= *
        *  SORT                                                   *
        * ======================================================= */

@@ -1,21 +1,20 @@
-// srv/lib/uploadProcessor.js
 
-const { INSERT, SELECT } = require('@sap/cds/lib').ql;
-
+const cds = require('@sap/cds');
+const validation = require('./validation');
 /**
  * Lê o stream do CSV, valida cada linha individualmente e retorna um lote de registros.
  * @param {ReadableStream} stream - O stream do arquivo CSV.
  * @param {object} validation - O módulo de validação com a função 'validarNotaFiscal'.
  * @returns {Promise<Array<object>>} - Um array com os registros validados.
  */
-async function processarStream(stream, validation) {
+async function processarStream(stream) {
     const batch = [];
     let contadorDeLinhas = 0;
     console.log("  [Processador] 📄 Lendo e validando itens individualmente...");
 
     for await (const registro of stream) {
         contadorDeLinhas++;
-        const validacao = validation.validarNotaFiscal(registro, contadorDeLinhas);
+        const validacao = validation.validarCampos(registro, contadorDeLinhas);
         if (!validacao.isValid) {
             const linhaDoArquivo = contadorDeLinhas + 1;
             throw new Error(`O arquivo foi rejeitado. Erro encontrado no item ${linhaDoArquivo} do seu CSV:\n\n- ${validacao.errors.join('\n- ')}`);
@@ -72,14 +71,14 @@ async function processarStream(stream, validation) {
 async function validarLoteCompleto(batch, tx, NotaFiscalServicoMonitor) {
     // 1. Validação de Consistência Mãe-Filho
     console.log("  [Processador] 🔗 Verificando consistência Mãe-Filho no arquivo completo...");
-    _validarConsistenciaMaeFilho(batch); // Esta função vai lançar um erro se falhar
+    validation.validarConsistenciaMaeFilhoNoLote(batch); // Esta função vai lançar um erro se falhar
     console.log("    [Processador] ✅ Consistência de dados validada.");
 
     // 2. Verificação de Duplicados no Banco
     console.log(`  [Processador] 🔍 Verificando se os ${batch.length} registros já existem no banco...`);
     const todosOsIdsDoArquivo = batch.map(r => r.idAlocacaoSAP);
     const idsExistentes = await tx.run(
-        SELECT.from(NotaFiscalServicoMonitor, ['idAlocacaoSAP']).where({ idAlocacaoSAP: { in: todosOsIdsDoArquivo } })
+        cds.ql.SELECT.from(NotaFiscalServicoMonitor, ['idAlocacaoSAP']).where({ idAlocacaoSAP: { in: todosOsIdsDoArquivo } })
     );
 
     if (idsExistentes.length > 0) {
@@ -97,31 +96,8 @@ async function validarLoteCompleto(batch, tx, NotaFiscalServicoMonitor) {
  */
 async function inserirRegistros(batch, tx, NotaFiscalServicoMonitor) {
     console.log(`  [Processador] 💾 Inserindo ${batch.length} novos registros no banco de dados...`);
-    await tx.run(INSERT.into(NotaFiscalServicoMonitor).entries(batch));
+    await tx.run(cds.ql.INSERT.into(NotaFiscalServicoMonitor).entries(batch));
 }
-
-
-// --- Funções Auxiliares Internas ---
-
-function _validarConsistenciaMaeFilho(registros) {
-    const filhoParaMaeMap = new Map();
-    registros.forEach((registro, index) => {
-        const linhaAtual = index + 1;
-        const { chaveDocumentoFilho, chaveDocumentoMae } = registro;
-        if (chaveDocumentoFilho && chaveDocumentoMae) {
-            if (filhoParaMaeMap.has(chaveDocumentoFilho)) {
-                const primeiraOcorrencia = filhoParaMaeMap.get(chaveDocumentoFilho);
-                if (primeiraOcorrencia.mae !== chaveDocumentoMae) {
-                    const erroMsg = `Inconsistência no Item ${linhaAtual}: A chave de filho "${chaveDocumentoFilho}" está ligada à mãe "${chaveDocumentoMae}", mas no Item ${primeiraOcorrencia.linha} ela já estava ligada à mãe "${primeiraOcorrencia.mae}".`;
-                    throw new Error(`O arquivo foi rejeitado por inconsistência nos dados:\n\n- ${erroMsg}`);
-                }
-            } else {
-                filhoParaMaeMap.set(chaveDocumentoFilho, { mae: chaveDocumentoMae, linha: linhaAtual });
-            }
-        }
-    });
-}
-
 
 module.exports = {
     processarStream,

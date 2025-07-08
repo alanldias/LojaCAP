@@ -11,7 +11,7 @@ sap.ui.define([
          * @param {sap.m.Table} oTable A instância da tabela que será impressa.
          * @param {object} mCoresLinha Um mapa de IDs para classes de cor (ex: { 'someId': 'linhaVerde' }).
          */
-        printTable: function (oTable) {
+        printTable(oTable) {
             if (!oTable) {
                 MessageToast.show("Tabela não encontrada para impressão.");
                 return;
@@ -75,7 +75,7 @@ sap.ui.define([
                         status: oRowData.status || "",
                         numeroNfseServico: oRowData.numeroNfseServico || "",
                         serieNfseServico: oRowData.serieNfseServico || "",
-                        dataEmissaoNfseServico: oRowData.dataEmissaoNfseServico ? oDateFormat.format(new Date(oRowData.dataEmissaoNfseServico)) : "",
+                        dataEmissaoNfseServico: oRowData.dataEmissaoNfseServico ? oDateFormat.format(new Date(oRowData.dataEmissaoNfseServico)) : "",    
                         chaveAcessoNfseServico: oRowData.chaveAcessoNfseServico || "",
                         codigoVerificacaoNfse: oRowData.codigoVerificacaoNfse || "",
                         numeroDocumentoMIRO: oRowData.numeroDocumentoMIRO || "",
@@ -86,7 +86,7 @@ sap.ui.define([
                 });
 
                 // O restante do seu código HTML é exatamente o mesmo
-                var sHTML = `
+                let sHTML = `
                 <!DOCTYPE html>
                 <html>
                 <head>
@@ -176,7 +176,7 @@ sap.ui.define([
                     </table>
                     <div class="footer">
                         <p>Relatório gerado em ${oDateFormat.format(new Date())} - ${oTimeFormat.format(new Date())}</p>
-                        <p>Sistema NTTTESTTE - Plataforma Logística</p>
+                        <p>Sistema NTTTESTE - Plataforma Logística</p>
                     </div>
                 </body>
                 </html>`;
@@ -186,13 +186,22 @@ sap.ui.define([
                 const oJanelaImpressao = window.open(sUrl, '_blank', 'width=1200,height=800,scrollbars=yes,resizable=yes');
 
                 if (oJanelaImpressao) {
+                    // Adiciona um evento para revogar o blob quando a janela de impressão for fechada
+                    oJanelaImpressao.onbeforeunload = () => {
+                        URL.revokeObjectURL(sUrl);
+                        console.log('Blob URL revogado ao fechar a janela de impressão.');
+                    };
+
                     oJanelaImpressao.onload = () => {
                         oJanelaImpressao.focus();
                         oJanelaImpressao.print();
-                        URL.revokeObjectURL(sUrl);
+                        // Importante: NÃO revogue o URL do blob aqui imediatamente
+                        // Deixe o onbeforeunload da janela de impressão cuidar disso.
                     };
                 } else {
                     MessageToast.show("Não foi possível abrir a janela de impressão. Por favor, desative o bloqueador de pop-ups.");
+                    // Se a janela não puder ser aberta, revogue o blob imediatamente para evitar vazamento.
+                    URL.revokeObjectURL(sUrl);
                 }
 
             }).catch(oError => {

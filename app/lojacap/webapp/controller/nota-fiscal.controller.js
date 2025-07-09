@@ -435,13 +435,12 @@ sap.ui.define([
      * ======================================================= */
 
     onPressPrint: function () {
-      const oController = this;
+      const oController = this; 
       const oTable = oController.byId("tableNotaFiscalServicoMonitor");
       sap.ui.require(["lojacap/util/PrintUtil"], function (PrintUtil) {
-        MessageToast.show("Módulo de impressão carregado sob demanda!");
-        PrintUtil.printTable(oTable);
-      });
-    },
+        PrintUtil.printTable(oTable, oController); 
+    });
+},
 
     /* ======================================================= *
      *  LOG – diálogo e filtro “NF com erro”                   *

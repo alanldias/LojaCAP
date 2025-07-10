@@ -156,3 +156,52 @@ entity NotaFiscalServicoMonitor : cuid, managed {
     classeMensagemErro         : String(20) @title : 'Classe Mensagem Erro';   // Corresponde a SYMSGID [cite: 72]
     numeroMensagemErro         : String(3) @title : 'Número Mensagem Erro';   // Corresponde a SYMSGNO [cite: 72]
 }
+
+entity NotaFiscalServicoLog : managed {
+    key ID              : UUID;
+    nota_ID             : Association to NotaFiscalServicoMonitor
+                          on nota_ID.idAlocacaoSAP = $self.idAlocacaoSAP;
+
+    idAlocacaoSAP       : String(13);   // mesmo comprimento do principal
+    mensagemErro        : String(120);
+    tipoMensagemErro    : String(1);
+    classeMensagemErro  : String(20);
+    numeroMensagemErro  : String(3);
+    origem              : String(30);   // 'avancarStatusNFs', 'BAPI_XYZ', e tals
+}
+
+//lista de empresas
+entity Empresas {
+    key ID   : String(4); // O código de 4 caracteres
+        nome : String(100);
+}
+entity ZTMM_ISS_CFG : cuid, managed {
+    mandt        : String(3);
+    empresa      : Association to Empresas; 
+    loc_neg      : String(4);
+    loc_fornec   : String(15);
+    prestac_serv : String(15);
+    prestad_serv : String(10);
+    serv_prest   : String(4);
+    serv_type    : String(16);
+    verif        : String(1);
+    val_de       : Date;
+    val_ate      : Date;
+}
+
+entity Chats : cuid, managed {
+    title       : String(255);
+    lastMessage : LargeString;
+  
+    messages    : Composition of many Messages on messages.chat = $self;
+}
+entity Messages : cuid, managed {
+    chat   : Association to Chats; 
+    
+    // muito mais limpa
+    sender : String enum { 
+        user; 
+        bot; 
+    };
+    text   : LargeString;
+}

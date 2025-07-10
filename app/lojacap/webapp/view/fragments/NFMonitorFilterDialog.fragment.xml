@@ -1,0 +1,54 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">
+
+    <Dialog
+        id="filterDialog"
+        title="Filtros – NF Monitor"
+        resizable="true"
+        draggable="true"
+        contentWidth="600px">
+
+        <f:SimpleForm
+            id="filterForm"
+            editable="true"
+            layout="ResponsiveGridLayout"
+            labelSpanM="4"
+            columnsM="2"
+            class="sapUiContentPadding">
+
+            <Label id="lblIdSapFrom" text="ID Aloc. SAP (De)"/>
+            <Input id="inpIdSapFrom"/>
+            <Label id="lblIdSapTo" text="ID Aloc. SAP (Até)"/>
+            <Input id="inpIdSapTo"/>
+
+            <Label id="lblOrderFrom" text="Order ID PL (De)"/>
+            <Input id="inpOrderFrom"/>
+            <Label id="lblOrderTo" text="Order ID PL (Até)"/>
+            <Input id="inpOrderTo"/>
+
+            <Label id="lblStatusFrom" text="Status (De)"/>
+            <Input id="inpStatusFrom" width="5rem" />
+            <Label id="lblStatusTo" text="Status (Até)"/>
+            <Input id="inpStatusTo" width="5rem" />
+
+            <Label id="lblDateFrom" text="Data Emissão (De)"/>
+            <DatePicker id="dpDateFrom" displayFormat="yyyy-MM-dd"/>
+            <Label id="lblDateTo" text="Data Emissão (Até)"/>
+            <DatePicker id="dpDateTo" displayFormat="yyyy-MM-dd"/>
+
+            <Label id="lblVlrBrutoFrom" text="Valor Bruto (De)"/>
+            <Input id="inpVlrBrutoFrom" type="Number"/>
+            <Label id="lblVlrBrutoTo" text="Valor Bruto (Até)"/>
+            <Input id="inpVlrBrutoTo" type="Number"/>
+        </f:SimpleForm>
+
+        <beginButton>
+            <Button id="btnApply" text="Aplicar" press="onFilterApply"/>
+        </beginButton>
+        <endButton>
+            <Button id="btnCancel" text="Cancelar" press="onFilterCancel"/>
+        </endButton>
+    </Dialog>
+</core:FragmentDefinition>

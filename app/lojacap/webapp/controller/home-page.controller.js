@@ -38,6 +38,12 @@ sap.ui.define([
         onGonotafiscal: function () {
             this.getOwnerComponent().getRouter().navTo("Routenota-fiscal");
           },
+          onGoIss: function () {
+            this.getOwnerComponent().getRouter().navTo("RouteConfiguracaoISS");
+          },
+          onchatbot: function () {
+            this.getOwnerComponent().getRouter().navTo("Routechatbot");
+          },
 
 
 

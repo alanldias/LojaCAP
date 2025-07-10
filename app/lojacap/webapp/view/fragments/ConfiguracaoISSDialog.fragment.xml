@@ -1,0 +1,72 @@
+<core:FragmentDefinition
+    xmlns="sap.m"
+    xmlns:core="sap.ui.core"
+    xmlns:f="sap.ui.layout.form">
+    
+    <Dialog id="ConfiguracaoISSDialog" title="Configuração de ISS" contentWidth="40rem">
+        <content>
+            <f:SimpleForm id="configForm" editable="true" layout="ResponsiveGridLayout">
+                
+                <core:Title id="titleDadosGerais" text="Dados Gerais"/>
+                
+                <Label id="lblMandante" text="Mandante" />
+                <Input id="inpMandante" value="{formModel>/mandt}" editable="false"/>
+
+                <Label id="lblEmpresa" text="Empresa" required="true"/>
+                <Select
+                    id="empresaSelect"
+                    selectedKey="{formModel>/empresa_ID}"
+                    width="100%"
+                    items="{ path: '/Empresas', sorter: { path: 'nome' } }">
+                    <core:Item id="itemEmpresa" key="{ID}" text="{nome}" />
+                </Select>
+
+                <Label id="lblLocNeg" text="Local de Negócios" required="true"/>
+                <Input id="locNegInput" value="{formModel>/loc_neg}" maxLength="4"/>
+
+                <Label id="lblLocFornec" text="Local do Fornecedor"/>
+                <Input id="inpLocFornec" value="{formModel>/loc_fornec}" maxLength="15"/>
+                
+                <core:Title id="titleDetalhesServico" text="Detalhes do Serviço"/>
+
+                <Label id="lblPrestacServ" text="Prestação do Serviço"/>
+                <Input id="inpPrestacServ" value="{formModel>/prestac_serv}" maxLength="15"/>
+
+                <Label id="lblPrestadServ" text="Prestador do Serviço"/>
+                <Input id="inpPrestadServ" value="{formModel>/prestad_serv}" maxLength="10"/>
+
+                <Label id="lblServPrest" text="Serviço Prestado"/>
+                <Input id="inpServPrest" value="{formModel>/serv_prest}" maxLength="4"/>
+
+                <Label id="lblServType" text="Tipo de Serviço"/>
+                <Input id="inpServType" value="{formModel>/serv_type}" maxLength="16"/>
+
+                <core:Title id="titleValidade" text="Validade"/>
+
+                <Label id="lblVerif" text="Aplicável?"/>
+                <CheckBox id="verifCheckBox" selected="{formModel>/verif}" />
+
+                <Label id="lblValDe" text="Válido De"/>
+                <DatePicker 
+                    id="valDeDatePicker"
+                    value="{formModel>/val_de}"
+                    valueFormat="yyyy-MM-dd"
+                    displayFormat="short"
+                />
+
+                <Label id="lblValAte" text="Válido Até"/>
+                <DatePicker 
+                    id="valAteDatePicker"
+                    value="{formModel>/val_ate}"
+                    valueFormat="yyyy-MM-dd"
+                    displayFormat="short"
+                />
+            </f:SimpleForm>
+        </content>
+        
+        <buttons>
+            <Button id="saveButton" text="Salvar" type="Emphasized" press=".onSave"/>
+            <Button id="cancelButton" text="Cancelar" press=".onCloseDialog"/>
+        </buttons>
+    </Dialog>
+</core:FragmentDefinition>

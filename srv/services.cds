@@ -1,6 +1,7 @@
 // srv/services.cds
 using my.shop as shop from '../db/schema';
 
+
 service ShopService {
 
   @odata.draft.enabled
@@ -27,15 +28,30 @@ service ShopService {
 
     entity NotaFiscalServicoMonitor as projection on shop.NotaFiscalServicoMonitor;
 
-    
-   action avancarStatusNFs(
-        notasFiscaisIDs : array of NotaFiscalServicoMonitor:idAlocacaoSAP // Usando o tipo da chave primária
+    entity NotaFiscalServicoLog     as projection on shop.NotaFiscalServicoLog;
+
+    entity ConfiguracoesISS as projection on shop.ZTMM_ISS_CFG;
+    @readonly
+    entity Empresas as projection on shop.Empresas;
+
+    action uploadArquivoFrete(data: LargeBinary) returns Boolean;
+   
+    action avancarStatusNFs(
+        grpFilho      : String     
     ) returns array of {
         idAlocacaoSAP     : String;
         success           : Boolean;
         message           : String;
         novoStatus        : String;
         numeroNfseServico : String;
+    };
+    action rejeitarFrete(
+        grpFilho      : String
+    ) returns array of {
+        idAlocacaoSAP : String;
+        success       : Boolean;
+        message       : String;
+        novoStatus    : String;
     };
     
     action registerCliente(nome: String, email: String, senha: String) returns String;
@@ -49,5 +65,21 @@ service ShopService {
         quantidade    : Integer,
         precoUnitario : Decimal // Passar o preço unitário do momento da compra
     ) returns UUID;
+    action voltarStatusNFs(grpFilho: String, grpStatus: Integer) returns array of {
+        idAlocacaoSAP : String;
+        success       : Boolean;
+        message       : String;
+        novoStatus    : String;
+    };
+  function getPOSubcontractingComponents() returns LargeString;
 
+
+//deep 
+   function callDeepSeek(question: String) returns String;
+   
+   entity Chats    as projection on shop.Chats;
+   entity Messages as projection on shop.Messages;
+
+  action startChat(title : String) returns Chats;
+  action sendMessage(chat : Chats, question : String) returns Messages;
 }

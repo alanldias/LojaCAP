@@ -1,721 +1,343 @@
 const cds = require('@sap/cds');
-const validator = require('validator')
+const csv = require('csv-parser');
+const { Readable } = require('stream');
+const OpenAI = require("openai");
+const validation = require('./lib/validation');
+const processor = require('./lib/uploadProcessor');
+const axios = require('axios');
 
-module.exports = cds.service.impl(async function (srv) {
-  const { Clientes, Pedidos, ItemPedido, Carrinhos, ItemCarrinho, Produtos, NotaFiscalServicoMonitor  } = srv.entities;
+require('dotenv').config();
+
+const handlers = [
+  require('./lojacap/cliente'),
+  require('./lojacap/produto'),
+  require('./lojacap/pagamento'),
+  require('./lojacap/carrinho'),
+  require('./lojacap/pedidos')
+];
+
+const openai = new OpenAI({
+  baseURL: 'https://api.deepseek.com',
+  apiKey: process.env.DEEPSEEK_API_KEY
+});
+
+
+
+module.exports = cds.service.impl(function (srv) {
+  handlers.forEach(register => register(srv));
+
+  const etapas = require('./nf/etapas')(srv);    // devolve { avancar, voltar }
+  const { sucesso, falha, gravarLog } = require('./nf/log');
+  
+  const MAX_CONTEXT = 10;                       // quantas msgs anteriores enviar
+
+  const { NotaFiscalServicoMonitor, Chats, Messages } = srv.entities;
 
   console.log("✅ CAP Service inicializado");
 
-  // ==== loginCliente ====
-  srv.on('loginCliente', async (req) => {
-    const { email, senha } = req.data;
-  
-    const user = await SELECT.one.from(Clientes).where({ email, senha });
-    if (!user) {
-      req.reject(401, "Login inválido");
-    }
-  
-    // Atualiza createdBy com o usuário atual da sessão
-    await UPDATE(Clientes)
-      .set({}) 
-      .where({ ID: user.ID });
-  
-    // Associar esse cliente ao user.id da sessão
-    const result = await cds.run(
-      UPDATE('my.shop.Cliente')
-        .set({ createdBy: req.user.id })
-        .where({ ID: user.ID })
-    );
-  
-    return "OK"; // simples resposta, nada de token
+  srv.on('startChat', async req => {
+    const { title } = req.data;
+    const [chat] = await cds.run(INSERT.into(Chats).entries({ title }));
+    return chat;
   });
 
-  srv.before(['CREATE', 'UPDATE'], 'Clientes', async (req) => {
-    const { nome, email, senha } = req.data;
-    console.log("📥 Chamado registerCliente");
-
-    if (!nome || !email || !senha) {
-      return req.error(400, "Todos os campos são obrigatórios")
-    }
-
-    // Validação: nome com pelo menos 6 caracteres
-    if (nome.length < 6) {
-      return req.error(400, "O nome deve ter pelo menos 6 caracteres.");
-    }
-
-    // Validação: senha com pelo menos 6 caracteres
-    if (senha.length < 6) {
-      return req.error(400, "A senha deve ter pelo menos 6 caracteres.");
-    }
-
-    // Validação: formato do e-mail (básico)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return req.error(400, "Formato de e-mail inválido.");
-    }
-  });
-
-  srv.before(['CREATE','UPDATE'], 'Produtos', async (req) => {
-    const { nome, descricao, preco, estoque, imagemURL } = req.data;
-    const urlField = req.data.imagemURL;
-
-    if (!nome || !descricao || !preco || !estoque || !imagemURL){
-      return req.error(400, "Todos os campos são obrigatórios!")
-    }
-
-    if (preco < 0) {
-      return req.error(400, "O preço não pode ser negativo!")
-    }
-
-    if (estoque < 0) {
-      return req.error(400, "O estoque não pode estar negativo!")
-    }
-    
-    if (urlField && !validator.isURL(urlField)) {
-      return req.error(400, "A imagem deve conter uma URL válida")
-    }
-  });
-
-  srv.on('realizarPagamento', async (req) => {
-    const { clienteID, tipoPagamento } = req.data;
-
-    if (!clienteID || !tipoPagamento) {
-      return req.error(400, 'clienteID e tipoPagamento são obrigatórios.');
-    }
-
-    const carrinho = await SELECT.one.from(Carrinhos).where({ cliente_ID: clienteID });
-    if (!carrinho) {
-      return req.error(404, `Carrinho não encontrado para o cliente ${clienteID}.`);
-    }
-
-    const itensCarrinho = await SELECT.from(ItemCarrinho).where({ carrinho_ID: carrinho.ID });
-    if (!itensCarrinho || itensCarrinho.length === 0) {
-      return req.error(400, 'O carrinho está vazio.');
-    }
-
-    let total = 0;
-    for (const item of itensCarrinho) {
-      const produto = await SELECT.one.from(Produtos).where({ ID: item.produto_ID });
-      if (!produto) {
-        return req.error(404, `Produto com ID ${item.produto_ID} não encontrado.`);
-      }
-      total += produto.preco * item.quantidade;
-    }
-
-    let pedidoCriadoID;
-
-    await cds.tx(req).run(async (tx) => {
-      pedidoCriadoID = cds.utils.uuid();
-      await tx.run(
-        INSERT.into(Pedidos).entries({
-          ID: pedidoCriadoID,
-          cliente_ID: clienteID,
-          total: total,
-          pagamento: tipoPagamento,
-          status: 'AGUARDANDO_PAGAMENTO'
-        })
-      );
-
-      const itensParaPedido = [];
-      for (const item of itensCarrinho) {
-        const produto = await tx.run(SELECT.one.from(Produtos).where({ ID: item.produto_ID }));
-        itensParaPedido.push({
-          pedido_ID: pedidoCriadoID,
-          produto_ID: produto.ID,
-          quantidade: item.quantidade,
-          precoUnitario: produto.preco
+  srv.on('sendMessage', async req => {
+    //  Extrai parâmetros
+    const chatGuid = typeof req.data.chat === 'string'
+          ? req.data.chat
+          : req.data.chat.ID;          // entidade = {ID: …}
+    const question = req.data.question;
+  
+    // Grava pergunta do usuário (sincrono)                  
+    await INSERT.into(Messages).entries({
+      chat_ID : chatGuid,              // GUID puro
+      sender  : 'user',
+      text    : question
+    });
+  
+    //DISPARA processamento assincrono (não await!)            
+    (async () => {
+      try {
+        // busca últimas N*2 mensagens para contexto           
+        const prev = await SELECT.from(Messages)
+          .where({ chat_ID : chatGuid })
+          .orderBy('createdAt desc')
+          .limit(MAX_CONTEXT * 2);
+  
+        const contextMsgs = prev.reverse().map(m => ({
+          role   : m.sender === 'user' ? 'user' : 'assistant',
+          content: m.text
+        }));
+  
+        // monta payload e chama DeepSeek                      
+        const { choices } = await openai.chat.completions.create({
+          model   : 'deepseek-chat',
+          messages: [
+            { role: 'system',
+              content: 'Você é um assistente SAP CAP/BTP em pt-BR.' },
+            ...contextMsgs,
+            { role: 'user', content: question }
+          ]
+        });
+  
+        const answer = choices?.[0]?.message?.content ?? "❔";
+  
+        //grava resposta do bot                               
+        await INSERT.into(Messages).entries({
+          chat_ID : chatGuid,
+          sender  : 'bot',
+          text    : answer
+        });
+  
+        // atualiza resumo no Chat  
+        await UPDATE(Chats, { ID : chatGuid }).with({ lastMessage : answer });
+  
+        console.log("[DeepSeek] resposta gravada para chat", chatGuid);
+      } catch (e) {
+        console.error("[DeepSeek bg] erro:", e);
+  
+        // grava mensagem de falha para o usuário ver
+        await INSERT.into(Messages).entries({
+          chat_ID : chatGuid,
+          sender  : 'bot',
+          text    : "⚠️ Erro ao consultar IA. Tente novamente mais tarde."
         });
       }
-
-      await tx.run(INSERT.into(ItemPedido).entries(itensParaPedido));
-      await tx.run(DELETE.from(ItemCarrinho).where({ carrinho_ID: carrinho.ID }));
-    });
-
-    return pedidoCriadoID;
+    })();   // ← dispara e esquece
+  
+    // Resposta imediata para o frontend                
+    return { status : "queued" };      // front ativa polling e logo vê a resposta
   });
 
-  srv.on('realizarPagamentoItemUnico', async (req) => {
-    const { clienteID, tipoPagamento, produtoID, quantidade, precoUnitario } = req.data;
-    console.log("🛍️ Backend: Ação 'realizarPagamentoItemUnico' chamada com clienteID:", clienteID, "produtoID:", produtoID);
 
-    if (!clienteID || !tipoPagamento || !produtoID || !quantidade || precoUnitario === undefined) {
-        return req.error(400, 'clienteID, tipoPagamento, produtoID, quantidade e precoUnitario são obrigatórios.');
+  srv.on('getPOSubcontractingComponents', async req => {
+    const axiosCfg = {
+      headers: {
+        Accept: 'application/json',
+        APIKey: process.env.PO_API_KEY
+      },
+      timeout: 10_000
+    };
+
+    const base = `${process.env.PO_API_BASE}/POSubcontractingComponent`;
+    const top = 50;
+    let url = `${base}?$top=${top}`;
+    let result = [];
+    let pageCount = 1; // Contador de páginas para o log
+
+    try {
+      while (url && result.length < top) {
+        console.log(`🔎 Página ${pageCount}: Chamando a URL -> ${url}`);
+        const { data } = await axios.get(url, axiosCfg);
+
+        if (data.value) {
+          console.log(`✅ Página ${pageCount}: Recebidos ${data.value.length} itens.`);
+          result = result.concat(data.value);
+        } else {
+          console.log(`⚠️ Página ${pageCount}: A resposta não continha um array 'value'.`);
+        }
+
+        // O log mais importante de todos!
+        console.log(`📦 A resposta da página ${pageCount} contém um @odata.nextLink? ->`, data['@odata.nextLink'] || 'Não');
+
+        // server-driven paging ➜ segue o @odata.nextLink
+        url = data['@odata.nextLink']
+          ? `${process.env.PO_API_BASE}/${data['@odata.nextLink']}`
+          : null;
+
+        pageCount++;
+      }
+
+      console.log(`🏁 Fim do loop. Total de itens acumulados: ${result.length}`);
+      return JSON.stringify(result.slice(0, top)); // garante no máx. 50
+
+    } catch (e) {
+      req.error(
+        e.response?.status || 500,
+        e.response?.data?.error?.message?.value || e.message
+      );
     }
-    if (quantidade <= 0) {
-        return req.error(400, 'Quantidade deve ser maior que zero.');
-    }
+});
+
+// no seu service.js
+
+srv.before('CREATE', 'NotaFiscalServicoMonitor', async (req) => {
+  console.log("✅ [BACKEND] Recebido 'before CREATE' para NotaFiscalServicoMonitor.");
+  
+  let todosOsErros = [];
+
+  // --- Bloco 1: Validação de Campos ---
+  const validacaoCampos = validation.validarCampos(req.data);
+  if (!validacaoCampos.isValid) {
+      todosOsErros.push(...validacaoCampos.errors);
+  }
+
+  // --- Bloco 2: Validação de Consistência no Banco de Dados ---
+  // Só executa se os campos básicos estiverem ok para evitar erros desnecessários.
+  if (validacaoCampos.isValid) {
+      const errosDeConsistencia = await validation.validarConsistenciaMaeFilhoNoBanco(
+          req.data,
+          this, // Passa o contexto do serviço (this)
+          NotaFiscalServicoMonitor // Passa a entidade
+      );
+      if (errosDeConsistencia.length > 0) {
+          todosOsErros.push(...errosDeConsistencia);
+      }
+  }
+
+  // --- Conclusão da Validação ---
+  if (todosOsErros.length > 0) {
+      const mensagemDeErro = todosOsErros.join(' | ');
+      console.error("❌ [BACKEND] Validação falhou. Erros:", mensagemDeErro);
+      return req.error(400, mensagemDeErro);
+  }
+
+  console.log("✅ [BACKEND] Todas as validações passaram. Prosseguindo com a criação.");
+});
+
+  this.on('avancarStatusNFs', async req => {
+    const { grpFilho } = req.data || {};
+    if (!grpFilho) return req.error(400, 'grpFilho é obrigatório');
 
     const tx = cds.transaction(req);
+    const rows = await tx.run(
+      SELECT.from(NotaFiscalServicoMonitor).columns(
+        'idAlocacaoSAP', 'status', 'issRetido', 'valorBrutoNfse',
+        'valorEfetivoFrete', 'valorLiquidoFreteNfse'
+      ).where({ chaveDocumentoFilho: grpFilho })
+    );
+    if (!rows.length) return req.error(404, 'Nenhuma NF encontrada');
+
+    const grpStatus = rows[0].status;
+    const ids = rows.map(r => r.idAlocacaoSAP);
+
+    switch (grpStatus) {
+      case '01': return etapas.avancar.trans01para05(tx, rows);
+      case '05': return etapas.avancar.trans05para15(tx, ids);
+      case '15': return etapas.avancar.trans15para30(tx, rows);
+      case '30': return etapas.avancar.trans30para35(tx, rows);
+      case '35': return etapas.avancar.trans35para50(tx, ids);
+      default: return req.error(400, `Status ${grpStatus} não suportado`);
+    }
+  });
+
+  this.on('voltarStatusNFs', async req => {
+    const { grpFilho, grpStatus } = req.data;
+    if (!grpFilho || grpStatus === undefined)
+      return req.error(400, 'grpFilho e grpStatus são obrigatórios');
+
+    const tx = cds.transaction(req);
+    const nfs = await tx.read(NotaFiscalServicoMonitor).where({
+      chaveDocumentoFilho: grpFilho, status: grpStatus
+    });
+
+    if (!nfs.length) return [];
+
+    switch (grpStatus) {
+      case '50': return etapas.voltar.trans50para35_reverso(tx, nfs);
+      case '35': return etapas.voltar.trans35para30_reverso(tx, nfs);
+      case '30': return etapas.voltar.trans30para15_reverso(tx, nfs);
+      case '15': return etapas.voltar.trans15para05_reverso(tx, nfs);
+      case '05': return etapas.voltar.trans05para01_reverso(tx, nfs);
+      default: return req.error(400, `Reversão não permitida para ${grpStatus}`);
+    }
+  });
+
+
+  this.on('rejeitarFrete', async req => {
+    const { grpFilho } = req.data || {};
+    if (!grpFilho) return req.error(400, 'grpFilho é obrigatório');
+
+    const tx = cds.transaction(req);
+
+    /* 1️⃣  Pega todos os IDs do grupo ------------------------- */
+    const linhas = await tx.run(
+      SELECT.from(NotaFiscalServicoMonitor)
+        .columns('idAlocacaoSAP')
+        .where({ chaveDocumentoFilho: grpFilho })
+    );
+    if (!linhas.length) return req.error(404, 'Nenhuma NF no grupo');
+
+    const ids = linhas.map(l => l.idAlocacaoSAP);
+
+    /* 2️⃣  Atualiza status para 55 + grava LOG "R" ------------ */
     try {
-        // 1. Verifica se o produto existe. 
-        //    Vamos tentar sem IsActiveEntity: true para ver se o erro some,
-        //    espelhando a leitura no realizarPagamento que funciona.
-        //    O CAP geralmente resolve para a entidade ativa por padrão em leituras.
-        console.log("🛍️ Backend: 'realizarPagamentoItemUnico' - Buscando produto SEM IsActiveEntity explícito:", produtoID);
-        const produto = await tx.run(SELECT.one.from(Produtos).where({ ID: produtoID })); // << MUDANÇA AQUI
-        
-        if (!produto) {
-            // Se o produto não for encontrado aqui, pode ser que ele só exista como draft e não como ativo.
-            // Nesse caso, você pode querer adicionar uma checagem secundária ou decidir o comportamento.
-            // Por agora, vamos manter simples. Se não achar, é erro.
-            console.error("🛍️ Backend: 'realizarPagamentoItemUnico' - Produto não encontrado (ou apenas draft existente) para ID:", produtoID);
-            return req.error(404, `Produto com ID ${produtoID} não encontrado.`);
-        }
-        console.log("🛍️ Backend: 'realizarPagamentoItemUnico' - Produto encontrado:", JSON.stringify(produto));
+      await tx.update(NotaFiscalServicoMonitor)
+        .set({ status: '55' })
+        .where({ chaveDocumentoFilho: grpFilho });
+
+      // um log "R" para cada NF  ➜ gravarLog já propaga campos na tabela
+      await Promise.all(
+        ids.map(id =>
+          gravarLog(
+            tx,
+            id,
+            'Frete rejeitado – status 55',
+            'R',                       // tipoMensagemErro = Rejeitado
+            'REJ_FRETE',               // classe
+            '055',                     // número
+            'rejeitarFrete'            // origem
+          )
+        )
+      );
+
+      return sucesso(ids, '55');       // helper padrão
+
+    } catch (e) {
+      // Se algo falhar, gera um log de erro por NF
+      await Promise.all(
+        ids.map(id =>
+          gravarLog(
+            tx,
+            id,
+            e.message,
+            'E', 'REJ_FRETE', '055', 'rejeitarFrete'
+          )
+        )
+      );
+      return falha(ids, '55', 'Falha ao rejeitar: ' + e.message);
+    }
+  });
 
 
-        // Se o produto encontrado não for o ativo (raro se o SELECT padrão funcionar bem),
-        // e você PRECISAR garantir que é o ativo, você poderia checar produto.IsActiveEntity aqui.
-        // Mas se a query acima já te dá o ativo, ótimo.
+  // =======================================================
+  // ==                  FUNÇÕES HELPER                   ==
+  // =======================================================
 
-        const totalPedido = parseFloat(precoUnitario) * parseInt(quantidade);
+  this.on('uploadArquivoFrete', async (req) => {
+    console.log('\n[Upload de Arquivo] 🚀 Início do processamento.');
+    const { data } = req.data;
+    if (!data) return req.error(400, 'Nenhum arquivo recebido.');
 
-        // 2. Cria o Pedido
-        const novoPedidoID = cds.utils.uuid();
-        await tx.run(INSERT.into(Pedidos).entries({
-            ID: novoPedidoID,
-            cliente_ID: clienteID,
-            total: totalPedido,
-            pagamento: tipoPagamento,
-            status: 'AGUARDANDO_PAGAMENTO'
-        }));
-        console.log("🛍️ Backend: 'realizarPagamentoItemUnico' - Pedido criado:", novoPedidoID);
+    const buffer = Buffer.from(data.split(';base64,')[1], 'base64');
+    const stream = Readable.from(buffer).pipe(csv({ mapHeaders: ({ header }) => header.trim() }));
 
-        // 3. Cria o ItemPedido
-        await tx.run(INSERT.into(ItemPedido).entries({
-            pedido_ID: novoPedidoID,
-            produto_ID: produtoID, // Usamos o produtoID original, já validado
-            quantidade: quantidade,
-            precoUnitario: parseFloat(precoUnitario)
-        }));
-        console.log("🛍️ Backend: 'realizarPagamentoItemUnico' - ItemPedido criado para o pedido:", novoPedidoID);
+    try {
+      await cds.tx(async (tx) => {
+        tx.req = req;
+        console.log("  [Orquestrador] Transação iniciada. Delegando para o processador...");
 
-        await tx.commit();
-        return novoPedidoID;
+          // 1. Processa o stream e valida linhas individuais
+          const batch = await processor.processarStream(stream);
+
+        // 2. Executa validações no lote completo (consistência, duplicados)
+        await processor.validarLoteCompleto(batch, tx, NotaFiscalServicoMonitor);
+
+        // 3. Insere os registros no banco
+        await processor.inserirRegistros(batch, tx, NotaFiscalServicoMonitor);
+
+        console.log("  [Orquestrador] ✨ Processo concluído. Notificando o usuário.");
+        req.notify(`Arquivo processado e ${batch.length} registros importados com sucesso!`);
+      });
+
+      console.log('[Upload de Arquivo] ✅ Processo finalizado com sucesso.');
+      return true;
 
     } catch (error) {
-        console.error("🛍️ Backend: Erro em 'realizarPagamentoItemUnico':", error);
-        await tx.rollback(error);
-        if (!req.errors && error.message && !error.message.includes("Virtual elements")) { // Evita duplicar o erro de virtual elements se ele voltar
-            req.error(500, "Erro interno ao processar o pedido do item único: " + error.message);
-        } else if (!req.errors) { // Erro genérico se não for o de virtual elements
-             req.error(500, "Erro interno desconhecido ao processar o pedido do item único.");
-        }
-        // Se o erro de "Virtual elements" persistir, ele será propagado pelo CAP.
-        }
-    });
-
-
-  this.on('mergeCarrinho', async (req) => {
-    const { carrinhoAnonimoID } = req.data; // ID do localStorage
-    if (!carrinhoAnonimoID) {
-      return req.error(400, "ID do carrinho anônimo não fornecido.");
+      // O erro pode vir de qualquer uma das etapas do processador
+      console.error(`\n[Upload de Arquivo] ❌ FALHA! Rollback executado. Motivo: ${error.message}\n`);
+      return req.error(400, error.message);
     }
-
-    const tx = cds.transaction(req); // Iniciar transação
-
-    const cliente = await tx.run(SELECT.one.from(Clientes).where({ /* userUUID: req.user.id OU */ createdBy: req.user.id }));
-    if (!cliente) {
-      return req.error(401, "Cliente não identificado ou não encontrado.");
-    }
-    const clienteID = cliente.ID;
-
-    // 2. Verificar se o cliente já possui um carrinho
-    let carrinhoDoCliente = await tx.run(SELECT.one.from(Carrinhos).where({ cliente_ID: clienteID }));
-
-    // 3. Buscar o carrinho anônimo pelo ID fornecido
-    // Certifique-se de que ele é realmente anônimo (cliente_ID é null)
-    const carrinhoAnonimo = await tx.run(SELECT.one.from(Carrinhos).where({ ID: carrinhoAnonimoID, cliente_ID: null }));
-
-    let idCarrinhoFinal = null;
-
-    if (carrinhoDoCliente) {
-      // CASO A: Cliente já tem um carrinho.
-      idCarrinhoFinal = carrinhoDoCliente.ID;
-
-      if (carrinhoAnonimo && carrinhoAnonimo.ID !== carrinhoDoCliente.ID) {
-        const itensAnonimos = await tx.run(SELECT.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimo.ID }));
-
-        for (const itemAnonimo of itensAnonimos) {
-          const itemExistenteNoCarrinhoCliente = await tx.run(SELECT.one.from(ItemCarrinho).where({
-            carrinho_ID: carrinhoDoCliente.ID,
-            produto_ID: itemAnonimo.produto_ID
-          }));
-
-          if (itemExistenteNoCarrinhoCliente) {
-            await tx.run(UPDATE(ItemCarrinho)
-              .set({ quantidade: itemExistenteNoCarrinhoCliente.quantidade + itemAnonimo.quantidade })
-              .where({ ID: itemExistenteNoCarrinhoCliente.ID }));
-          } else {
-            delete itemAnonimo.ID; // Garante novo ID para o item no novo carrinho
-            await tx.run(INSERT.into(ItemCarrinho).entries({
-              ...itemAnonimo, // Copia os campos relevantes (produto_ID, quantidade, precoUnitario)
-              carrinho_ID: carrinhoDoCliente.ID // Associa ao carrinho do cliente
-            }));
-          }
-        }
-        await tx.run(DELETE.from(ItemCarrinho).where({ carrinho_ID: carrinhoAnonimo.ID }));
-        await tx.run(DELETE.from(Carrinhos).where({ ID: carrinhoAnonimo.ID }));
-        console.log(`Itens do carrinho anônimo ${carrinhoAnonimo.ID} mesclados ao carrinho ${carrinhoDoCliente.ID} do cliente ${clienteID}. Carrinho anônimo deletado.`);
-      }
-      // Se não houver carrinho anônimo, ou for o mesmo, nada a fazer.
-      console.log("[BACKEND mergeCarrinho] CASO A - Preparando para retornar:", { carrinhoID: idCarrinhoFinal }, "(Tipo:", typeof idCarrinhoFinal, ")");
-      return { carrinhoID: idCarrinhoFinal };
-
-    } else {
-      // CASO B: Cliente NÃO tem um carrinho.
-      if (carrinhoAnonimo) {
-        await tx.run(UPDATE(Carrinhos)
-          .set({ cliente_ID: clienteID })
-          .where({ ID: carrinhoAnonimo.ID }));
-        idCarrinhoFinal = carrinhoAnonimo.ID;
-        console.log(`Carrinho anônimo ${carrinhoAnonimo.ID} associado ao cliente ${clienteID}.`);
-        // ----- LOG DE DEBUG ANTES DO RETURN (Passo 1 do diagnóstico) -----
-        console.log("[BACKEND mergeCarrinho] CASO B - Preparando para retornar:", { carrinhoID: idCarrinhoFinal }, "(Tipo:", typeof idCarrinhoFinal, ")");
-        return { carrinhoID: idCarrinhoFinal };
-
-      } else {
-        // CASO C: Cliente não tem carrinho E NÃO existe carrinho anônimo.
-        const novoCarrinho = {
-          ID: cds.utils.uuid(), // Servidor gera o ID
-          cliente_ID: clienteID
-        };
-        await tx.run(INSERT.into(Carrinhos).entries(novoCarrinho));
-        idCarrinhoFinal = novoCarrinho.ID;
-        console.log(`Novo carrinho ${idCarrinhoFinal} criado para o cliente ${clienteID}.`);
-
-        console.log("[BACKEND mergeCarrinho] CASO C - Preparando para retornar:", { carrinhoID: idCarrinhoFinal }, "(Tipo:", typeof idCarrinhoFinal, ")");
-        return { carrinhoID: idCarrinhoFinal };
-      }
-    }
-});
-
-  const statusOrder = [
-    'CANCELADO',            // 0
-    'AGUARDANDO_PAGAMENTO', // 1
-    'PAGO',                 // 2
-    'ENVIADO',              // 3
-    'ENTREGUE'              // 4
-  ];
-
-
-  function getNextStatus(currentStatus) {
-    console.log(`🚦 Backend (getNextStatus - SEM DRAFT): Status atual: ${currentStatus}`);
-    const currentIndex = statusOrder.indexOf(currentStatus);
-    if (currentIndex === -1) {
-        console.warn(`🚦 Backend (getNextStatus - SEM DRAFT): Status '${currentStatus}' não reconhecido.`);
-        return null;
-    }
-    if (currentIndex === statusOrder.length - 1) {
-        console.log(`🚦 Backend (getNextStatus - SEM DRAFT): Status '${currentStatus}' já é o último.`);
-        return null;
-    }
-    const next = statusOrder[currentIndex + 1];
-    console.log(`🚦 Backend (getNextStatus - SEM DRAFT): Próximo status: ${next}`);
-    return next;
-}
-
-  function getPreviousStatus(currentStatus) {
-    const currentIndex = statusOrder.indexOf(currentStatus);
-    if (currentIndex === -1) {
-        console.warn(`🚦 Backend (getPreviousStatus): Status atual '${currentStatus}' não reconhecido.`);
-        return null; // Status atual não está na lista
-    }
-    if (currentIndex === 0) {
-        console.log(`🚦 Backend (getPreviousStatus): Status '${currentStatus}' já é o primeiro.`);
-        return null; // Já está no primeiro status
-    }
-    return statusOrder[currentIndex - 1];
-  }
-
-  srv.on('avancarStatus', 'Pedidos', async (req) => {
-    const tx = cds.transaction(req);
-
-    // Normalizar o valor da chave
-    const aRawParams = req.params;
-    const aPedidoKeys = [];
-
-    // 💡 Corrigido: transforma string em objeto { ID: ... }
-    for (const rawParam of aRawParams) {
-        if (typeof rawParam === 'string') {
-            aPedidoKeys.push({ ID: rawParam });
-        } else if (rawParam && rawParam.ID) {
-            aPedidoKeys.push(rawParam);
-        } else {
-            req.warn(`Chave de pedido inválida recebida: ${JSON.stringify(rawParam)}`);
-        }
-    }
-
-    if (aPedidoKeys.length === 0) {
-        console.error("🔴 Backend 'avancarStatus' (SEM DRAFT): Nenhuma chave válida.");
-        return req.error(400, "Nenhum pedido selecionado ou chave inválida.");
-    }
-
-    let iSuccessCount = 0;
-
-    for (const { ID: sPedidoID } of aPedidoKeys) {
-        console.log(`🛠️ Atualizando pedido: ${sPedidoID}`);
-
-        const pedido = await tx.run(SELECT.one.from(Pedidos).where({ ID: sPedidoID }));
-        if (!pedido) {
-            req.warn(`Pedido ${sPedidoID} não encontrado.`);
-            continue;
-        }
-
-        const sNextStatus = getNextStatus(pedido.status);
-        if (!sNextStatus) {
-            req.warn(`Status '${pedido.status}' não pode ser avançado.`);
-            continue;
-        }
-
-        await tx.run(UPDATE(Pedidos).set({ status: sNextStatus }).where({ ID: sPedidoID }));
-        req.notify(`Pedido ${sPedidoID} avançado para '${sNextStatus}'.`);
-        iSuccessCount++;
-    }
-
-    if (iSuccessCount === 0) {
-        return req.error(400, "Nenhum pedido pôde ser atualizado.");
-    }
-
-    console.log(`✅ ${iSuccessCount} pedido(s) atualizados com sucesso.`);
-});
-
-srv.on('retrocederStatus', 'Pedidos', async (req) => {
-  const tx = cds.transaction(req);
-  const aRawParams = req.params;
-  const aPedidoKeys = [];
-
-  for (const raw of aRawParams) {
-      if (typeof raw === 'string') {
-          aPedidoKeys.push({ ID: raw });
-      } else if (raw && raw.ID) {
-          aPedidoKeys.push(raw);
-      }
-  }
-
-  if (aPedidoKeys.length === 0) {
-      return req.error(400, "Nenhum pedido selecionado.");
-  }
-  if (aPedidoKeys.length > 1) {
-      return req.error(400, "Apenas um pedido pode ser selecionado para retroceder o status.");
-  }
-
-  const { ID: pedidoID } = aPedidoKeys[0];
-  console.log(`⏪ Backend (SEM DRAFT): Retrocedendo status do pedido ${pedidoID}`);
-  const pedido = await tx.run(SELECT.one.from(Pedidos).where({ ID: pedidoID }));
-
-  if (!pedido) {
-      return req.error(404, `Pedido ${pedidoID} não encontrado.`);
-  }
-
-  const previousStatus = getPreviousStatus(pedido.status);
-  if (!previousStatus) {
-      req.warn(`Status '${pedido.status}' não pode ser retrocedido.`);
-      return;
-  }
-
-  await tx.run(
-      UPDATE(Pedidos).set({ status: previousStatus }).where({ ID: pedidoID })
-  );
-  req.notify(`Status do Pedido ${pedidoID} retrocedido para '${previousStatus}'.`);
-  console.log(`✅ Pedido ${pedidoID} atualizado com sucesso.`);
-});
-
-// SEU HANDLER PARA statusCriticality (MUITO IMPORTANTE PARA A UI)
-srv.after('READ', 'Pedidos', each => {
-    if (each.status) { // Certifique-se que 'each' existe e tem 'status'
-        switch (each.status) {
-            case 'AGUARDANDO_PAGAMENTO': each.statusCriticality = 2; break; // Amarelo/Laranja (Warning)
-            case 'PAGO':                 each.statusCriticality = 3; break; // Verde (Success)
-            case 'ENVIADO':              each.statusCriticality = 5; break; // Azul (Information)
-            case 'ENTREGUE':             each.statusCriticality = 3; break; // Verde (Success) ou 0 (Neutro)
-            case 'CANCELADO':            each.statusCriticality = 1; break; // Vermelho (Error)
-            default:                     each.statusCriticality = 0; // Cinza (Neutral)
-        }
-    } else {
-        each.statusCriticality = 0; // Default se status for nulo
-    }
-});
-
-this.on('avancarStatusNFs', async (req) => {
-
-  const { notasFiscaisIDs } = req.data || {};
-  if (!notasFiscaisIDs?.length) return req.error(400, 'Selecione ao menos uma NFSe.');
-
-  const tx = cds.transaction(req);
-  const notas = await tx.read(NotaFiscalServicoMonitor)
-                        .where({ idAlocacaoSAP: { in: notasFiscaisIDs } });
-
-  if (notas.length !== notasFiscaisIDs.length)
-    return req.error(400, 'Alguma NFSe selecionada não foi encontrada.');
-
-  const filhos  = new Set(notas.map(n => n.chaveDocumentoFilho));
-  const status  = new Set(notas.map(n => n.status));
-
-  if (filhos.size  > 1) return req.error(400, 'Selecione registros com o mesmo documento filho.');
-  if (status.size  > 1) return req.error(400, 'Selecione registros com o mesmo status.');
-
-  const statusAtual = [...status][0];
-  let resultados;
-
-  switch (statusAtual) {
-    case '01': resultados = await trans01para05(tx, notasFiscaisIDs); break;
-    case '05': resultados = await trans05para15(tx, notasFiscaisIDs); break;
-    case '15': resultados = await trans15para30(tx, notas);           break;
-    case '30': resultados = await trans30para35(tx, notas);           break;
-    case '35': resultados = await trans35para50(tx,notasFiscaisIDs);  break;
-    default :  return req.error(400, `Transição não definida para status ${statusAtual}.`);
-  }
-
-  return resultados;
-});
-
-
-
-function gerarNumeroNF() {
-  return Math.floor(1_000_000_000 + Math.random() * 900_000_000).toString();
-}
-
-/** Monta array de resultados-padrão (sucesso = true). */
-function sucesso(ids, proximoStatus, extra = {}) {
-  return ids.map(id => ({
-    idAlocacaoSAP     : id,
-    success           : true,
-    message           : `NF avançada para ${proximoStatus}.`,
-    novoStatus        : proximoStatus,
-    ...extra
-  }));
-}
-
-/** Monta array de resultados-padrão (falha = false). */
-function falha(ids, statusAtual, motivo) {
-  return ids.map(id => ({
-    idAlocacaoSAP     : id,
-    success           : false,
-    message           : motivo,
-    novoStatus        : statusAtual
-  }));
-}
-
-
- //  Transições encapsuladas
-
-
-/** 01 → 05  (gera número NF e atualiza em massa) */
-async function trans01para05(tx, ids) {
-  const numeroNF = gerarNumeroNF();
-  await tx.update(NotaFiscalServicoMonitor)
-          .set({ status: '05', numeroNfseServico: numeroNF })
-          .where({ idAlocacaoSAP: { in: ids } });
-
-  return sucesso(ids, '05', { numeroNfseServico: numeroNF });
-}
-
-/** 05 → 15  (apenas status) */
-async function trans05para15(tx, ids) {
-  await tx.update(NotaFiscalServicoMonitor)
-          .set({ status: '15' })
-          .where({ idAlocacaoSAP: { in: ids } });
-
-  return sucesso(ids, '15');
-}
-
-/** 15 → 30  (all-or-nothing, lista **todos** os erros) */
-async function trans15para30(tx, notas) {
-  const resultados     = [];
-  const valoresPorNota = new Map();           // <id, valores gerados>
-  const erros          = new Map();           // <id, msgErro>
-
-  /* 1. Valida TODAS as NFs ---------------------------------------- */
-  for (const nota of notas) {
-    const id   = nota.idAlocacaoSAP;
-    const resp = await BAPI_PO_CREATE1(nota);
-
-    if (!resp.ok) {
-      erros.set(id, resp.msg);                        // guarda erro
-      await BAPI_TRANSACTION_ROLLBACK(resp.msg);      // compensação
-      continue;                                       // mas continua validando para achar +erros
-    }
-    valoresPorNota.set(id, resp.valores);             // ok → guarda p/ update
-  }
-
-  /* 2. Se houve qualquer erro → devolve falha para TODAS ---------- */
-  if (erros.size > 0) {
-    const idsComErro = [...erros.keys()].join(', ');  // para msg nos “abordados”
-
-    for (const nota of notas) {
-      const id   = nota.idAlocacaoSAP;
-      const msg  = erros.has(id)
-        ? `NF ${id}: ${erros.get(id)}`                          // erro específico
-        : `Processo abortado — erros nas NFs: ${idsComErro}.`;  // demais
-
-      resultados.push({
-        idAlocacaoSAP : id,
-        success       : false,
-        message       : msg,
-        novoStatus    : '15'
-      });
-    }
-    return resultados;   // nada foi atualizado no BD
-  }
-
-  /* 3. Nenhum erro → grava todas e devolve sucesso ---------------- */
-  for (const nota of notas) {
-    const id      = nota.idAlocacaoSAP;
-    const valores = valoresPorNota.get(id);
-
-    await tx.update(NotaFiscalServicoMonitor)
-            .set({ status: '30', ...valores })
-            .where({ idAlocacaoSAP: id });
-
-    resultados.push({
-      idAlocacaoSAP : id,
-      success       : true,
-      message       : 'Status 15→30 e valores gravados.',
-      novoStatus    : '30'
-    });
-  }
-  return resultados;
-}
-
-/**
-* Função de transição para o status 30 -> 35.
-* Orquestra a chamada das BAPIs de MIRO e NF.
-* @param {object} tx - A transação CAP.
-* @param {Array<object>} notas - O array de notas a serem processadas.
-* @returns {Promise<Array<object>>} Um array com os resultados do processamento.
-*/
-async function trans30para35(tx, notas) {
-  const resultados = [];
-
-  // Esta etapa é complexa e geralmente processada uma a uma (ou por documento filho)
-  for (const nota of notas) {
-      const { idAlocacaoSAP: id } = nota;
-      console.log(`[TRANSITION_LOG] Iniciando 30->35 para a NF ${id}`);
-
-      try {
-          // --- ETAPA 1: Criar a MIRO ---
-          const respMiro = await BAPI_INCOMINGINVOICE_CREATE1(nota);
-          if (!respMiro.ok) {
-              // Se a primeira BAPI falha, logamos o erro e pulamos para a próxima nota
-              throw new Error(respMiro.msg);
-          }
-          console.log(`[TRANSITION_LOG] MIRO criada para NF ${id}. Documento: ${respMiro.valores.numeroDocumentoMIRO}`);
-
-          // --- ETAPA 2: Criar a Nota Fiscal ---
-          const respNF = await BAPI_J_1B_NF_CREATEFROMDATA(nota, respMiro.valores.numeroDocumentoMIRO);
-          if (!respNF.ok) {
-              // Se a segunda BAPI falha, a MIRO já foi "criada".
-              // No mundo real, aqui teríamos uma lógica de compensação (cancelar a MIRO).
-              // Na simulação, vamos apenas registrar o erro.
-              console.error(`[TRANSITION_LOG] MIRO criada, mas criação da NF falhou para ${id}. Requer ação manual!`);
-              throw new Error(respNF.msg);
-          }
-          console.log(`[TRANSITION_LOG] NF de serviço criada para ${id}.`);
-
-          // --- ETAPA 3: Sucesso! Atualizar o status e gravar os dados ---
-          await tx.update(NotaFiscalServicoMonitor)
-              .set({
-                  status: '35',
-                  numeroDocumentoMIRO: respMiro.valores.numeroDocumentoMIRO,
-                  // Adicione outros campos que a BAPI de NF retornaria, se houver
-              })
-              .where({ idAlocacaoSAP: id });
-          
-          resultados.push({
-              idAlocacaoSAP: id,
-              success: true,
-              message: 'Fatura e Nota Fiscal criadas com sucesso.',
-              novoStatus: '35'
-          });
-
-      } catch (error) {
-          // Se qualquer passo falhar, o CATCH captura
-          console.error(`[TRANSITION_LOG] Erro no fluxo 30->35 para NF ${id}:`, error.message);
-          
-          // Atualiza a NF para o status de erro
-          await tx.update(NotaFiscalServicoMonitor)
-                    .set({ status: '99', MSG_TEXT: error.message.substring(0,120) }) // Adicionei MSG_TEXT
-                    .where({ idAlocacaoSAP: id });
-          
-          resultados.push({
-              idAlocacaoSAP: id,
-              success: false,
-              message: error.message,
-              novoStatus: '99'
-          });
-      }
-  }
-  return resultados;
-}
-
-
-/** 35 → 50  (apenas status) mas ainda teria que fazer alguma validação com as tabelas */
-async function trans35para50(tx, ids) {
-  await tx.update(NotaFiscalServicoMonitor)
-          .set({ status: '50' })
-          .where({ idAlocacaoSAP: { in: ids } });
-
-  return sucesso(ids, '50');
-}
-
-//  BAPI mocks 
-
-async function BAPI_PO_CREATE1(nota) {
-  const { valorBrutoNfse, valorEfetivoFrete, valorLiquidoFreteNfse } = nota;
-  const temValor = (valorBrutoNfse        && valorBrutoNfse        > 0) ||
-                   (valorEfetivoFrete     && valorEfetivoFrete     > 0) ||
-                   (valorLiquidoFreteNfse && valorLiquidoFreteNfse > 0);
-
-  if (temValor) return { ok: false, msg: 'Campos de valores já preenchidos.' };
-
-  const bruto   = Math.floor(10_000 + Math.random() * 90_000);
-  const efetivo = +(bruto * 0.10).toFixed(2);
-  const liquido = +(efetivo * 0.80).toFixed(2);
-
-  return {
-    ok: true,
-    valores: {
-      valorBrutoNfse       : bruto,
-      valorEfetivoFrete    : efetivo,
-      valorLiquidoFreteNfse: liquido
-    }
-  };
-}
-
-async function BAPI_TRANSACTION_ROLLBACK(motivo) {
-  console.warn('↩️  Rollback:', motivo);
-  return { ok: true, msg: motivo };
-}
-/**
- * MOCK da BAPI_INCOMINGINVOICE_CREATE1 para criar a MIRO (fatura).
- * @returns {{ok: boolean, msg?: string, valores?: {numeroDocumentoMIRO: string}}}
- */
-async function BAPI_INCOMINGINVOICE_CREATE1(nota) {
-  console.log(`[BAPI_SIMULATION] Criando MIRO para NF ${nota.idAlocacaoSAP}...`);
-  // Aqui você pode adicionar lógicas de falha para teste, se quiser
-  // if (nota.algumaCondicaoDeErro) {
-  //    return { ok: false, msg: "Erro simulado na criação da MIRO." };
-  // }
-  return {
-      ok: true,
-      valores: {
-          // Gera um número de documento de MIRO simulado
-          numeroDocumentoMIRO: `510${Math.floor(1000000 + Math.random() * 9000000)}`
-      }
-  };
-}
-
-/**
-* MOCK da BAPI_J_1B_NF_CREATEFROMDATA para criar a Nota Fiscal de Serviço.
-* @returns {{ok: boolean, msg?: string}}
-*/
-async function BAPI_J_1B_NF_CREATEFROMDATA(nota, miroDocNumber) {
-  console.log(`[BAPI_SIMULATION] Criando NF de Serviço para MIRO ${miroDocNumber}...`);
-  // if (miroDocNumber.endsWith('7')) { // Exemplo de condição de erro
-  //    return { ok: false, msg: "Erro simulado: dados fiscais inválidos." };
-  // }
-  return { ok: true }; // Apenas confirma o sucesso
-}
+  });
 
 });

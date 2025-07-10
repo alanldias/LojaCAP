@@ -1,9 +1,24 @@
-// webapp/controller/formatter.js
-sap.ui.define([], function () {
+sap.ui.define([
+    "sap/ui/core/format/DateFormat"
+], function (DateFormat) {
     "use strict";
+
     return {
+
+        formatDate: function (sDate) {
+            if (!sDate) {
+                return ""; // Retorna vazio se a data for nula ou indefinida
+            }
+            // Pega o formatador de data do UI5 para o estilo "short" (dd/MM/aaaa)
+            var oDateFormat = DateFormat.getDateInstance({
+                style: "short",
+                UTC: true // Essencial para evitar problemas de fuso horário!
+            });
+            // Cria um objeto Date a partir da string e formata
+            return oDateFormat.format(new Date(sDate));
+        },
+
         formatStatusNfseText: function (sStatus) {
-            // Adapte conforme sua necessidade
             switch (sStatus) {
                 case "01": return "Não Atribuída";
                 case "05": return "Atribuída";
@@ -12,20 +27,33 @@ sap.ui.define([], function () {
                 case "35": return "Fatura e NF Criadas";
                 case "50": return "Proc. Finalizado PL";
                 case "55": return "Rejeitado";
-                case "99": return "Erro";
                 default: return sStatus;
             }
         },
+
         formatStatusNfseState: function (sStatus) {
-            // Adapte conforme sua necessidade
             switch (sStatus) {
-                case "01": return sap.ui.core.ValueState.Information; // ou Warning
-                case "05": return sap.ui.core.ValueState.Success;
-                case "50": return sap.ui.core.ValueState.Success;
-                case "55": return sap.ui.core.ValueState.Warning;
-                case "99": return sap.ui.core.ValueState.Error;
-                default: return sap.ui.core.ValueState.None;
+                case "01": return "Information";
+                case "05": return "Success";
+                case "50": return "Success";
+                case "55": return "Warning";
+                case "99": return "Error";
+                default: return "None";
             }
-        }
+        },
+        iconTipo: function (sTipo) {
+            switch (sTipo) {
+              case 'E': return 'sap-icon://project-definition-triangle-2';
+              case 'S': return 'sap-icon://color-fill';
+              case 'R': return 'sap-icon://circle-task-2';
+              default : return 'sap-icon://question-mark';
+            }
+          },
+          colorTipo: function (sTipo) {
+            return (sTipo === 'E') ? 'Negative'
+                 : (sTipo === 'S') ? 'Positive'
+                 : (sTipo === 'R') ? 'Critical'
+                 : 'Neutral';
+          }          
     };
 });

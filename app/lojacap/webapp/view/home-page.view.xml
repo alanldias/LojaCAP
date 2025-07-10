@@ -23,6 +23,12 @@
                 <Button id = "telapedidos" text="Ir para Pedidos Free" press=".onGoPedidosFree" />
 
                 <Button id = "telanotafisca" text="Ir para Nota fiscal tela" press=".onGonotafiscal" />
+
+                <Button id = "telanotaiss" text="Ir para ISS" press=".onGoIss" />
+
+                <Button id = "chatbot" text="Ir para ChatBot" press=".onchatbot" />
+
+                
         </headerContent>
 
         <VBox

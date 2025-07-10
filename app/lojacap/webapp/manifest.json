@@ -135,6 +135,16 @@
           "name": "Routenota-fiscal",
           "pattern": "nota-fiscal",
           "target": ["Targetnota-fiscal"]
+        },
+        {
+          "name": "RouteConfiguracaoISS",
+          "pattern": "configuracaoISS",   
+          "target": ["TargetConfiguracaoISS"]
+        },
+        {
+          "name": "Routechatbot",
+          "pattern": "chatbot",   
+          "target": ["Targetchatbot"]
         }
       ],
       "targets": {
@@ -176,6 +186,14 @@
         "Targetnota-fiscal": {
           "viewName": "nota-fiscal",
           "viewId": "nota-fiscal"
+        },
+        "TargetConfiguracaoISS": { 
+          "viewName": "configuracao-iss",
+          "viewId": "configuracao-iss"
+        },
+        "Targetchatbot": { 
+          "viewName": "chatbot",
+          "viewId": "chatbot"
         }
       }
     },

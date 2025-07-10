@@ -131,16 +131,20 @@ sap.ui.define([
       const oTable = this.byId(TBL_NOTAS);
       const oBind = oTable.getBinding("items");
 
-      /* 1. remove qualquer filtro ativo */
+      // 1. remove qualquer filtro ativo
       oBind.filter([]);
       this._filtroIdsErro = null;          // zera flag do botão “NF c/ erro”
 
-      /* 2. limpa seleções e estado de grupo */
+      // 2. remove qualquer sorter ativo
+      oBind.sort(null);                    // ← limpa ordenação aplicada
+
+      // 3. limpa seleções e estado de grupo
       oTable.removeSelections();
       this._selGrpFilho = null;
       this._selGrpStatus = null;
 
-      oBind.refresh();                     // ← sem “true” aqui
+      // 4. força atualização dos dados
+      oBind.refresh();                     // ← sem “true” aqui (mantém cache)
 
       sap.m.MessageToast.show("Dados atualizados.");
     },
@@ -199,59 +203,59 @@ sap.ui.define([
     * ======================================================= */
 
     onOpenUploadDialog() {
-        if (!this._oUploadDialog) {
-            Fragment.load({
-                id: this.getView().getId(), // Adiciona o ID da view como prefixo
-                name: "lojacap.view.fragments.UploadFreteDialog", // Use o caminho correto do seu fragmento
-                controller: this
-            }).then(oDialog => {
-                this._oUploadDialog = oDialog;
-                this.getView().addDependent(this._oUploadDialog);
-                this._oUploadDialog.open();
-            });
-        } else {
-            this._oUploadDialog.open();
-        }
+      if (!this._oUploadDialog) {
+        Fragment.load({
+          id: this.getView().getId(), // Adiciona o ID da view como prefixo
+          name: "lojacap.view.fragments.UploadFreteDialog", // Use o caminho correto do seu fragmento
+          controller: this
+        }).then(oDialog => {
+          this._oUploadDialog = oDialog;
+          this.getView().addDependent(this._oUploadDialog);
+          this._oUploadDialog.open();
+        });
+      } else {
+        this._oUploadDialog.open();
+      }
     },
 
     // Fecha o Dialog
     onUploadDialogClose() {
-        this._resetFileUploader();
-        if (this._oUploadDialog) {
-            this._oUploadDialog.close();
-        }
+      this._resetFileUploader();
+      if (this._oUploadDialog) {
+        this._oUploadDialog.close();
+      }
     },
 
     // Evento disparado ao selecionar um arquivo
     onFileChange(oEvent) {
-        // Guarda a referência do arquivo e habilita o botão de upload
-        this._file = oEvent.getParameter("files") && oEvent.getParameter("files")[0];
-        this.byId("btnConfirmUpload").setEnabled(!!this._file);
+      // Guarda a referência do arquivo e habilita o botão de upload
+      this._file = oEvent.getParameter("files") && oEvent.getParameter("files")[0];
+      this.byId("btnConfirmUpload").setEnabled(!!this._file);
     },
 
     // Disparado ao clicar no botão "Processar" do Dialog
     onPressUploadFrete() {
-        if (!this._file) {
-            MessageBox.error("Por favor, selecione um arquivo CSV.");
-            return;
-        }
-    
-        // Usa a API FileReader para ler o conteúdo do arquivo no navegador
-        const oReader = new FileReader();
-    
-        // Callback para quando a leitura do arquivo for concluída
-        oReader.onload = (oEvent) => {
-            var sFileContent = oEvent.target.result;
-            console.log("[FRONTEND-LOG] Arquivo lido. O conteúdo em Base64 começa com:", sFileContent.substring(0, 80));
-            this._callUploadAction(sFileContent);
-        };
-        oReader.onerror = (oError) => {
-            MessageBox.error("Erro ao ler o arquivo selecionado.");
-            console.error("FileReader Error:", oError);
-        };
-    
-        // Inicia a leitura do arquivo
-        oReader.readAsDataURL(this._file);
+      if (!this._file) {
+        MessageBox.error("Por favor, selecione um arquivo CSV.");
+        return;
+      }
+
+      // Usa a API FileReader para ler o conteúdo do arquivo no navegador
+      const oReader = new FileReader();
+
+      // Callback para quando a leitura do arquivo for concluída
+      oReader.onload = (oEvent) => {
+        var sFileContent = oEvent.target.result;
+        console.log("[FRONTEND-LOG] Arquivo lido. O conteúdo em Base64 começa com:", sFileContent.substring(0, 80));
+        this._callUploadAction(sFileContent);
+      };
+      oReader.onerror = (oError) => {
+        MessageBox.error("Erro ao ler o arquivo selecionado.");
+        console.error("FileReader Error:", oError);
+      };
+
+      // Inicia a leitura do arquivo
+      oReader.readAsDataURL(this._file);
     },
 
     /* ====================================================== *
@@ -263,99 +267,99 @@ sap.ui.define([
       const oView = this.getView();
 
       if (!this._oCriarFreteDialog) {
-          console.log("[DEBUG] 1.1. Carregando o fragmento do diálogo pela primeira vez.");
-          this._oCriarFreteDialog = await Fragment.load({
-              id: oView.getId(),
-              name: "lojacap.view.fragments.CriarFreteDialog",
-              controller: this
-          });
-          oView.addDependent(this._oCriarFreteDialog);
+        console.log("[DEBUG] 1.1. Carregando o fragmento do diálogo pela primeira vez.");
+        this._oCriarFreteDialog = await Fragment.load({
+          id: oView.getId(),
+          name: "lojacap.view.fragments.CriarFreteDialog",
+          controller: this
+        });
+        oView.addDependent(this._oCriarFreteDialog);
       }
 
       console.log("[DEBUG] 1.2. Criando o JSONModel para o novo registro.");
       const oNovoRegistroModel = new JSONModel({
-          idAlocacaoSAP: "", orderIdPL: "", chaveDocumentoMae: "", chaveDocumentoFilho: "",
-          documentoVendasMae: "", documentoFaturamentoMae: "", numeroPedidoCompra: "",
-          itemPedidoCompra: "", numeroControleDocumentoSAP: "", numeroNfseServico: "",
-          serieNfseServico: "", dataEmissaoNfseServico: new Date().toISOString().substring(0, 10), chaveAcessoNfseServico: "",
-          codigoVerificacaoNfse: "", cnpjTomador: "", codigoFornecedor: "", nomeFornecedor: "",
-          numeroNotaFiscalSAP: "", serieNotaFiscalSAP: "", localPrestacaoServico: "",
-          numeroDocumentoMIRO: "", anoFiscalMIRO: null, documentoContabilMiroSAP: "",
-          valorBrutoNfse: 0, valorLiquidoFreteNfse: 0, valorEfetivoFrete: 0,
-          status: "01", issRetido: false, estornado: false, enviadoParaPL: false,
-          logErroFlag: false, mensagemErro: "", tipoMensagemErro: "", classeMensagemErro: "",
-          numeroMensagemErro: ""
+        idAlocacaoSAP: "", orderIdPL: "", chaveDocumentoMae: "", chaveDocumentoFilho: "",
+        documentoVendasMae: "", documentoFaturamentoMae: "", numeroPedidoCompra: "",
+        itemPedidoCompra: "", numeroControleDocumentoSAP: "", numeroNfseServico: "",
+        serieNfseServico: "", dataEmissaoNfseServico: new Date().toISOString().substring(0, 10), chaveAcessoNfseServico: "",
+        codigoVerificacaoNfse: "", cnpjTomador: "", codigoFornecedor: "", nomeFornecedor: "",
+        numeroNotaFiscalSAP: "", serieNotaFiscalSAP: "", localPrestacaoServico: "",
+        numeroDocumentoMIRO: "", anoFiscalMIRO: null, documentoContabilMiroSAP: "",
+        valorBrutoNfse: 0, valorLiquidoFreteNfse: 0, valorEfetivoFrete: 0,
+        status: "01", issRetido: false, estornado: false, enviadoParaPL: false,
+        logErroFlag: false, mensagemErro: "", tipoMensagemErro: "", classeMensagemErro: "",
+        numeroMensagemErro: ""
       });
       this._oCriarFreteDialog.setModel(oNovoRegistroModel, "novoRegistro");
-      
+
       console.log("[DEBUG] 1.3. Abrindo o diálogo.");
       this._oCriarFreteDialog.open();
       console.log("[DEBUG] 1.4. onAbrirDialogoCriacao - FIM");
-  },
+    },
 
-  onCancelarDialogoCriacao() { this._oCriarFreteDialog.close() },
+    onCancelarDialogoCriacao() { this._oCriarFreteDialog.close() },
 
-  async onSalvarNovoRegistro() {
-    const oDialog = this._oCriarFreteDialog;
-    if (!oDialog) { return }
+    async onSalvarNovoRegistro() {
+      const oDialog = this._oCriarFreteDialog;
+      if (!oDialog) { return }
 
-    const oPayload = oDialog.getModel("novoRegistro").getData();
-    const oListBinding = this.getView().getModel().bindList("/NotaFiscalServicoMonitor");
+      const oPayload = oDialog.getModel("novoRegistro").getData();
+      const oListBinding = this.getView().getModel().bindList("/NotaFiscalServicoMonitor");
 
-    if (!oPayload.idAlocacaoSAP || !oPayload.orderIdPL || !oPayload.chaveDocumentoMae) {
+      if (!oPayload.idAlocacaoSAP || !oPayload.orderIdPL || !oPayload.chaveDocumentoMae) {
         MessageBox.error("Por favor, preencha os campos de identificação obrigatórios.");
         return;
-    }
-    oPayload.issRetido = oPayload.issRetido ? 'X' : '';
-    oPayload.enviadoParaPL = oPayload.enviadoParaPL ? 'X' : '';
+      }
+      oPayload.issRetido = oPayload.issRetido ? 'X' : '';
+      oPayload.enviadoParaPL = oPayload.enviadoParaPL ? 'X' : '';
 
-    oDialog.setBusy(true);
+      oDialog.setBusy(true);
 
-    // --- MUDANÇA DE ESTRATÉGIA: USANDO EVENTOS ---
-    // Em vez de try/catch, vamos escutar o evento que o UI5 dispara
-    // quando a operação de criação termina (com sucesso ou falha).
-    oListBinding.attachEventOnce("createCompleted", (oEvent) => {
+      // --- MUDANÇA DE ESTRATÉGIA: USANDO EVENTOS ---
+      // Em vez de try/catch, vamos escutar o evento que o UI5 dispara
+      // quando a operação de criação termina (com sucesso ou falha).
+      oListBinding.attachEventOnce("createCompleted", (oEvent) => {
         oDialog.setBusy(false);
-        
+
         const bSuccess = oEvent.getParameter("success");
 
         if (bSuccess) {
-            // ---- CENÁRIO DE SUCESSO ----
-            MessageToast.show("Novo registro de frete criado com sucesso!");
-            oDialog.close();
-            this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
+          // ---- CENÁRIO DE SUCESSO ----
+          MessageToast.show("Novo registro de frete criado com sucesso!");
+          oDialog.close();
+          this.byId("tableNotaFiscalServicoMonitor").getBinding("items").refresh();
         } else {
-            // ---- CENÁRIO DE FALHA ----
-            // Se a criação falhou, o framework já colocou o erro no MessageManager.
-            // Agora é o momento certo de ler de lá.
-            const oMessageManager = sap.ui.getCore().getMessageManager();
-            const aMessages = oMessageManager.getMessageModel().getData();
-            let sErrorMessage = "Ocorreu um erro desconhecido.";
+          // ---- CENÁRIO DE FALHA ----
+          // Se a criação falhou, o framework já colocou o erro no MessageManager.
+          // Agora é o momento certo de ler de lá.
+          const oMessageManager = sap.ui.getCore().getMessageManager();
+          const aMessages = oMessageManager.getMessageModel().getData();
+          let sErrorMessage = "Ocorreu um erro desconhecido.";
 
-            if (aMessages.length > 0) {
-                // Filtramos apenas as mensagens de erro que acabaram de chegar
-                const aErrorMessages = aMessages
-                    .filter(msg => msg.getType() === 'Error')
-                    .map(msg => `- ${msg.getMessage()}`); // A mensagem já é "Value ... is not a valid String(13)"
-                
-                if (aErrorMessages.length > 0) {
-                    sErrorMessage = "Por favor, corrija os seguintes erros:\n\n" + aErrorMessages.join("\n");
-                }
+          if (aMessages.length > 0) {
+            // Filtramos apenas as mensagens de erro que acabaram de chegar
+            const aErrorMessages = aMessages
+              .filter(msg => msg.getType() === 'Error')
+              .map(msg => `- ${msg.getMessage()}`); // A mensagem já é "Value ... is not a valid String(13)"
+
+            if (aErrorMessages.length > 0) {
+              sErrorMessage = "Por favor, corrija os seguintes erros:\n\n" + aErrorMessages.join("\n");
             }
+          }
 
-            MessageBox.error(sErrorMessage, {
-                title: "Erro de Validação",
-                onClose: () => {
-                    // Limpa as mensagens de erro para não aparecerem de novo na próxima tentativa
-                    oMessageManager.removeAllMessages();
-                }
-            });
+          MessageBox.error(sErrorMessage, {
+            title: "Erro de Validação",
+            onClose: () => {
+              // Limpa as mensagens de erro para não aparecerem de novo na próxima tentativa
+              oMessageManager.removeAllMessages();
+            }
+          });
         }
-    });
+      });
 
-    // Dispara a criação. A resposta será tratada no evento "createCompleted" acima.
-    oListBinding.create(oPayload);
-},
+      // Dispara a criação. A resposta será tratada no evento "createCompleted" acima.
+      oListBinding.create(oPayload);
+    },
 
     /* ======================================================= *
      *  SORT                                                   *
@@ -536,14 +540,14 @@ sap.ui.define([
       }
       const grpFilho = aCtxSel[0].getProperty("chaveDocumentoFilho");
       const grpStatus = aCtxSel[0].getProperty("status");
-     
+
       oTable.getItems().forEach(item => {
         const c = item.getBindingContext();
         const match = c && c.getProperty("chaveDocumentoFilho") === grpFilho &&
           c.getProperty("status") === grpStatus;
         item.setSelected(match);
       });
-      return {grpFilho, grpStatus };
+      return { grpFilho, grpStatus };
     },
 
     /** executa action de lote e mostra toast/erros */
@@ -767,12 +771,12 @@ sap.ui.define([
 
     // Reseta o FileUploader para um novo upload
     _resetFileUploader() {
-        const oFileUploader = this.byId("fileUploader");
-        if (oFileUploader) {
-            oFileUploader.clear();
-            this.byId("btnConfirmUpload").setEnabled(false);
-            this._file = null;
-        }
+      const oFileUploader = this.byId("fileUploader");
+      if (oFileUploader) {
+        oFileUploader.clear();
+        this.byId("btnConfirmUpload").setEnabled(false);
+        this._file = null;
+      }
     }
   });
 });

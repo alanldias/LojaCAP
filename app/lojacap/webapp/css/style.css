@@ -25,3 +25,11 @@
 .tabelaComBorda td:last-child {
   border-right: none; /* remove borda da última coluna */
 }
+
+.chatUserMsg {
+  background-color: #dcf8c6  !important;   /* verde-claro estilo zapzap */
+}
+
+.chatBotMsg {
+  background-color: #e6f0fa  !important;   /* azul-claro suave */
+}

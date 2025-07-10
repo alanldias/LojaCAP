@@ -72,4 +72,14 @@ service ShopService {
         novoStatus    : String;
     };
   function getPOSubcontractingComponents() returns LargeString;
+
+
+//deep 
+   function callDeepSeek(question: String) returns String;
+   
+   entity Chats    as projection on shop.Chats;
+   entity Messages as projection on shop.Messages;
+
+  action startChat(title : String) returns Chats;
+  action sendMessage(chat : Chats, question : String) returns Messages;
 }

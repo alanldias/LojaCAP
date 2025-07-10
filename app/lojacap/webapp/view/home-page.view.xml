@@ -26,6 +26,8 @@
 
                 <Button id = "telanotaiss" text="Ir para ISS" press=".onGoIss" />
 
+                <Button id = "chatbot" text="Ir para ChatBot" press=".onchatbot" />
+
                 
         </headerContent>
 

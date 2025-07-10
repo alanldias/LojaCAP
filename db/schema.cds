@@ -188,3 +188,20 @@ entity ZTMM_ISS_CFG : cuid, managed {
     val_de       : Date;
     val_ate      : Date;
 }
+
+entity Chats : cuid, managed {
+    title       : String(255);
+    lastMessage : LargeString;
+  
+    messages    : Composition of many Messages on messages.chat = $self;
+}
+entity Messages : cuid, managed {
+    chat   : Association to Chats; 
+    
+    // muito mais limpa
+    sender : String enum { 
+        user; 
+        bot; 
+    };
+    text   : LargeString;
+}
